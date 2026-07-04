@@ -9,9 +9,12 @@ def ensure_schema_compatibility():
     dialect = db.engine.dialect.name
 
     add_column_if_missing("users", "permissions", column_sql(dialect, "permissions", "TEXT"))
+    add_column_if_missing("users", "photo_path", column_sql(dialect, "photo_path", "VARCHAR(255)"))
     add_column_if_missing("students", "phone", column_sql(dialect, "phone", "VARCHAR(40)"))
     add_column_if_missing("students", "level", column_sql(dialect, "level", "VARCHAR(80)"))
     add_column_if_missing("students", "section", column_sql(dialect, "section", "VARCHAR(80)"))
+    add_column_if_missing("results", "grade_override", column_sql(dialect, "grade_override", "VARCHAR(10)"))
+    add_column_if_missing("results", "comment", column_sql(dialect, "comment", "VARCHAR(255)"))
 
 
 def add_column_if_missing(table, column, ddl):

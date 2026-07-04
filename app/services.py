@@ -75,6 +75,8 @@ DEFAULT_SETTINGS = {
     "id_card_rounded_corners": "on",
     "id_card_show_barcode": "off",
     "id_card_footer": "Official Student Identification Card",
+    "id_card_found_contact_text": "Fadlan haddii aad kaadhkan aragto la xidhiidh:",
+    "id_card_exam_type": "Examination Office",
     "id_card_watermark": "",
     "id_card_issue_months": "12",
     "id_card_office_signature": "Office Examination Signature",
@@ -162,13 +164,19 @@ def result_payload(student, exam=None, public_only=True):
     subject_rows = []
     for row in rows:
         percentage = Decimal(row.score) / Decimal(row.subject.max_score) * 100 if row.subject.max_score else 0
+        automatic_grade = grade_for(percentage)
+        displayed_grade = {
+            "grade": row.grade_override or automatic_grade["grade"],
+            "comment": row.comment or automatic_grade["comment"],
+        }
         subject_rows.append(
             {
                 "id": row.id,
                 "subject": row.subject.name.strip(),
                 "score": float(row.score),
                 "max_score": float(row.subject.max_score),
-                "grade": grade_for(percentage),
+                "grade": displayed_grade,
+                "automatic_grade": automatic_grade,
                 "status": "Pass" if percentage >= passing else "Needs Support",
                 "percentage": float(round(percentage, 2)),
                 "icon": subject_icon(row.subject.name, settings),

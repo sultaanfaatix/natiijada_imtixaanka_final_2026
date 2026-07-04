@@ -42,6 +42,7 @@ ENDPOINT_PERMISSIONS = {
     "admin.export_students": "export",
     "admin.results": "results",
     "admin.save_results": "results",
+    "admin.edit_result_set": "results",
     "admin.delete_result": "results",
     "admin.import_results": "import",
     "admin.confirm_result_import": "import",

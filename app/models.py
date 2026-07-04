@@ -22,6 +22,7 @@ class User(UserMixin, TimestampMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.Enum("super_admin", "admin", "staff"), default="admin", nullable=False)
     permissions = db.Column(db.Text)
+    photo_path = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     def set_password(self, password):
@@ -134,6 +135,8 @@ class Result(TimestampMixin, db.Model):
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
 
     score = db.Column(db.Numeric(6, 2), nullable=False)
+    grade_override = db.Column(db.String(10))
+    comment = db.Column(db.String(255))
     is_published = db.Column(db.Boolean, default=True, nullable=False)
 
     student = db.relationship("Student", backref=db.backref("results", cascade="all, delete-orphan"))

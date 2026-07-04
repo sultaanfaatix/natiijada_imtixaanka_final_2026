@@ -11,7 +11,7 @@ from .import_wizard import preview_results, preview_students, result_template, s
 from .models import AcademicYear, AuditLog, Exam, GradeScale, Result, SchoolClass, Setting, Student, Subject, User
 from .permissions import PERMISSIONS, can, enforce_endpoint_permission, permission_required
 from .security import ALLOWED_PHOTOS, ALLOWED_SHEETS, allowed_file, safe_upload_name
-from .services import get_settings, result_payload
+from .services import get_settings, grade_for, result_payload
 from .services import slug
 
 admin_bp = Blueprint("admin", __name__)
@@ -214,6 +214,54 @@ def delete_result(result_id):
     return redirect(url_for("admin.results"))
 
 
+@admin_bp.route("/results/<int:student_id>/<int:exam_id>/edit", methods=["GET", "POST"])
+def edit_result_set(student_id, exam_id):
+    student = db.session.get(Student, student_id) or abort_404()
+    exam = db.session.get(Exam, exam_id) or abort_404()
+    subjects = Subject.query.order_by(Subject.sort_order, Subject.name).all()
+    existing = {row.subject_id: row for row in Result.query.filter_by(student_id=student.id, exam_id=exam.id).all()}
+    if request.method == "POST":
+        changes = []
+        for subject in subjects:
+            raw = request.form.get(f"score_{subject.id}", "").strip()
+            result = existing.get(subject.id)
+            if raw == "":
+                continue
+            score = max(0, min(float(raw), float(subject.max_score)))
+            if not result:
+                result = Result(student=student, exam=exam, subject=subject)
+            old_score = float(result.score) if result.id and result.score is not None else None
+            old_grade = result.grade_override or ""
+            old_comment = result.comment or ""
+            result.score = score
+            result.grade_override = request.form.get(f"grade_{subject.id}", "").strip() or None
+            result.comment = request.form.get(f"comment_{subject.id}", "").strip() or None
+            result.is_published = bool(request.form.get(f"published_{subject.id}"))
+            db.session.add(result)
+            if old_score != score or old_grade != (result.grade_override or "") or old_comment != (result.comment or ""):
+                changes.append(f"{subject.name}: {old_score} -> {score}")
+        audit("Result Publishing", f"Edited result set for {student.student_code} / {exam.name}: {', '.join(changes) or 'no score changes'}")
+        db.session.commit()
+        flash("Result changes saved. Totals, averages, grades, and status recalculated automatically.", "success")
+        return redirect(url_for("admin.edit_result_set", student_id=student.id, exam_id=exam.id))
+    payload = result_payload(student, exam=exam, public_only=False)
+    subject_previews = {}
+    for subject in subjects:
+        row = existing.get(subject.id)
+        percentage = float(row.score) / float(subject.max_score) * 100 if row and subject.max_score else 0
+        subject_previews[subject.id] = grade_for(percentage)
+    return render_template(
+        "admin/result_edit.html",
+        student=student,
+        exam=exam,
+        subjects=subjects,
+        existing=existing,
+        subject_previews=subject_previews,
+        payload=payload,
+        scales=GradeScale.query.order_by(GradeScale.min_score.desc()).all(),
+    )
+
+
 @admin_bp.route("/results/import", methods=["POST"])
 def import_results():
     file = request.files.get("file")
@@ -352,6 +400,16 @@ def users():
         user.full_name = request.form["full_name"].strip()
         user.role = request.form["role"]
         user.is_active = bool(request.form.get("is_active"))
+        photo = request.files.get("photo")
+        if photo and photo.filename:
+            if not allowed_file(photo.filename, ALLOWED_PHOTOS):
+                flash("Admin photo must be JPG, PNG, or WEBP.", "danger")
+                return redirect(url_for("admin.users"))
+            filename = f"admin_{user.username}_{safe_upload_name(photo.filename)}"
+            upload_dir = Path(current_app_config("UPLOAD_FOLDER"))
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            photo.save(upload_dir / filename)
+            user.photo_path = f"uploads/{filename}"
         password = request.form.get("password", "")
         if password:
             user.set_password(password)

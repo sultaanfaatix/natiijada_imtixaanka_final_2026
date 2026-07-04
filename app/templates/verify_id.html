@@ -2,32 +2,51 @@
 {% block title %}{{ 'Verified ID Card' if verified else 'Invalid ID Card' }}{% endblock %}
 {% block body_class %}public-body{% endblock %}
 {% block content %}
-<main class="public-hero lock-screen">
-  <section class="locked-card glass-card">
-    <div class="lock-emblem">
-      <i class="fa-solid {{ 'fa-id-card-clip' if verified else 'fa-circle-xmark' }}"></i>
-    </div>
+<main class="public-hero verify-page">
+  <section class="verify-card glass-card">
+    <header class="verify-header">
+      <div class="verify-school">
+        <span class="verify-logo">
+          {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+        </span>
+        <div>
+          <span class="eyebrow"><i class="fa-solid fa-shield-check"></i> {{ 'Verified Student ID' if verified else 'Invalid ID Card' }}</span>
+          <h1>{{ settings.school_name }}</h1>
+          <p>{{ settings.school_motto }}</p>
+        </div>
+      </div>
+      <span class="verify-state {{ 'ok' if verified else 'bad' }}"><i class="fa-solid {{ 'fa-circle-check' if verified else 'fa-circle-xmark' }}"></i>{{ display_status if verified else 'Invalid' }}</span>
+    </header>
+
     {% if verified %}
-      {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo" style="max-height:80px">{% endif %}
-      <span class="eyebrow"><i class="fa-solid fa-shield-check"></i> Verified Student ID</span>
-      <h1>{{ settings.school_name }}</h1>
-      <div class="student-avatar" style="margin:0 auto 16px">
-        {% if issue.student.photo_path %}<img src="{{ url_for('static', filename=issue.student.photo_path) }}" alt="{{ issue.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
-      </div>
-      <div class="lock-details">
-        <div><i class="fa-solid fa-user-graduate"></i><span>Student Name</span><strong>{{ issue.student.full_name }}</strong></div>
-        <div><i class="fa-solid fa-id-card"></i><span>Student ID</span><strong>{{ issue.student.student_code }}</strong></div>
-        <div><i class="fa-solid fa-people-roof"></i><span>Current Class</span><strong>{{ issue.student.school_class.name }}</strong></div>
-        <div><i class="fa-solid fa-calendar-days"></i><span>Academic Year</span><strong>{{ issue.academic_year.name }}</strong></div>
-        <div><i class="fa-solid fa-calendar-check"></i><span>Expiry Date</span><strong>{{ issue.expiry_date or '-' }}</strong></div>
-        <div><i class="fa-solid fa-circle-check"></i><span>Status</span><strong>{{ display_status }}</strong></div>
-      </div>
+      <section class="verify-body">
+        <div class="verify-photo">
+          {% if issue.student.photo_path %}<img src="{{ url_for('static', filename=issue.student.photo_path) }}" alt="{{ issue.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
+        </div>
+        <div class="verify-details">
+          <h2>{{ issue.student.full_name }}</h2>
+          <div class="lock-details verify-grid">
+            <div><i class="fa-solid fa-id-card"></i><span>Student ID</span><strong>{{ issue.student.student_code }}</strong></div>
+            <div><i class="fa-solid fa-people-roof"></i><span>Current Class</span><strong>{{ issue.student.school_class.name }}</strong></div>
+            <div><i class="fa-solid fa-calendar-days"></i><span>Academic Year</span><strong>{{ issue.academic_year.name }}</strong></div>
+            <div><i class="fa-solid fa-calendar-check"></i><span>Expiry Date</span><strong>{{ issue.expiry_date or '-' }}</strong></div>
+            <div><i class="fa-solid fa-user-check"></i><span>Status</span><strong>{{ display_status }}</strong></div>
+            <div><i class="fa-solid fa-school"></i><span>Verified By</span><strong>{{ settings.school_name }}</strong></div>
+          </div>
+        </div>
+      </section>
     {% else %}
-      <span class="eyebrow warning"><i class="fa-solid fa-triangle-exclamation"></i> Invalid ID Card</span>
-      <h1>Invalid ID Card</h1>
-      <p>This verification link is invalid or no longer recognized by the system.</p>
+      <section class="verify-invalid">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <h2>Invalid ID Card</h2>
+        <p>This verification link is invalid or no longer recognized by the system.</p>
+      </section>
     {% endif %}
-    <a class="btn premium" href="{{ url_for('public.portal') }}"><i class="fa-solid fa-arrow-left"></i> Back to Portal</a>
+
+    <footer class="verify-footer">
+      <span>{{ settings.school_address }} | {{ settings.school_phone }}</span>
+      <a class="btn premium" href="{{ url_for('public.portal') }}"><i class="fa-solid fa-arrow-left"></i> Back to Portal</a>
+    </footer>
   </section>
 </main>
 {% endblock %}

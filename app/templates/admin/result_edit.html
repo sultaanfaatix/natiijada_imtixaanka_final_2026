@@ -1,0 +1,42 @@
+{% extends "admin/base.html" %}
+{% block page_title %}Edit Result{% endblock %}
+{% block admin_content %}
+<section class="panel">
+  <div class="section-heading"><span><i class="fa-solid fa-pen-to-square"></i></span><div><h2>{{ student.full_name }}</h2><p>{{ student.student_code }} | {{ student.mother_name }} | {{ student.school_class.name }} | {{ exam.name }}</p></div></div>
+  <div class="result-edit-summary">
+    <div><span>Total</span><strong>{{ payload.total }} / {{ payload.max_total }}</strong></div>
+    <div><span>Average</span><strong>{{ payload.average }}%</strong></div>
+    <div><span>Grade</span><strong>{{ payload.overall_grade.grade }}</strong></div>
+    <div><span>Status</span><strong>{{ payload.status }}</strong></div>
+  </div>
+</section>
+
+<form method="post" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="section-heading"><span><i class="fa-solid fa-list-check"></i></span><div><h2>Subject Scores</h2><p>Edit marks, optional grade override, optional comment, and publish status. Totals and averages remain automatic.</p></div></div>
+  <div class="responsive-table">
+    <table class="premium-table">
+      <thead><tr><th>Subject</th><th>Score</th><th>Auto Grade</th><th>Grade Override</th><th>Comment</th><th>Published</th></tr></thead>
+      <tbody>
+      {% for subject in subjects %}
+        {% set row = existing.get(subject.id) %}
+        {% set percentage = ((row.score / subject.max_score) * 100) if row else 0 %}
+        <tr>
+          <td data-label="Subject">{{ subject.name }}<small>Max {{ subject.max_score }}</small></td>
+          <td data-label="Score"><input type="number" step="0.01" min="0" max="{{ subject.max_score }}" name="score_{{ subject.id }}" value="{{ row.score if row else '' }}"></td>
+          <td data-label="Auto Grade">{{ subject_previews[subject.id].grade if row else '-' }}</td>
+          <td data-label="Grade Override"><input name="grade_{{ subject.id }}" value="{{ row.grade_override if row else '' }}" placeholder="Optional"></td>
+          <td data-label="Comment"><input name="comment_{{ subject.id }}" value="{{ row.comment if row else '' }}" placeholder="Optional subject comment"></td>
+          <td data-label="Published"><label class="check"><input type="checkbox" name="published_{{ subject.id }}" {% if row is none or row.is_published %}checked{% endif %}> Visible</label></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="toolbar">
+    <button class="premium"><i class="fa-solid fa-floppy-disk"></i> Save Result Changes</button>
+    <a class="btn ghost" href="{{ url_for('admin.admin_print_report', student_id=student.id, exam_id=exam.id) }}" target="_blank"><i class="fa-solid fa-print"></i> Print Report</a>
+    <a class="btn ghost" href="{{ url_for('admin.results') }}"><i class="fa-solid fa-arrow-left"></i> Back</a>
+  </div>
+</form>
+{% endblock %}

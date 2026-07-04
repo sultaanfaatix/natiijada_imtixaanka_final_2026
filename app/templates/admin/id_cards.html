@@ -15,10 +15,10 @@
     <label><i class="fa-solid fa-crop-simple"></i> Rounded Corners<select name="id_card_rounded_corners"><option value="on" {% if settings.id_card_rounded_corners=='on' %}selected{% endif %}>ON</option><option value="off" {% if settings.id_card_rounded_corners!='on' %}selected{% endif %}>OFF</option></select></label>
     <label><i class="fa-solid fa-barcode"></i> Barcode<select name="id_card_show_barcode"><option value="off" {% if settings.id_card_show_barcode!='on' %}selected{% endif %}>OFF</option><option value="on" {% if settings.id_card_show_barcode=='on' %}selected{% endif %}>ON</option></select></label>
     <label><i class="fa-solid fa-calendar-plus"></i> Valid Months<input type="number" min="1" name="id_card_issue_months" value="{{ settings.id_card_issue_months }}"></label>
-    <label class="span-2"><i class="fa-solid fa-signature"></i> Office Examination Signature<input name="id_card_office_signature" value="{{ settings.id_card_office_signature }}"></label>
+    <label class="span-2"><i class="fa-solid fa-file-circle-check"></i> Exam Type<input name="id_card_exam_type" value="{{ settings.id_card_exam_type }}"></label>
     <label><i class="fa-solid fa-stamp"></i> School Stamp<input name="id_card_stamp_text" value="{{ settings.id_card_stamp_text }}"></label>
     <label><i class="fa-solid fa-water"></i> Watermark<input name="id_card_watermark" value="{{ settings.id_card_watermark }}"></label>
-    <label class="wide"><i class="fa-solid fa-shoe-prints"></i> Footer<input name="id_card_footer" value="{{ settings.id_card_footer }}"></label>
+    <label class="wide"><i class="fa-solid fa-phone-volume"></i> Found Card Contact Text<input name="id_card_found_contact_text" value="{{ settings.id_card_found_contact_text }}"></label>
     <button class="premium"><i class="fa-solid fa-floppy-disk"></i> Save Designer</button>
   </form>
 </section>

@@ -3,7 +3,7 @@ import calendar
 from datetime import date
 from tempfile import NamedTemporaryFile
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
 from flask_login import login_required
 from sqlalchemy import or_
 
@@ -30,7 +30,7 @@ def dashboard():
             "id_card_size", "id_card_orientation", "id_card_background", "id_card_primary_color",
             "id_card_accent_color", "id_card_font_family", "id_card_border_style", "id_card_rounded_corners",
             "id_card_show_barcode", "id_card_footer", "id_card_watermark", "id_card_issue_months",
-            "id_card_office_signature", "id_card_stamp_text",
+            "id_card_office_signature", "id_card_stamp_text", "id_card_found_contact_text", "id_card_exam_type",
         ]
         for key in editable_keys:
             setting = db.session.get(Setting, key) or Setting(key=key)
@@ -103,36 +103,131 @@ def print_cards():
 @id_cards_bp.route("/export.pdf")
 def export_pdf():
     issues = selected_issues()
+    from io import BytesIO
+    import qrcode
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
 
     tmp = NamedTemporaryFile(delete=False, suffix=".pdf")
-    doc = SimpleDocTemplate(tmp.name, pagesize=A4, leftMargin=24, rightMargin=24, topMargin=24, bottomMargin=24)
-    styles = getSampleStyleSheet()
-    data = [["Student ID", "Name", "Class", "Year", "Issue Date", "Expiry", "Status"]]
-    for issue in issues:
-        data.append([
-            issue.student.student_code,
-            issue.student.full_name,
-            issue.student.school_class.name,
-            issue.academic_year.name,
-            issue.issue_date.isoformat(),
-            issue.expiry_date.isoformat() if issue.expiry_date else "",
-            issue.status,
-        ])
-    table = Table(data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#002060")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-    ]))
-    doc.build([Paragraph("Student ID Cards Export", styles["Title"]), Spacer(1, 12), table])
+    pdf = canvas.Canvas(tmp.name, pagesize=A4)
+    settings = get_settings()
+    page_w, page_h = A4
+    margin = 8 * mm
+    gap = 4 * mm
+    slot_w = (page_w - (2 * margin) - gap) / 2
+    slot_h = (page_h - (2 * margin) - (2 * gap)) / 3
+    primary = colors.HexColor(settings.get("id_card_primary_color") or "#002060")
+    accent = colors.HexColor(settings.get("id_card_accent_color") or "#007bff")
+
+    for index, issue in enumerate(issues):
+        slot = index % 6
+        if index and slot == 0:
+            pdf.showPage()
+        col = slot % 2
+        row = slot // 2
+        x = margin + col * (slot_w + gap)
+        y = page_h - margin - (row + 1) * slot_h - row * gap
+        draw_id_card_pdf(pdf, issue, settings, x, y, slot_w, slot_h, primary, accent, qrcode, ImageReader, BytesIO)
+    if not issues:
+        pdf.drawString(margin, page_h - margin, "No ID cards selected.")
+    pdf.save()
     audit("ID Card Operations", "Exported ID cards PDF")
     db.session.commit()
     return send_file(tmp.name, as_attachment=True, download_name="student_id_cards.pdf")
+
+
+def draw_id_card_pdf(pdf, issue, settings, x, y, w, h, primary, accent, qrcode, ImageReader, BytesIO):
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+
+    pdf.setDash(3, 2)
+    pdf.setStrokeColor(colors.HexColor("#94a3b8"))
+    pdf.rect(x, y, w, h, stroke=1, fill=0)
+    pdf.setDash()
+    pad = 2.5 * mm
+    card_x, card_y = x + pad, y + pad
+    card_w, card_h = w - 2 * pad, h - 2 * pad
+    pdf.setStrokeColor(primary)
+    pdf.setFillColor(colors.white)
+    pdf.roundRect(card_x, card_y, card_w, card_h, 8, stroke=1, fill=1)
+
+    header_h = 17 * mm
+    pdf.setFillColor(primary)
+    pdf.roundRect(card_x, card_y + card_h - header_h, card_w, header_h, 8, stroke=0, fill=1)
+    pdf.setFillColor(colors.white)
+    logo_x, logo_y = card_x + 3 * mm, card_y + card_h - header_h + 3 * mm
+    pdf.roundRect(logo_x, logo_y, 11 * mm, 11 * mm, 4, stroke=0, fill=1)
+    pdf.setFillColor(primary)
+    pdf.setFont("Helvetica-Bold", 7)
+    pdf.drawCentredString(logo_x + 5.5 * mm, logo_y + 4.6 * mm, "LOGO")
+
+    pdf.setFillColor(colors.white)
+    pdf.setFont("Helvetica-Bold", 8.5)
+    pdf.drawString(card_x + 17 * mm, card_y + card_h - 7 * mm, (settings.get("school_name") or "School")[:34])
+    pdf.setFont("Helvetica", 6.5)
+    pdf.drawString(card_x + 17 * mm, card_y + card_h - 12 * mm, (settings.get("id_card_exam_type") or "Examination Office")[:34])
+    pdf.setFont("Helvetica-Bold", 6.5)
+    pdf.drawRightString(card_x + card_w - 3 * mm, card_y + card_h - 8 * mm, issue.academic_year.name[:14])
+
+    body_y = card_y + 13 * mm
+    photo_x = card_x + 4 * mm
+    photo_y = body_y + 10 * mm
+    pdf.setStrokeColor(accent)
+    pdf.setFillColor(colors.HexColor("#eef6ff"))
+    pdf.roundRect(photo_x, photo_y, 24 * mm, 29 * mm, 6, stroke=1, fill=1)
+    if issue.student.photo_path:
+        image_path = current_app.static_folder + "/" + issue.student.photo_path.replace("\\", "/")
+        try:
+            pdf.drawImage(image_path, photo_x + 1, photo_y + 1, 24 * mm - 2, 29 * mm - 2, preserveAspectRatio=True, mask="auto")
+        except Exception:
+            pass
+
+    info_x = photo_x + 28 * mm
+    pdf.setFillColor(primary)
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(info_x, body_y + 33 * mm, issue.student.full_name[:32])
+    pdf.setFont("Helvetica", 6)
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.drawString(info_x, body_y + 30 * mm, "STUDENT NAME")
+    pdf.setFillColor(primary)
+    pdf.setFont("Helvetica-Bold", 7)
+    pdf.drawString(info_x, body_y + 23 * mm, f"ID: {issue.student.student_code}")
+    pdf.drawString(info_x + 30 * mm, body_y + 23 * mm, f"Class: {issue.student.school_class.name[:12]}")
+    pdf.drawString(info_x, body_y + 15 * mm, f"Issue: {issue.issue_date}")
+    pdf.drawString(info_x + 30 * mm, body_y + 15 * mm, f"Expiry: {issue.expiry_date or ''}")
+
+    qr = qrcode.make(id_card_qr_payload(issue)["url"])
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    buffer.seek(0)
+    qr_size = 18 * mm
+    qr_x = card_x + card_w - qr_size - 5 * mm
+    qr_y = body_y + 1 * mm
+    pdf.setFillColor(colors.HexColor("#f8fbff"))
+    pdf.roundRect(qr_x - 2 * mm, qr_y - 2 * mm, qr_size + 4 * mm, qr_size + 5 * mm, 7, stroke=1, fill=1)
+    pdf.drawImage(ImageReader(buffer), qr_x, qr_y, qr_size, qr_size)
+    pdf.setFont("Helvetica-Bold", 5.5)
+    pdf.setFillColor(primary)
+    pdf.drawCentredString(qr_x + qr_size / 2, qr_y - 1 * mm, "SCAN TO VERIFY")
+
+    if settings.get("id_card_show_barcode") == "on":
+        pdf.setFillColor(colors.black)
+        bx = info_x
+        by = body_y + 6 * mm
+        for n, ch in enumerate(issue.student.student_code[:22]):
+            width = 0.4 * mm if ord(ch) % 2 else 0.8 * mm
+            pdf.rect(bx + n * 1.15 * mm, by, width, 4 * mm, fill=1, stroke=0)
+
+    footer_h = 10 * mm
+    pdf.setFillColor(primary)
+    pdf.rect(card_x, card_y, card_w, footer_h, stroke=0, fill=1)
+    pdf.setFillColor(colors.white)
+    pdf.setFont("Helvetica", 6)
+    contact = f"{settings.get('id_card_found_contact_text')} {issue.student.phone or settings.get('school_phone')}"
+    pdf.drawCentredString(card_x + card_w / 2, card_y + 3.6 * mm, contact[:95])
 
 
 def get_or_create_issue(student):

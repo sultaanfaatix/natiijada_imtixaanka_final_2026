@@ -2,16 +2,24 @@
 {% block body_class %}admin-body {{ 'theme-dark' if ui_settings.dashboard_theme == 'dark' else 'theme-light' }}{% endblock %}
 {% block content %}
 <aside class="sidebar">
-  <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
-    <span class="brand-logo">
-      {% if ui_settings.admin_logo_path or ui_settings.logo_path %}
-        <img src="{{ url_for('static', filename=ui_settings.admin_logo_path or ui_settings.logo_path) }}" alt="Admin logo">
-      {% else %}
-        <i class="fa-solid fa-graduation-cap"></i>
-      {% endif %}
-    </span>
-    <span><strong>{{ ui_settings.dashboard_title }}</strong><small>{{ ui_settings.school_name }}</small></span>
-  </a>
+  <div class="sidebar-fixed">
+    <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
+      <span class="brand-logo">
+        {% if ui_settings.admin_logo_path or ui_settings.logo_path %}
+          <img src="{{ url_for('static', filename=ui_settings.admin_logo_path or ui_settings.logo_path) }}" alt="Admin logo">
+        {% else %}
+          <i class="fa-solid fa-graduation-cap"></i>
+        {% endif %}
+      </span>
+      <span><strong>{{ ui_settings.dashboard_title }}</strong><small>Administration</small></span>
+    </a>
+    <div class="admin-profile">
+      <span class="admin-avatar">
+        {% if current_user.photo_path %}<img src="{{ url_for('static', filename=current_user.photo_path) }}" alt="{{ current_user.full_name }} photo">{% else %}<i class="fa-solid fa-user-shield"></i>{% endif %}
+      </span>
+      <span><strong>{{ current_user.full_name }}</strong><small>{{ current_user.role|replace('_', ' ')|title }}</small></span>
+    </div>
+  </div>
   <nav class="side-nav">
     {% if can('dashboard') %}<a href="{{ url_for('admin.dashboard') }}"><i class="fa-solid fa-chart-pie"></i><span>{{ _('Dashboard') }}</span></a>{% endif %}
     {% if can('students') %}<a href="{{ url_for('admin.students') }}"><i class="fa-solid fa-user-graduate"></i><span>{{ _('Students') }}</span></a>{% endif %}

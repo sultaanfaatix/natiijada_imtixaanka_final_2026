@@ -1,12 +1,13 @@
 {% extends "admin/base.html" %}
 {% block page_title %}{{ _('Users') }}{% endblock %}
 {% block admin_content %}
-<form method="post" class="panel form-grid compact premium-form">
+<form method="post" enctype="multipart/form-data" class="panel form-grid compact premium-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="section-heading wide"><span><i class="fa-solid fa-users-gear"></i></span><div><h2>Add Admin</h2><p>Create administrators and assign individual permissions.</p></div></div>
   <label><i class="fa-solid fa-user"></i> Username<input name="username" required></label>
   <label><i class="fa-solid fa-id-badge"></i> Full Name<input name="full_name" required></label>
   <label><i class="fa-solid fa-shield"></i> Role<select name="role"><option>admin</option><option>staff</option><option>super_admin</option></select></label>
+  <label><i class="fa-solid fa-image"></i> Admin Photo<input name="photo" type="file" accept="image/*"></label>
   <label><i class="fa-solid fa-key"></i> Password<input name="password" type="password" required></label>
   <label class="check"><input type="checkbox" name="is_active" checked> <i class="fa-solid fa-circle-check"></i> Active</label>
   <div class="wide permission-grid">
