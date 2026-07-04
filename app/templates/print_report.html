@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Report Card - {{ result.student.student_code }}</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+</head>
+<body onload="window.print()">
+  <article class="sheet">
+    <header class="print-header">
+      <div class="print-logo">
+        {% if result.settings.logo_path %}<img src="{{ url_for('static', filename=result.settings.logo_path) }}" alt="Logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+      </div>
+      <div class="print-brand">
+        <h1>{{ result.settings.school_name }}</h1>
+        <p>{{ result.settings.school_motto }}</p>
+        <span><i class="fa-solid fa-location-dot"></i> {{ result.settings.school_address }} &nbsp; <i class="fa-solid fa-phone"></i> {{ result.settings.school_phone }} &nbsp; <i class="fa-solid fa-envelope"></i> {{ result.settings.school_email }}</span>
+      </div>
+      <div class="qr-box"><i class="fa-solid fa-qrcode"></i><small>Verify</small></div>
+    </header>
+
+    <section class="report-title">
+      <div><span>Official Report Card</span><h2>{{ result.exam.name if result.exam else "Exam Result" }}</h2></div>
+      <b>{{ result.student.academic_year.name }}</b>
+    </section>
+
+    <section class="student-strip">
+      <div class="student-photo">{% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="Student photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}</div>
+      <div class="wide"><span>Student Name</span><b>{{ result.student.full_name }}</b></div>
+      <div class="wide"><span>Mother Name</span><b>{{ result.student.mother_name }}</b></div>
+      <div><span>Student ID</span><b>{{ result.student.student_code }}</b></div>
+      <div><span>Class</span><b>{{ result.student.school_class.name }}</b></div>
+      <div><span>Status</span><b>{{ result.status }}</b></div>
+    </section>
+
+    <table class="print-table">
+      <thead><tr><th>#</th><th>Subject</th><th>Score</th><th>Grade</th><th>Comment</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for row in result.subjects %}
+          <tr><td>{{ loop.index }}</td><td>{{ row.subject }}</td><td>{{ row.score }} / {{ row.max_score }}</td><td>{{ row.grade.grade }}</td><td>{{ row.grade.comment }}</td><td>{{ row.status }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <section class="print-summary">
+      <div><i class="fa-solid fa-calculator"></i><span>Total</span><b>{{ result.total }} / {{ result.max_total }}</b></div>
+      <div><i class="fa-solid fa-percent"></i><span>Average</span><b>{{ result.average }}%</b></div>
+      <div><i class="fa-solid fa-medal"></i><span>Overall Grade</span><b>{{ result.overall_grade.grade }}</b></div>
+      <div><i class="fa-solid fa-circle-check"></i><span>Decision</span><b>{{ result.status }}</b></div>
+    </section>
+
+    <section class="print-remark">
+      <i class="fa-solid fa-comment-dots"></i>
+      <p>{{ result.comment }}</p>
+    </section>
+
+    <section class="signatures">
+      <div>
+        {% if result.settings.principal_signature_path %}<img src="{{ url_for('static', filename=result.settings.principal_signature_path) }}" alt="Principal signature">{% endif %}
+        <b>{{ result.settings.principal_name }}</b><span>Principal</span>
+      </div>
+      <div>
+        {% if result.settings.vice_principal_signature_path %}<img src="{{ url_for('static', filename=result.settings.vice_principal_signature_path) }}" alt="Vice principal signature">{% endif %}
+        <b>Vice Principal</b><span>Academic Office</span>
+      </div>
+      <div>
+        {% if result.settings.exam_officer_signature_path %}<img src="{{ url_for('static', filename=result.settings.exam_officer_signature_path) }}" alt="Exam officer signature">{% endif %}
+        <b>Examination Officer</b><span>Results Office</span>
+      </div>
+    </section>
+
+    <footer>
+      <span>{{ result.settings.school_footer }}</span>
+      <span>{{ result.settings.school_website }}</span>
+    </footer>
+  </article>
+</body>
+</html>

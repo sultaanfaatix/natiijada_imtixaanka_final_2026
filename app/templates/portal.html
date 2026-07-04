@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ settings.school_name }} Result Portal{% endblock %}
+{% block body_class %}public-body{% endblock %}
+{% block content %}
+<main class="public-hero">
+  <nav class="public-nav glass-card">
+    <a class="portal-brand" href="{{ url_for('public.portal') }}">
+      <span class="brand-logo">
+        {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+      </span>
+      <span><strong>{{ settings.school_name }}</strong><small>{{ settings.school_motto }}</small></span>
+    </a>
+    <div class="nav-actions">
+      <select class="language-switcher" aria-label="Language">
+        <option value="so" {% if settings.default_language == 'so' %}selected{% endif %}>Somali</option>
+        <option value="en" {% if settings.default_language == 'en' %}selected{% endif %}>English</option>
+        <option value="ar" {% if settings.default_language == 'ar' %}selected{% endif %}>العربية</option>
+        <option value="tr" {% if settings.default_language == 'tr' %}selected{% endif %}>Turkish</option>
+      </select>
+      <a class="icon-btn" href="{{ settings.call_url or '#' }}" aria-label="Call center"><i class="fa-solid fa-headset"></i></a>
+    </div>
+  </nav>
+
+  <section class="portal-layout">
+    <div class="hero-copy">
+      <span class="eyebrow"><i class="fa-solid fa-graduation-cap"></i> Online Exam Result Management</span>
+      <h1>{{ settings.school_name }} Results Portal</h1>
+      <p>{{ settings.dashboard_subtitle }}</p>
+      <div class="hero-metrics">
+        <div><i class="fa-solid fa-lock"></i><strong>Secure</strong><span>Student ID lookup</span></div>
+        <div><i class="fa-solid fa-print"></i><strong>A4</strong><span>One-page report</span></div>
+        <div><i class="fa-solid fa-bolt"></i><strong>Live</strong><span>Database updates</span></div>
+      </div>
+    </div>
+
+    <section class="search-card glass-card">
+      <div class="card-heading">
+        <span class="icon-pill"><i class="fa-solid fa-magnifying-glass"></i></span>
+        <div><h2>Find Student Result</h2><p>Enter the official Student ID to view the published report.</p></div>
+      </div>
+      <form method="post" action="{{ url_for('public.result') }}" class="search-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="student_id"><i class="fa-solid fa-id-card"></i> Student ID</label>
+        <div class="search-row">
+          <input id="student_id" name="student_id" required placeholder="Example: 3007">
+          <button type="submit"><i class="fa-solid fa-search"></i> Search</button>
+        </div>
+      </form>
+      {% if error %}<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i>{{ error }}</div>{% endif %}
+    </section>
+  </section>
+
+  {% if result %}
+    <section class="premium-result" data-result-status="{{ result.status }}">
+      <div class="celebration {{ 'success' if result.status == 'Gudbay' else 'support' }}">
+        <i class="fa-solid {{ 'fa-trophy' if result.status == 'Gudbay' else 'fa-seedling' }}"></i>
+        <div><strong>{{ 'Congratulations!' if result.status == 'Gudbay' else 'Keep Growing' }}</strong><span>{{ result.comment }}</span></div>
+      </div>
+      <div class="profile-panel glass-card">
+        <div class="student-avatar">
+          {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
+        </div>
+        <div class="student-title">
+          <span>{{ result.exam.name if result.exam else "Published Exam" }}</span>
+          <h2>{{ result.student.full_name }}</h2>
+          <p><i class="fa-solid fa-user"></i> Mother: {{ result.student.mother_name }}</p>
+        </div>
+        <a class="btn premium" href="{{ url_for('public.print_report', student_code=result.student.student_code) }}" target="_blank"><i class="fa-solid fa-print"></i> Print Report</a>
+      </div>
+
+      <div class="result-info-grid">
+        <div class="info-tile wide"><i class="fa-solid fa-user-graduate"></i><span>Student Name</span><strong>{{ result.student.full_name }}</strong></div>
+        <div class="info-tile wide"><i class="fa-solid fa-person-dress"></i><span>Mother Name</span><strong>{{ result.student.mother_name }}</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-id-badge"></i><span>Student ID</span><strong>{{ result.student.student_code }}</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-people-roof"></i><span>Class</span><strong>{{ result.student.school_class.name }}</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-calendar-days"></i><span>Academic Year</span><strong>{{ result.student.academic_year.name }}</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-percent"></i><span>Average</span><strong>{{ result.average }}%</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-calculator"></i><span>Total Marks</span><strong>{{ result.total }} / {{ result.max_total }}</strong></div>
+        <div class="info-tile"><i class="fa-solid fa-medal"></i><span>Grade</span><strong>{{ result.overall_grade.grade }}</strong></div>
+      </div>
+
+      <div class="decision-box {{ 'pass-box' if result.status == 'Gudbay' else 'fail-box' }}">
+        <i class="fa-solid {{ 'fa-circle-check' if result.status == 'Gudbay' else 'fa-hands-helping' }}"></i>
+        <div><span>Final Decision</span><strong>{{ result.status }}</strong><p>{{ result.comment }}</p></div>
+      </div>
+
+      <section class="result-table-card glass-card">
+        <div class="section-heading"><span><i class="fa-solid fa-chart-simple"></i></span><div><h2>Subject Performance</h2><p>Scores, grades, remarks, and subject status.</p></div></div>
+        <div class="responsive-table">
+          <table class="premium-table">
+            <thead><tr><th>Subject</th><th>Score</th><th>Grade</th><th>Comment</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for row in result.subjects %}
+                <tr>
+                  <td data-label="Subject"><span class="subject-icon"><i class="fa-solid fa-book-open"></i></span>{{ row.subject }}</td>
+                  <td data-label="Score"><strong>{{ row.score }}</strong> / {{ row.max_score }}</td>
+                  <td data-label="Grade"><span class="grade-badge">{{ row.grade.grade }}</span></td>
+                  <td data-label="Comment">{{ row.grade.comment }}</td>
+                  <td data-label="Status"><span class="status-pill {{ 'ok' if row.status == 'Pass' else 'warn' }}"><i class="fa-solid {{ 'fa-check' if row.status == 'Pass' else 'fa-arrow-trend-up' }}"></i>{{ row.status }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  {% endif %}
+
+  <footer class="public-footer glass-card">
+    <div><strong>{{ settings.school_name }}</strong><span>{{ settings.school_address }} | {{ settings.school_phone }} | {{ settings.school_email }}</span></div>
+    <div class="social-links">
+      <a href="{{ settings.whatsapp_url or '#' }}" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+      <a href="{{ settings.facebook_url or '#' }}" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+      <a href="{{ settings.instagram_url or '#' }}" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+      <a href="{{ settings.telegram_url or '#' }}" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
+      <a href="{{ settings.twitter_url or '#' }}" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+      <a href="{{ settings.email_url or '#' }}" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
+      <a href="{{ settings.call_url or '#' }}" aria-label="Call"><i class="fa-solid fa-phone"></i></a>
+      <a href="{{ settings.maps_url or '#' }}" aria-label="Map"><i class="fa-solid fa-map-location-dot"></i></a>
+    </div>
+  </footer>
+</main>
+{% endblock %}

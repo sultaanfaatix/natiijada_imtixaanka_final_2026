@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Result Temporarily Withheld{% endblock %}
+{% block body_class %}public-body{% endblock %}
+{% block content %}
+<main class="public-hero lock-screen">
+  <section class="locked-card glass-card">
+    <div class="lock-emblem"><i class="fa-solid fa-lock"></i></div>
+    <span class="eyebrow warning"><i class="fa-solid fa-triangle-exclamation"></i> Result Lock Notice</span>
+    <h1>Your examination result has been temporarily withheld.</h1>
+    <p>Please visit the Finance Office to complete the required clearance before your result can be released.</p>
+    <div class="lock-details">
+      <div><i class="fa-solid fa-id-card"></i><span>Student ID</span><strong>{{ student.student_code }}</strong></div>
+      <div><i class="fa-solid fa-user-graduate"></i><span>Student</span><strong>{{ student.full_name }}</strong></div>
+      <div><i class="fa-solid fa-clipboard-list"></i><span>Reason</span><strong>{{ student.lock_reason or "Clearance required" }}</strong></div>
+    </div>
+    <a class="btn premium" href="{{ url_for('public.portal') }}"><i class="fa-solid fa-arrow-left"></i> Back to Portal</a>
+  </section>
+</main>
+{% endblock %}

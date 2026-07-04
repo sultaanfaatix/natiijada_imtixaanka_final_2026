@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block body_class %}admin-body {{ 'theme-dark' if ui_settings.dashboard_theme == 'dark' else 'theme-light' }}{% endblock %}
+{% block content %}
+<aside class="sidebar">
+  <a class="admin-brand" href="{{ url_for('admin.dashboard') }}">
+    <span class="brand-logo">
+      {% if ui_settings.admin_logo_path or ui_settings.logo_path %}
+        <img src="{{ url_for('static', filename=ui_settings.admin_logo_path or ui_settings.logo_path) }}" alt="Admin logo">
+      {% else %}
+        <i class="fa-solid fa-graduation-cap"></i>
+      {% endif %}
+    </span>
+    <span><strong>{{ ui_settings.dashboard_title }}</strong><small>{{ ui_settings.school_name }}</small></span>
+  </a>
+  <nav class="side-nav">
+    <a href="{{ url_for('admin.dashboard') }}"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+    <a href="{{ url_for('admin.students') }}"><i class="fa-solid fa-user-graduate"></i><span>Students</span></a>
+    <a href="{{ url_for('admin.results') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>Results</span></a>
+    <a href="{{ url_for('admin.classes') }}"><i class="fa-solid fa-people-roof"></i><span>Classes</span></a>
+    <a href="{{ url_for('admin.subjects') }}"><i class="fa-solid fa-book-open"></i><span>Subjects</span></a>
+    <a href="{{ url_for('admin.exams') }}"><i class="fa-solid fa-file-circle-check"></i><span>Exams</span></a>
+    <a href="{{ url_for('admin.academic_years') }}"><i class="fa-solid fa-calendar-days"></i><span>Academic Year</span></a>
+    {% if current_user.can_manage_users() %}<a href="{{ url_for('admin.users') }}"><i class="fa-solid fa-users-gear"></i><span>Users</span></a>{% endif %}
+    <a href="{{ url_for('admin.settings') }}"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
+  </nav>
+  <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+  </form>
+</aside>
+<main class="admin-main" {% if ui_settings.dashboard_background %}style="background-image: linear-gradient(135deg, #f6f9ffdd, #eef4ffef), url('{{ url_for('static', filename=ui_settings.dashboard_background) }}');"{% endif %}>
+  <header class="admin-top glass-card">
+    <div>
+      <span class="eyebrow"><i class="fa-solid fa-shield-halved"></i> Secure Admin Workspace</span>
+      <h1>{% block page_title %}{% endblock %}</h1>
+      <p>{{ ui_settings.dashboard_subtitle }}</p>
+    </div>
+    <div class="top-actions">
+      <select class="language-switcher" aria-label="Language">
+        <option>Somali</option><option selected>English</option><option>Arabic</option><option>Turkish</option>
+      </select>
+      <a class="icon-btn" href="{{ url_for('auth.change_password') }}" title="Change password"><i class="fa-solid fa-key"></i></a>
+      <a class="icon-btn" href="{{ url_for('public.portal') }}" title="Public portal" target="_blank"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+    </div>
+  </header>
+  {% block admin_content %}{% endblock %}
+</main>
+{% endblock %}

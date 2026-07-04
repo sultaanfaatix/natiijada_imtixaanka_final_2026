@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block admin_content %}
+<form method="post" enctype="multipart/form-data" class="settings-stack">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-school"></i></span><div><h2>School Branding</h2><p>These values update the public portal, admin area, and printable reports.</p></div></div>
+    <label><i class="fa-solid fa-signature"></i> School Name<input name="school_name" value="{{ settings.school_name }}"></label>
+    <label><i class="fa-solid fa-quote-left"></i> Motto<input name="school_motto" value="{{ settings.school_motto }}"></label>
+    <label><i class="fa-solid fa-location-dot"></i> Address<input name="school_address" value="{{ settings.school_address }}"></label>
+    <label><i class="fa-solid fa-phone"></i> Phone<input name="school_phone" value="{{ settings.school_phone }}"></label>
+    <label><i class="fa-solid fa-envelope"></i> Email<input name="school_email" value="{{ settings.school_email }}"></label>
+    <label><i class="fa-solid fa-globe"></i> Website<input name="school_website" value="{{ settings.school_website }}"></label>
+    <label><i class="fa-solid fa-user-tie"></i> Principal Name<input name="principal_name" value="{{ settings.principal_name }}"></label>
+    <label><i class="fa-solid fa-percent"></i> Passing Mark<input name="passing_mark" type="number" step="0.01" value="{{ settings.passing_mark }}"></label>
+    <label><i class="fa-solid fa-image"></i> School Logo<input name="logo" type="file" accept="image/*"></label>
+    <label class="wide"><i class="fa-solid fa-shoe-prints"></i> Footer Text<input name="school_footer" value="{{ settings.school_footer }}"></label>
+  </section>
+
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-gauge-high"></i></span><div><h2>Admin Dashboard</h2><p>Customize title, theme, colors, layout hints, and dashboard imagery.</p></div></div>
+    <label><i class="fa-solid fa-heading"></i> Dashboard Title<input name="dashboard_title" value="{{ settings.dashboard_title }}"></label>
+    <label><i class="fa-solid fa-align-left"></i> Dashboard Subtitle<input name="dashboard_subtitle" value="{{ settings.dashboard_subtitle }}"></label>
+    <label><i class="fa-solid fa-language"></i> Default Language<select name="default_language"><option value="so" {% if settings.default_language=='so' %}selected{% endif %}>Somali</option><option value="en" {% if settings.default_language=='en' %}selected{% endif %}>English</option><option value="ar" {% if settings.default_language=='ar' %}selected{% endif %}>Arabic</option><option value="tr" {% if settings.default_language=='tr' %}selected{% endif %}>Turkish</option></select></label>
+    <label><i class="fa-solid fa-moon"></i> Theme<select name="dashboard_theme"><option value="light" {% if settings.dashboard_theme=='light' %}selected{% endif %}>Light</option><option value="dark" {% if settings.dashboard_theme=='dark' %}selected{% endif %}>Dark</option></select></label>
+    <label><i class="fa-solid fa-palette"></i> Primary Color<input name="primary_color" type="color" value="{{ settings.primary_color }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Secondary Color<input name="secondary_color" type="color" value="{{ settings.secondary_color }}"></label>
+    <label><i class="fa-solid fa-bars-staggered"></i> Sidebar Color<input name="sidebar_color" type="color" value="{{ settings.sidebar_color }}"></label>
+    <label><i class="fa-solid fa-image"></i> Admin Logo<input name="admin_logo" type="file" accept="image/*"></label>
+    <label><i class="fa-solid fa-panorama"></i> Dashboard Background<input name="dashboard_background" type="file" accept="image/*"></label>
+    <label class="wide"><i class="fa-solid fa-table-cells-large"></i> Visible Cards<input name="visible_cards" value="{{ settings.visible_cards }}"></label>
+    <label class="wide"><i class="fa-solid fa-house-laptop"></i> Homepage Widgets<input name="homepage_widgets" value="{{ settings.homepage_widgets }}"></label>
+  </section>
+
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-share-nodes"></i></span><div><h2>Social & Contact Links</h2><p>Clickable public footer links for families and students.</p></div></div>
+    <label><i class="fa-brands fa-whatsapp"></i> WhatsApp<input name="whatsapp_url" value="{{ settings.whatsapp_url }}"></label>
+    <label><i class="fa-brands fa-facebook-f"></i> Facebook<input name="facebook_url" value="{{ settings.facebook_url }}"></label>
+    <label><i class="fa-brands fa-instagram"></i> Instagram<input name="instagram_url" value="{{ settings.instagram_url }}"></label>
+    <label><i class="fa-brands fa-telegram"></i> Telegram<input name="telegram_url" value="{{ settings.telegram_url }}"></label>
+    <label><i class="fa-brands fa-x-twitter"></i> X Twitter<input name="twitter_url" value="{{ settings.twitter_url }}"></label>
+    <label><i class="fa-solid fa-envelope"></i> Email Link<input name="email_url" value="{{ settings.email_url }}"></label>
+    <label><i class="fa-solid fa-headset"></i> Call Center<input name="call_url" value="{{ settings.call_url }}"></label>
+    <label><i class="fa-solid fa-map-location-dot"></i> Google Maps<input name="maps_url" value="{{ settings.maps_url }}"></label>
+  </section>
+
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-file-signature"></i></span><div><h2>Signature Management</h2><p>Uploaded signatures automatically appear on printable reports.</p></div></div>
+    <label><i class="fa-solid fa-pen-nib"></i> Principal Signature<input name="principal_signature" type="file" accept="image/*"></label>
+    <label><i class="fa-solid fa-pen-nib"></i> Vice Principal Signature<input name="vice_principal_signature" type="file" accept="image/*"></label>
+    <label><i class="fa-solid fa-pen-nib"></i> Examination Officer Signature<input name="exam_officer_signature" type="file" accept="image/*"></label>
+  </section>
+
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-ranking-star"></i></span><div><h2>Grade Scale</h2><p>Adjust score bands and comments used across reports.</p></div></div>
+    {% for s in scales %}
+      <label>{{ s.grade }} Min<input name="min_{{ s.id }}" value="{{ s.min_score }}"></label>
+      <label>{{ s.grade }} Max<input name="max_{{ s.id }}" value="{{ s.max_score }}"></label>
+      <label class="span-2">{{ s.grade }} Comment<input name="comment_{{ s.id }}" value="{{ s.comment }}"></label>
+    {% endfor %}
+  </section>
+  <button class="floating-save premium"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>
+</form>
+{% endblock %}

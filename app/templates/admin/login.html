@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body_class %}login-body{% endblock %}
+{% block content %}
+<main class="login-page">
+  <form method="post" class="login-card glass-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="login-mark"><i class="fa-solid fa-shield-halved"></i></div>
+    <span class="eyebrow"><i class="fa-solid fa-lock"></i> Secure Admin Access</span>
+    <h1>{{ ui_settings.dashboard_title }}</h1>
+    <p>{{ ui_settings.school_name }} administration workspace.</p>
+    <label><i class="fa-solid fa-user"></i> Username<input name="username" required autofocus></label>
+    <label><i class="fa-solid fa-key"></i> Password<input name="password" type="password" required></label>
+    <button type="submit" class="premium"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+  </form>
+</main>
+{% endblock %}

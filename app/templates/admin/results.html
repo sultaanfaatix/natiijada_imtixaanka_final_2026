@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block page_title %}Result Management{% endblock %}
+{% block admin_content %}
+<section class="panel">
+  <div class="section-heading"><span><i class="fa-solid fa-square-poll-vertical"></i></span><div><h2>Add or Edit Results</h2><p>Enter scores by subject, publish instantly, and print individual reports.</p></div></div>
+  <form method="post" action="{{ url_for('admin.save_results') }}" class="form-grid premium-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="span-2"><i class="fa-solid fa-user-graduate"></i> Student<select name="student_id" required>{% for s in students %}<option value="{{ s.id }}">{{ s.student_code }} - {{ s.full_name }}</option>{% endfor %}</select></label>
+    <label class="span-2"><i class="fa-solid fa-file-circle-check"></i> Exam<select name="exam_id" required>{% for e in exams %}<option value="{{ e.id }}">{{ e.name }} - {{ e.academic_year.name }}</option>{% endfor %}</select></label>
+    <div class="wide subject-grid">
+      {% for subject in subjects %}
+        <label><i class="fa-solid fa-book"></i> {{ subject.name }}<input type="number" step="0.01" min="0" max="{{ subject.max_score }}" name="subject_{{ subject.id }}" placeholder="0-{{ subject.max_score }}"></label>
+      {% else %}
+        <p class="empty-state"><i class="fa-solid fa-circle-info"></i>Add subjects before entering results.</p>
+      {% endfor %}
+    </div>
+    <label class="check"><input type="checkbox" name="is_published" checked> <i class="fa-solid fa-eye"></i> Publish these result rows</label>
+    <button class="premium"><i class="fa-solid fa-floppy-disk"></i> Save Results</button>
+  </form>
+</section>
+<section class="toolbar glass-card">
+  <form method="post" action="{{ url_for('admin.import_results') }}" enctype="multipart/form-data" class="inline-upload"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><select name="exam_id" required>{% for e in exams %}<option value="{{ e.id }}">{{ e.name }}</option>{% endfor %}</select><label class="file-pill"><i class="fa-solid fa-file-excel"></i><input type="file" name="file" accept=".xlsx" required></label><button><i class="fa-solid fa-upload"></i> Import Results</button></form>
+  <a class="btn ghost" href="{{ url_for('admin.export_results') }}"><i class="fa-solid fa-download"></i> Export Results</a>
+</section>
+<section class="panel">
+  <div class="section-heading"><span><i class="fa-solid fa-clock-rotate-left"></i></span><div><h2>Latest Results</h2><p>Review, print, or delete individual result rows.</p></div></div>
+  <div class="responsive-table">
+    <table class="premium-table"><thead><tr><th>Student</th><th>Exam</th><th>Subject</th><th>Score</th><th>Published</th><th>Actions</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.student.student_code }} - {{ r.student.full_name }}</td><td>{{ r.exam.name }}</td><td>{{ r.subject.name }}</td><td><strong>{{ r.score }}</strong></td><td><span class="status-pill {{ 'ok' if r.is_published else 'warn' }}"><i class="fa-solid {{ 'fa-eye' if r.is_published else 'fa-eye-slash' }}"></i>{{ "Yes" if r.is_published else "No" }}</span></td><td class="action-cell"><a class="icon-btn small" href="{{ url_for('admin.admin_print_report', student_id=r.student_id, exam_id=r.exam_id) }}" target="_blank" title="Print"><i class="fa-solid fa-print"></i></a><form method="post" action="{{ url_for('admin.delete_result', result_id=r.id) }}" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-btn small danger" title="Delete"><i class="fa-solid fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="6">No results yet.</td></tr>{% endfor %}</tbody></table>
+  </div>
+</section>
+{% endblock %}

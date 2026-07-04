@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% block page_title %}Student Management{% endblock %}
+{% block admin_content %}
+<section class="toolbar glass-card">
+  <form class="search-tools"><label><i class="fa-solid fa-search"></i><input name="q" value="{{ q }}" placeholder="Search by ID, name, or mother name"></label><button><i class="fa-solid fa-magnifying-glass"></i> Search</button></form>
+  <div class="toolbar-actions">
+    <a class="btn premium" href="{{ url_for('admin.student_form') }}"><i class="fa-solid fa-user-plus"></i> Add Student</a>
+    <a class="btn ghost" href="{{ url_for('admin.export_students') }}"><i class="fa-solid fa-file-export"></i> Export</a>
+    <form method="post" action="{{ url_for('admin.import_students') }}" enctype="multipart/form-data" class="inline-upload"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="file-pill"><i class="fa-solid fa-file-excel"></i><input type="file" name="file" accept=".xlsx" required></label><button><i class="fa-solid fa-upload"></i> Import</button></form>
+  </div>
+</section>
+<section class="panel">
+  <div class="section-heading"><span><i class="fa-solid fa-users"></i></span><div><h2>Student Directory</h2><p>Manage records, photos, result locks, and clearance status.</p></div></div>
+  <div class="responsive-table">
+    <table class="premium-table"><thead><tr><th>ID</th><th>Name</th><th>Mother</th><th>Class</th><th>Year</th><th>Result Lock</th><th>Actions</th></tr></thead>
+    <tbody>{% for s in students %}<tr><td><strong>{{ s.student_code }}</strong></td><td>{{ s.full_name }}</td><td>{{ s.mother_name }}</td><td>{{ s.school_class.name }}</td><td>{{ s.academic_year.name }}</td><td><span class="status-pill {{ 'warn' if s.is_result_locked else 'ok' }}"><i class="fa-solid {{ 'fa-lock' if s.is_result_locked else 'fa-unlock' }}"></i>{{ "Locked" if s.is_result_locked else "Open" }}</span></td><td class="action-cell"><a class="icon-btn small" href="{{ url_for('admin.student_form', student_id=s.id) }}" title="Edit"><i class="fa-solid fa-pen"></i></a><form method="post" action="{{ url_for('admin.toggle_student_lock', student_id=s.id) }}" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-btn small" title="Lock or unlock"><i class="fa-solid {{ 'fa-unlock' if s.is_result_locked else 'fa-lock' }}"></i></button></form><form method="post" action="{{ url_for('admin.delete_student', student_id=s.id) }}" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-btn small danger" title="Delete"><i class="fa-solid fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="7">No students found.</td></tr>{% endfor %}</tbody></table>
+  </div>
+</section>
+{% endblock %}
