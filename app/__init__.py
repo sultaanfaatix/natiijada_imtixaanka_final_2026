@@ -20,7 +20,8 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     login_manager.init_app(app)
 
-    from .models import User
+    from .models import User, Setting
+    from .services import DEFAULT_SETTINGS
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -36,7 +37,6 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_ui_settings():
         from .services import get_settings
-
         return {"ui_settings": get_settings()}
 
     from .routes_admin import admin_bp
@@ -48,6 +48,16 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp, url_prefix="/admin")
 
     register_cli(app)
+
+    # ✅ FIX: create tables + seed defaults (IMPORTANT)
+    with app.app_context():
+        db.create_all()
+
+        # seed default settings safely
+        if DEFAULT_SETTINGS:
+            for key, value in DEFAULT_SETTINGS.items():
+                db.session.merge(Setting(key=key, value=value))
+            db.session.commit()
 
     return app
 
@@ -62,8 +72,10 @@ def register_cli(app):
     def init_db_command():
         """Create tables and seed secure defaults."""
         db.create_all()
+
         for key, value in DEFAULT_SETTINGS.items():
             db.session.merge(Setting(key=key, value=value))
+
         if not GradeScale.query.first():
             for grade, min_score, max_score, comment in [
                 ("A+", 95, 100, "Heer Sare"),
@@ -79,12 +91,25 @@ def register_cli(app):
                 ("E", 20, 39.99, "Liita"),
                 ("F", 0, 19.99, "Liita"),
             ]:
-                db.session.add(GradeScale(grade=grade, min_score=min_score, max_score=max_score, comment=comment))
+                db.session.add(GradeScale(
+                    grade=grade,
+                    min_score=min_score,
+                    max_score=max_score,
+                    comment=comment
+                ))
+
         if not AcademicYear.query.first():
             db.session.add(AcademicYear(name="2024-2025", is_current=True))
+
         if not User.query.filter_by(username="admin").first():
-            admin = User(username="admin", full_name="System Administrator", role="super_admin", is_active=True)
+            admin = User(
+                username="admin",
+                full_name="System Administrator",
+                role="super_admin",
+                is_active=True
+            )
             admin.set_password("Admin@12345")
             db.session.add(admin)
+
         db.session.commit()
         click.echo("Database initialized. Default login: admin / Admin@12345")
