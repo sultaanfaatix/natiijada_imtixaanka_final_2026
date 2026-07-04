@@ -64,22 +64,31 @@ class Exam(TimestampMixin, db.Model):
     name = db.Column(db.String(150), nullable=False)
     academic_year_id = db.Column(db.Integer, db.ForeignKey("academic_years.id"), nullable=False)
     is_published = db.Column(db.Boolean, default=False, nullable=False)
+
     academic_year = db.relationship("AcademicYear")
 
-    __table_args__ = (UniqueConstraint("name", "academic_year_id", name="uq_exam_year"),)
+    __table_args__ = (
+        UniqueConstraint("name", "academic_year_id", name="uq_exam_year"),
+    )
 
 
 class Student(TimestampMixin, db.Model):
     __tablename__ = "students"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # ✅ THIS IS THE ID USERS TYPE (3007)
     student_code = db.Column(db.String(50), unique=True, nullable=False, index=True)
+
     full_name = db.Column(db.String(180), nullable=False)
     mother_name = db.Column(db.String(180))
+
     class_id = db.Column(db.Integer, db.ForeignKey("school_classes.id"), nullable=False)
     academic_year_id = db.Column(db.Integer, db.ForeignKey("academic_years.id"), nullable=False)
+
     photo_path = db.Column(db.String(255))
     note = db.Column(db.Text)
+
     is_result_locked = db.Column(db.Boolean, default=False, nullable=False)
     lock_reason = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -87,14 +96,21 @@ class Student(TimestampMixin, db.Model):
     school_class = db.relationship("SchoolClass")
     academic_year = db.relationship("AcademicYear")
 
+    # ✅ FIX: allow system to use "student_id" in queries safely
+    @property
+    def student_id(self):
+        return self.student_code
+
 
 class Result(TimestampMixin, db.Model):
     __tablename__ = "results"
 
     id = db.Column(db.Integer, primary_key=True)
+
     student_id = db.Column(db.Integer, db.ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     exam_id = db.Column(db.Integer, db.ForeignKey("exams.id", ondelete="CASCADE"), nullable=False)
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+
     score = db.Column(db.Numeric(6, 2), nullable=False)
     is_published = db.Column(db.Boolean, default=True, nullable=False)
 
@@ -102,7 +118,9 @@ class Result(TimestampMixin, db.Model):
     exam = db.relationship("Exam")
     subject = db.relationship("Subject")
 
-    __table_args__ = (UniqueConstraint("student_id", "exam_id", "subject_id", name="uq_student_exam_subject"),)
+    __table_args__ = (
+        UniqueConstraint("student_id", "exam_id", "subject_id", name="uq_student_exam_subject"),
+    )
 
 
 class Setting(TimestampMixin, db.Model):
