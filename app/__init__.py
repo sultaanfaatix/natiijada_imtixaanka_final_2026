@@ -49,14 +49,31 @@ def create_app(config_class=Config):
 
     register_cli(app)
 
-    # ✅ FIX: create tables + seed defaults (IMPORTANT)
+    # =========================
+    # FIX: AUTO CREATE EVERYTHING
+    # =========================
     with app.app_context():
         db.create_all()
 
-        # seed default settings safely
+        # seed settings
         if DEFAULT_SETTINGS:
             for key, value in DEFAULT_SETTINGS.items():
                 db.session.merge(Setting(key=key, value=value))
+            db.session.commit()
+
+        # 🔥 AUTO ADMIN FIX (IMPORTANT)
+        from .models import User
+
+        admin = User.query.filter_by(username="admin").first()
+        if not admin:
+            admin = User(
+                username="admin",
+                full_name="System Administrator",
+                role="super_admin",
+                is_active=True
+            )
+            admin.set_password("Admin@12345")
+            db.session.add(admin)
             db.session.commit()
 
     return app
@@ -70,7 +87,6 @@ def register_cli(app):
 
     @app.cli.command("init-db")
     def init_db_command():
-        """Create tables and seed secure defaults."""
         db.create_all()
 
         for key, value in DEFAULT_SETTINGS.items():
