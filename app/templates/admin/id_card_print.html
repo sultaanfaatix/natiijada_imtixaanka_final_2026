@@ -73,7 +73,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: 27mm minmax(0, 1fr) 34mm;
+      grid-template-columns: 27mm minmax(0, 1fr) 36mm;
       align-items: center;
       background: linear-gradient(90deg, var(--id-primary) 0 22%, #ffffff 22% 100%);
       border-bottom: 1px solid #dfe7f2;
@@ -119,28 +119,36 @@
     }
     .year-block {
       display: grid;
-      gap: 1.8mm;
-      justify-items: start;
-      padding-right: 4mm;
+      gap: 1.4mm;
+      justify-items: stretch;
+      padding: 0 4mm 0 3mm;
       border-left: 1.2px solid var(--id-primary);
+      min-width: 0;
+      overflow: hidden;
     }
     .year-block span {
       color: var(--id-deep);
-      font-size: 6.8pt;
+      font-size: 6.3pt;
       font-weight: 900;
       text-transform: uppercase;
-      padding-left: 5mm;
+      text-align: center;
+      white-space: nowrap;
     }
     .year-block b {
-      margin-left: 5mm;
-      padding: 1.5mm 4mm;
+      display: block;
+      width: 100%;
+      max-width: 28mm;
+      justify-self: center;
+      padding: 1.25mm 2.4mm;
       border-radius: 2mm;
       background: linear-gradient(135deg, var(--id-primary), #00549d);
       color: #fff;
-      font-size: 11pt;
-      letter-spacing: .8px;
+      font-size: 9.6pt;
+      letter-spacing: .45px;
       box-shadow: 0 .8mm 2mm rgba(0, 52, 100, .22);
       white-space: nowrap;
+      text-align: center;
+      overflow: hidden;
     }
     .title-band {
       position: relative;
@@ -171,8 +179,9 @@
     }
     .photo-column {
       display: grid;
-      grid-template-rows: 1fr auto;
+      grid-template-rows: minmax(0, auto) auto;
       gap: 1.1mm;
+      align-content: center;
       min-height: 0;
       overflow: hidden;
     }
@@ -188,6 +197,10 @@
       font-size: 15mm;
       min-height: 0;
       aspect-ratio: 3 / 4;
+      width: 29mm;
+      max-height: 38mm;
+      align-self: center;
+      justify-self: center;
     }
     .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
     .phone-tag {
