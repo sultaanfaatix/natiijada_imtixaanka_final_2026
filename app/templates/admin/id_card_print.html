@@ -5,69 +5,92 @@
   <title>Student ID Cards</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    @page { size: A4; margin: 8mm; }
+    @page { size: A4; margin: {{ settings.id_card_print_margin or 8 }}mm; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: "{{ settings.id_card_font_family }}", "Segoe UI", Arial, sans-serif; color: #111827; print-color-adjust: exact; -webkit-print-color-adjust: exact; background: #fff; }
-    .card-page { width: 194mm; min-height: 281mm; display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); gap: 4mm; page-break-after: always; position: relative; }
+    .card-page { width: calc(210mm - ({{ settings.id_card_print_margin or 8 }}mm * 2)); height: calc(297mm - ({{ settings.id_card_print_margin or 8 }}mm * 2)); display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); gap: 5mm; page-break-after: always; }
     .card-page:last-child { page-break-after: auto; }
-    .card-slot { border: 1px dashed #94a3b8; padding: 2.2mm; display: grid; place-items: stretch; min-height: 0; }
-    .empty-slot { border: 1px dashed #cbd5e1; }
-    .id-card { background: {{ settings.id_card_background }}; border: {{ '2px double' if settings.id_card_border_style=='double' else '1.3px solid' }} {{ settings.id_card_primary_color }}; border-radius: {{ '12px' if settings.id_card_rounded_corners=='on' else '0' }}; overflow: hidden; height: 100%; display: grid; grid-template-rows: auto 1fr auto; position: relative; box-shadow: 0 7px 18px rgba(0,32,96,.08); }
-    .watermark { position: absolute; inset: 0; display: grid; place-items: center; transform: rotate(-25deg); font-size: 28px; font-weight: 900; color: rgba(0,32,96,.06); pointer-events: none; }
-    .card-head { display: grid; grid-template-columns: 15mm 1fr auto; gap: 2.5mm; align-items: center; background: linear-gradient(135deg, {{ settings.id_card_primary_color }}, {{ settings.id_card_accent_color }}); color: #fff; padding: 2.6mm 3mm; }
-    .logo { width: 14mm; height: 14mm; border-radius: 3mm; background: #fff; display: grid; place-items: center; color: {{ settings.id_card_primary_color }}; overflow: hidden; }
+    .card-slot { border: 1.2px dashed #94a3b8; padding: 2.8mm; display: grid; min-height: 0; }
+    .empty-slot { border-color: #cbd5e1; }
+    .id-card { --id-primary: {{ settings.id_card_primary_color }}; --id-accent: {{ settings.id_card_accent_color }}; background: {{ settings.id_card_background }}; border: {{ '2px double' if settings.id_card_border_style=='double' else '1.5px solid' }} var(--id-primary); border-radius: {{ '16px' if settings.id_card_rounded_corners=='on' else '0' }}; overflow: hidden; height: 100%; display: grid; grid-template-rows: auto auto 1fr auto; position: relative; box-shadow: 0 9px 24px rgba(0,32,96,.12); }
+    .template-modern { --id-primary: #0f766e; --id-accent: #14b8a6; }
+    .template-premium { --id-primary: #111827; --id-accent: #d4af37; }
+    .template-minimal { --id-primary: #334155; --id-accent: #64748b; box-shadow: none; }
+    .template-executive { --id-primary: #312e81; --id-accent: #7c3aed; }
+    .template-premium .card-head, .template-premium footer { background: linear-gradient(135deg, #111827, #433b1f); }
+    .template-minimal .card-head, .template-minimal footer { background: #334155; }
+    .watermark { position: absolute; inset: 0; display: grid; place-items: center; transform: rotate(-25deg); font-size: 34px; font-weight: 900; color: rgba(0,32,96,.06); pointer-events: none; }
+    .card-head { display: grid; grid-template-columns: 18mm 1fr auto; gap: 3mm; align-items: center; background: linear-gradient(135deg, var(--id-primary), var(--id-accent)); color: #fff; padding: 3.2mm 4mm; }
+    .card-head.logo-center { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+    .card-head.logo-right { grid-template-columns: auto 1fr 18mm; }
+    .card-head.logo-right .logo { order: 3; }
+    .card-head.logo-right .school { order: 2; text-align: right; }
+    .card-head.logo-right .year-chip { order: 1; }
+    .logo { width: 17mm; height: 17mm; border-radius: 4mm; background: #fff; display: grid; place-items: center; color: var(--id-primary); overflow: hidden; }
     .logo img, .photo img { width: 100%; height: 100%; object-fit: cover; }
-    .school h2 { margin: 0; font-size: 10.5pt; line-height: 1.05; text-transform: uppercase; }
-    .school span, .year-chip span { display: block; font-size: 6.8pt; opacity: .9; }
-    .year-chip { border: 1px solid rgba(255,255,255,.55); border-radius: 3mm; padding: 1.5mm 2mm; text-align: center; min-width: 22mm; }
-    .year-chip strong { display: block; font-size: 7.4pt; }
-    .card-body { display: grid; grid-template-columns: 27mm 1fr 22mm; gap: 3mm; padding: 3mm; position: relative; z-index: 1; align-items: start; }
-    .photo { width: 27mm; height: 32mm; border: 1.8px solid {{ settings.id_card_accent_color }}; border-radius: 3.5mm; display: grid; place-items: center; color: {{ settings.id_card_primary_color }}; overflow: hidden; background: #eef6ff; }
-    .info { display: grid; gap: 1.8mm; min-width: 0; }
-    .student-name span, .pair span { display: block; font-size: 6.2pt; color: #64748b; text-transform: uppercase; font-weight: 800; }
-    .student-name strong { display: block; font-size: 11pt; color: {{ settings.id_card_primary_color }}; line-height: 1.08; overflow-wrap: anywhere; }
-    .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; }
-    .pair { border: 1px solid #dbe4f0; border-radius: 2.4mm; padding: 1.5mm; background: rgba(255,255,255,.86); min-width: 0; }
-    .pair strong { display: block; color: {{ settings.id_card_primary_color }}; font-size: 7.6pt; overflow-wrap: anywhere; }
-    .qr-panel { align-self: start; display: grid; place-items: center; gap: 1mm; border: 1px solid #dbe4f0; border-radius: 4mm; padding: 2mm; background: linear-gradient(180deg, #fff, #f8fbff); margin-top: 2mm; }
-    .qr-panel img { width: 17mm; height: 17mm; }
-    .qr-panel small { color: {{ settings.id_card_primary_color }}; font-size: 5.8pt; font-weight: 900; text-align: center; }
-    .barcode { grid-column: 1 / -1; height: 6mm; background: repeating-linear-gradient(90deg, #111827 0 1px, transparent 1px 3px, #111827 3px 5px, transparent 5px 7px); border-radius: 1.5mm; margin-top: .5mm; }
-    footer { background: {{ settings.id_card_primary_color }}; color: #fff; padding: 2mm 3mm; font-size: 6.8pt; line-height: 1.25; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 11mm; }
+    .school h2 { margin: 0; font-size: 12pt; line-height: 1.05; text-transform: uppercase; }
+    .year-chip { border: 1px solid rgba(255,255,255,.55); border-radius: 4mm; padding: 2mm 2.5mm; text-align: center; min-width: 27mm; }
+    .year-chip span { display: block; font-size: 6.8pt; opacity: .85; }
+    .year-chip strong { display: block; font-size: 8pt; }
+    .card-title { color: var(--id-primary); text-align: center; font-size: 10.5pt; font-weight: 900; letter-spacing: .02em; padding: 2.4mm 3mm 1.4mm; border-bottom: 1px solid #dbe4f0; }
+    .card-body { display: grid; grid-template-columns: 32mm 1fr 29mm; gap: 3.5mm; padding: 3.5mm 4mm; align-items: start; position: relative; z-index: 1; }
+    .card-body.photo-right { grid-template-columns: 29mm 1fr 32mm; }
+    .card-body.photo-right .photo-wrap { order: 3; }
+    .card-body.photo-right .qr-panel { order: 1; }
+    .card-body.photo-right .info { order: 2; }
+    .card-body.qr-left { grid-template-columns: 29mm 1fr 32mm; }
+    .card-body.qr-left .qr-panel { order: 1; }
+    .card-body.qr-left .info { order: 2; }
+    .card-body.qr-left .photo-wrap { order: 3; }
+    .card-body.spacing-compact { gap: 2.5mm; padding: 3mm; }
+    .card-body.spacing-wide { gap: 4.5mm; padding: 4.2mm; }
+    .photo-wrap { display: grid; gap: 1.4mm; }
+    .photo { width: 32mm; height: 39mm; border: 2px solid var(--id-accent); border-radius: 4.5mm; display: grid; place-items: center; color: var(--id-primary); overflow: hidden; background: #eef6ff; font-size: 20pt; }
+    .phone-under-photo { color: var(--id-primary); font-size: 7.4pt; font-weight: 900; text-align: center; border: 1px solid #dbe4f0; border-radius: 999px; padding: 1mm; background: #fff; }
+    .info { display: grid; gap: 2.2mm; min-width: 0; }
+    .field { border: 1px solid #dbe4f0; border-radius: 2.8mm; padding: 1.8mm; background: rgba(255,255,255,.9); min-width: 0; }
+    .field span { display: block; color: #64748b; text-transform: uppercase; font-size: 6.2pt; font-weight: 900; }
+    .labels-title .field span { text-transform: none; font-size: 6.8pt; }
+    .icons-minimal .qr-panel small { font-weight: 700; }
+    .field strong { display: block; color: var(--id-primary); font-size: 8.8pt; line-height: 1.1; overflow-wrap: anywhere; }
+    .field.full strong { font-size: 11.5pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .qr-panel { display: grid; place-items: center; gap: 1.4mm; border: 1px solid #dbe4f0; border-radius: 5mm; padding: 2.5mm; background: linear-gradient(180deg, #fff, #f8fbff); margin-top: 7mm; }
+    .qr-panel img { width: 24mm; height: 24mm; }
+    .qr-panel small { color: var(--id-primary); font-size: 6.4pt; font-weight: 900; text-align: center; }
+    footer { background: var(--id-primary); color: #fff; padding: 2.6mm 4mm; font-size: 8pt; line-height: 1.25; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 13mm; }
     @media print { body { margin: 0; } }
   </style>
 </head>
 <body onload="window.print()">
-  {% for page in cards|batch(6, none) %}
+  {% for page in cards|batch(4, none) %}
     <main class="card-page">
       {% for item in page %}
         {% if item %}
           {% set issue = item.issue %}
           <section class="card-slot">
-            <article class="id-card">
+            <article class="id-card template-{{ settings.id_card_template or 'classic' }} labels-{{ settings.id_card_label_style }} icons-{{ settings.id_card_icon_style }}">
               {% if settings.id_card_watermark %}<div class="watermark">{{ settings.id_card_watermark }}</div>{% endif %}
-              <header class="card-head">
+              <header class="card-head logo-{{ settings.id_card_logo_position }}">
                 <div class="logo">{% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="Logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}</div>
-                <div class="school"><h2>{{ settings.school_name }}</h2><span>{{ settings.id_card_exam_type }}</span></div>
+                <div class="school"><h2>{{ settings.school_name }}</h2></div>
                 <div class="year-chip"><span>Academic Year</span><strong>{{ issue.academic_year.name }}</strong></div>
               </header>
-              <section class="card-body">
-                <div class="photo">{% if issue.student.photo_path %}<img src="{{ url_for('static', filename=issue.student.photo_path) }}" alt="Photo">{% else %}<i class="fa-solid fa-user-graduate fa-2x"></i>{% endif %}</div>
+              <div class="card-title">{{ settings.id_card_header_text or 'KAARKA OGOLAANSHAHA IMTIXAANKA' }}</div>
+              <section class="card-body photo-{{ settings.id_card_photo_position }} qr-{{ settings.id_card_qr_position }} spacing-{{ settings.id_card_spacing }}">
+                <div class="photo-wrap">
+                  <div class="photo">{% if issue.student.photo_path %}<img src="{{ url_for('static', filename=issue.student.photo_path) }}" alt="Photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}</div>
+                  <div class="phone-under-photo">{{ issue.student.phone or '-' }}</div>
+                </div>
                 <div class="info">
-                  <div class="student-name"><span>Student Name</span><strong>{{ issue.student.full_name }}</strong></div>
-                  <div class="pair-grid">
-                    <div class="pair"><span>Student ID</span><strong>{{ issue.student.student_code }}</strong></div>
-                    <div class="pair"><span>Class</span><strong>{{ issue.student.school_class.name }}</strong></div>
-                  </div>
-                  <div class="pair-grid">
-                    <div class="pair"><span>Issue Date</span><strong>{{ issue.issue_date }}</strong></div>
-                    <div class="pair"><span>Expiry Date</span><strong>{{ issue.expiry_date or '' }}</strong></div>
-                  </div>
-                  {% if settings.id_card_show_barcode == 'on' %}<div class="barcode" title="{{ issue.student.student_code }}"></div>{% endif %}
+                  <div class="field full"><span>Student Name</span><strong>{{ issue.student.full_name }}</strong></div>
+                  <div class="field"><span>Student ID Number</span><strong>{{ issue.student.student_code }}</strong></div>
+                  <div class="field"><span>Mother's Name</span><strong>{{ issue.student.mother_name or '-' }}</strong></div>
+                  <div class="field"><span>Issue Date</span><strong>{{ issue.issue_date }}</strong></div>
+                  <div class="field"><span>Expiry Date</span><strong>{{ issue.expiry_date or '' }}</strong></div>
                 </div>
                 <div class="qr-panel"><img src="{{ item.qr.qr_code }}" alt="QR"><small>Scan to Verify</small></div>
               </section>
-              <footer>{{ settings.id_card_found_contact_text }} {{ issue.student.phone or settings.school_phone }}</footer>
+              <footer>{{ settings.id_card_footer or settings.id_card_found_contact_text }} {{ settings.school_phone or settings.call_url }}</footer>
             </article>
           </section>
         {% else %}

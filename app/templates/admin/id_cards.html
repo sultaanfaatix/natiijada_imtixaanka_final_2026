@@ -2,23 +2,51 @@
 {% block page_title %}Student ID Cards{% endblock %}
 {% block admin_content %}
 <section class="panel">
+  <div class="section-heading"><span><i class="fa-solid fa-layer-group"></i></span><div><h2>ID Card Template Manager</h2><p>Switch the active ID card design instantly. The selected template is saved in system settings.</p></div></div>
+  <div class="template-grid">
+    {% for key, preset in templates.items() %}
+      <form method="post" class="template-card template-card-{{ key }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="apply_template">
+        <input type="hidden" name="template_name" value="{{ key }}">
+        <span class="template-swatch" style="--tpl-primary: {{ preset.primary }}; --tpl-accent: {{ preset.accent }}"></span>
+        <h3>{{ key|title }}</h3>
+        <p>{{ preset.font }} | {{ preset.border|title }} | {{ preset.rounded|upper }}</p>
+        <button class="{{ 'premium' if settings.id_card_template == key else 'ghost' }}"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ 'Active' if settings.id_card_template == key else 'Use Template' }}</button>
+      </form>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
   <div class="section-heading"><span><i class="fa-solid fa-pen-ruler"></i></span><div><h2>ID Card Designer</h2><p>Customize card size, orientation, colors, logo placement, QR, footer, watermark, stamp, and signature text.</p></div></div>
   <form method="post" class="form-grid premium-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label><i class="fa-solid fa-ruler-combined"></i> Card Size<select name="id_card_size"><option value="cr80" {% if settings.id_card_size=='cr80' %}selected{% endif %}>CR80 Standard</option><option value="a6" {% if settings.id_card_size=='a6' %}selected{% endif %}>A6</option><option value="custom" {% if settings.id_card_size=='custom' %}selected{% endif %}>Custom</option></select></label>
-    <label><i class="fa-solid fa-mobile-screen"></i> Orientation<select name="id_card_orientation"><option value="portrait" {% if settings.id_card_orientation=='portrait' %}selected{% endif %}>Portrait</option><option value="landscape" {% if settings.id_card_orientation=='landscape' %}selected{% endif %}>Landscape</option></select></label>
+    <label><i class="fa-solid fa-layer-group"></i> Active Template<select name="id_card_template">{% for key in templates %}<option value="{{ key }}" {% if settings.id_card_template==key %}selected{% endif %}>{{ key|title }}</option>{% endfor %}</select></label>
+    <label><i class="fa-solid fa-ruler-combined"></i> Card Size<select name="id_card_size"><option value="large-a4-quarter" {% if settings.id_card_size=='large-a4-quarter' %}selected{% endif %}>Large A4 Quarter</option><option value="cr80" {% if settings.id_card_size=='cr80' %}selected{% endif %}>CR80 Standard</option><option value="custom" {% if settings.id_card_size=='custom' %}selected{% endif %}>Custom</option></select></label>
+    <label><i class="fa-solid fa-mobile-screen"></i> Orientation<select name="id_card_orientation"><option value="landscape" {% if settings.id_card_orientation=='landscape' %}selected{% endif %}>Landscape</option><option value="portrait" {% if settings.id_card_orientation=='portrait' %}selected{% endif %}>Portrait</option></select></label>
     <label><i class="fa-solid fa-fill-drip"></i> Background<input type="color" name="id_card_background" value="{{ settings.id_card_background }}"></label>
     <label><i class="fa-solid fa-palette"></i> Primary<input type="color" name="id_card_primary_color" value="{{ settings.id_card_primary_color }}"></label>
     <label><i class="fa-solid fa-droplet"></i> Accent<input type="color" name="id_card_accent_color" value="{{ settings.id_card_accent_color }}"></label>
     <label><i class="fa-solid fa-font"></i> Font<select name="id_card_font_family"><option {% if settings.id_card_font_family=='Segoe UI' %}selected{% endif %}>Segoe UI</option><option {% if settings.id_card_font_family=='Arial' %}selected{% endif %}>Arial</option><option {% if settings.id_card_font_family=='Tahoma' %}selected{% endif %}>Tahoma</option><option {% if settings.id_card_font_family=='Times New Roman' %}selected{% endif %}>Times New Roman</option></select></label>
     <label><i class="fa-solid fa-border-top-left"></i> Border<select name="id_card_border_style"><option value="solid" {% if settings.id_card_border_style=='solid' %}selected{% endif %}>Solid</option><option value="minimal" {% if settings.id_card_border_style=='minimal' %}selected{% endif %}>Minimal</option><option value="double" {% if settings.id_card_border_style=='double' %}selected{% endif %}>Double</option></select></label>
     <label><i class="fa-solid fa-crop-simple"></i> Rounded Corners<select name="id_card_rounded_corners"><option value="on" {% if settings.id_card_rounded_corners=='on' %}selected{% endif %}>ON</option><option value="off" {% if settings.id_card_rounded_corners!='on' %}selected{% endif %}>OFF</option></select></label>
+    <label><i class="fa-solid fa-image"></i> Logo Position<select name="id_card_logo_position"><option value="left" {% if settings.id_card_logo_position=='left' %}selected{% endif %}>Left</option><option value="center" {% if settings.id_card_logo_position=='center' %}selected{% endif %}>Center</option><option value="right" {% if settings.id_card_logo_position=='right' %}selected{% endif %}>Right</option></select></label>
+    <label><i class="fa-solid fa-user"></i> Photo Position<select name="id_card_photo_position"><option value="left" {% if settings.id_card_photo_position=='left' %}selected{% endif %}>Left</option><option value="right" {% if settings.id_card_photo_position=='right' %}selected{% endif %}>Right</option></select></label>
+    <label><i class="fa-solid fa-qrcode"></i> QR Position<select name="id_card_qr_position"><option value="right" {% if settings.id_card_qr_position=='right' %}selected{% endif %}>Right</option><option value="left" {% if settings.id_card_qr_position=='left' %}selected{% endif %}>Left</option></select></label>
+    <label><i class="fa-solid fa-icons"></i> Icons<select name="id_card_icon_style"><option value="solid" {% if settings.id_card_icon_style=='solid' %}selected{% endif %}>Solid</option><option value="minimal" {% if settings.id_card_icon_style=='minimal' %}selected{% endif %}>Minimal</option></select></label>
+    <label><i class="fa-solid fa-tags"></i> Labels<select name="id_card_label_style"><option value="uppercase" {% if settings.id_card_label_style=='uppercase' %}selected{% endif %}>Uppercase</option><option value="title" {% if settings.id_card_label_style=='title' %}selected{% endif %}>Title Case</option></select></label>
+    <label><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Spacing<select name="id_card_spacing"><option value="comfortable" {% if settings.id_card_spacing=='comfortable' %}selected{% endif %}>Comfortable</option><option value="compact" {% if settings.id_card_spacing=='compact' %}selected{% endif %}>Compact</option><option value="wide" {% if settings.id_card_spacing=='wide' %}selected{% endif %}>Wide</option></select></label>
+    <label><i class="fa-solid fa-border-all"></i> Print Margins (mm)<input type="number" min="5" max="15" name="id_card_print_margin" value="{{ settings.id_card_print_margin }}"></label>
     <label><i class="fa-solid fa-barcode"></i> Barcode<select name="id_card_show_barcode"><option value="off" {% if settings.id_card_show_barcode!='on' %}selected{% endif %}>OFF</option><option value="on" {% if settings.id_card_show_barcode=='on' %}selected{% endif %}>ON</option></select></label>
     <label><i class="fa-solid fa-calendar-plus"></i> Valid Months<input type="number" min="1" name="id_card_issue_months" value="{{ settings.id_card_issue_months }}"></label>
     <label class="span-2"><i class="fa-solid fa-file-circle-check"></i> Exam Type<input name="id_card_exam_type" value="{{ settings.id_card_exam_type }}"></label>
+    <label class="span-2"><i class="fa-solid fa-heading"></i> Header Title<input name="id_card_header_text" value="{{ settings.id_card_header_text }}"></label>
+    <label><i class="fa-solid fa-signature"></i> Signature<input name="id_card_signature_text" value="{{ settings.id_card_signature_text }}"></label>
     <label><i class="fa-solid fa-stamp"></i> School Stamp<input name="id_card_stamp_text" value="{{ settings.id_card_stamp_text }}"></label>
     <label><i class="fa-solid fa-water"></i> Watermark<input name="id_card_watermark" value="{{ settings.id_card_watermark }}"></label>
-    <label class="wide"><i class="fa-solid fa-phone-volume"></i> Found Card Contact Text<input name="id_card_found_contact_text" value="{{ settings.id_card_found_contact_text }}"></label>
+    <label class="wide"><i class="fa-solid fa-phone-volume"></i> Footer Contact Text<input name="id_card_footer" value="{{ settings.id_card_footer }}"></label>
+    <input type="hidden" name="id_card_found_contact_text" value="{{ settings.id_card_footer }}">
     <button class="premium"><i class="fa-solid fa-floppy-disk"></i> Save Designer</button>
   </form>
 </section>

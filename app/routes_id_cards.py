@@ -16,6 +16,14 @@ from .verification import id_card_qr_payload
 
 id_cards_bp = Blueprint("admin_id_cards", __name__)
 
+ID_CARD_TEMPLATES = {
+    "classic": {"primary": "#002060", "accent": "#007bff", "background": "#ffffff", "font": "Segoe UI", "border": "solid", "rounded": "on"},
+    "modern": {"primary": "#0f766e", "accent": "#14b8a6", "background": "#f8fffd", "font": "Segoe UI", "border": "minimal", "rounded": "on"},
+    "premium": {"primary": "#111827", "accent": "#d4af37", "background": "#fffdf5", "font": "Georgia", "border": "double", "rounded": "on"},
+    "minimal": {"primary": "#334155", "accent": "#64748b", "background": "#ffffff", "font": "Arial", "border": "minimal", "rounded": "off"},
+    "executive": {"primary": "#312e81", "accent": "#7c3aed", "background": "#fbfaff", "font": "Tahoma", "border": "solid", "rounded": "on"},
+}
+
 
 @id_cards_bp.before_request
 @login_required
@@ -26,11 +34,21 @@ def require_login():
 @id_cards_bp.route("/", methods=["GET", "POST"])
 def dashboard():
     if request.method == "POST":
+        template_name = request.form.get("template_name", "").strip().lower()
+        if request.form.get("action") == "apply_template" and template_name in ID_CARD_TEMPLATES:
+            apply_template(template_name)
+            audit("Settings Changes", f"Applied ID card template {template_name}")
+            db.session.commit()
+            flash(f"{template_name.title()} template applied.", "success")
+            return redirect(url_for("admin_id_cards.dashboard"))
         editable_keys = [
             "id_card_size", "id_card_orientation", "id_card_background", "id_card_primary_color",
             "id_card_accent_color", "id_card_font_family", "id_card_border_style", "id_card_rounded_corners",
+            "id_card_template", "id_card_logo_position", "id_card_photo_position", "id_card_qr_position",
+            "id_card_icon_style", "id_card_label_style", "id_card_spacing", "id_card_print_margin",
             "id_card_show_barcode", "id_card_footer", "id_card_watermark", "id_card_issue_months",
             "id_card_office_signature", "id_card_stamp_text", "id_card_found_contact_text", "id_card_exam_type",
+            "id_card_header_text", "id_card_signature_text",
         ]
         for key in editable_keys:
             setting = db.session.get(Setting, key) or Setting(key=key)
@@ -54,7 +72,25 @@ def dashboard():
         years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
         levels=distinct_values(Student.level),
         sections=distinct_values(Student.section),
+        templates=ID_CARD_TEMPLATES,
     )
+
+
+def apply_template(template_name):
+    preset = ID_CARD_TEMPLATES[template_name]
+    values = {
+        "id_card_template": template_name,
+        "id_card_primary_color": preset["primary"],
+        "id_card_accent_color": preset["accent"],
+        "id_card_background": preset["background"],
+        "id_card_font_family": preset["font"],
+        "id_card_border_style": preset["border"],
+        "id_card_rounded_corners": preset["rounded"],
+    }
+    for key, value in values.items():
+        setting = db.session.get(Setting, key) or Setting(key=key)
+        setting.value = value
+        db.session.add(setting)
 
 
 @id_cards_bp.route("/generate/<int:student_id>", methods=["POST"])
@@ -115,15 +151,19 @@ def export_pdf():
     pdf = canvas.Canvas(tmp.name, pagesize=A4)
     settings = get_settings()
     page_w, page_h = A4
-    margin = 8 * mm
-    gap = 4 * mm
+    margin = max(5, min(float(settings.get("id_card_print_margin") or 8), 15)) * mm
+    gap = 5 * mm
     slot_w = (page_w - (2 * margin) - gap) / 2
-    slot_h = (page_h - (2 * margin) - (2 * gap)) / 3
+    slot_h = (page_h - (2 * margin) - gap) / 2
     primary = colors.HexColor(settings.get("id_card_primary_color") or "#002060")
     accent = colors.HexColor(settings.get("id_card_accent_color") or "#007bff")
+    template = ID_CARD_TEMPLATES.get((settings.get("id_card_template") or "classic").lower())
+    if template:
+        primary = colors.HexColor(template["primary"])
+        accent = colors.HexColor(template["accent"])
 
     for index, issue in enumerate(issues):
-        slot = index % 6
+        slot = index % 4
         if index and slot == 0:
             pdf.showPage()
         col = slot % 2
@@ -147,87 +187,94 @@ def draw_id_card_pdf(pdf, issue, settings, x, y, w, h, primary, accent, qrcode, 
     pdf.setStrokeColor(colors.HexColor("#94a3b8"))
     pdf.rect(x, y, w, h, stroke=1, fill=0)
     pdf.setDash()
-    pad = 2.5 * mm
+    pad = 3 * mm
     card_x, card_y = x + pad, y + pad
     card_w, card_h = w - 2 * pad, h - 2 * pad
     pdf.setStrokeColor(primary)
     pdf.setFillColor(colors.white)
     pdf.roundRect(card_x, card_y, card_w, card_h, 8, stroke=1, fill=1)
 
-    header_h = 17 * mm
+    header_h = 22 * mm
     pdf.setFillColor(primary)
     pdf.roundRect(card_x, card_y + card_h - header_h, card_w, header_h, 8, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
-    logo_x, logo_y = card_x + 3 * mm, card_y + card_h - header_h + 3 * mm
-    pdf.roundRect(logo_x, logo_y, 11 * mm, 11 * mm, 4, stroke=0, fill=1)
-    pdf.setFillColor(primary)
-    pdf.setFont("Helvetica-Bold", 7)
-    pdf.drawCentredString(logo_x + 5.5 * mm, logo_y + 4.6 * mm, "LOGO")
+    logo_x, logo_y = card_x + 4 * mm, card_y + card_h - header_h + 4 * mm
+    pdf.roundRect(logo_x, logo_y, 14 * mm, 14 * mm, 5, stroke=0, fill=1)
+    if settings.get("logo_path"):
+        logo_path = current_app.static_folder + "/" + settings.get("logo_path").replace("\\", "/")
+        try:
+            pdf.drawImage(logo_path, logo_x + 1, logo_y + 1, 14 * mm - 2, 14 * mm - 2, preserveAspectRatio=True, mask="auto")
+        except Exception:
+            pdf.setFillColor(primary)
+            pdf.setFont("Helvetica-Bold", 7)
+            pdf.drawCentredString(logo_x + 7 * mm, logo_y + 6 * mm, "LOGO")
+    else:
+        pdf.setFillColor(primary)
+        pdf.setFont("Helvetica-Bold", 7)
+        pdf.drawCentredString(logo_x + 7 * mm, logo_y + 6 * mm, "LOGO")
 
     pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica-Bold", 8.5)
-    pdf.drawString(card_x + 17 * mm, card_y + card_h - 7 * mm, (settings.get("school_name") or "School")[:34])
-    pdf.setFont("Helvetica", 6.5)
-    pdf.drawString(card_x + 17 * mm, card_y + card_h - 12 * mm, (settings.get("id_card_exam_type") or "Examination Office")[:34])
-    pdf.setFont("Helvetica-Bold", 6.5)
-    pdf.drawRightString(card_x + card_w - 3 * mm, card_y + card_h - 8 * mm, issue.academic_year.name[:14])
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(card_x + 21 * mm, card_y + card_h - 8 * mm, (settings.get("school_name") or "School")[:36])
+    pdf.setFont("Helvetica-Bold", 7)
+    pdf.drawString(card_x + 21 * mm, card_y + card_h - 14 * mm, f"Academic Year: {issue.academic_year.name[:18]}")
 
-    body_y = card_y + 13 * mm
-    photo_x = card_x + 4 * mm
-    photo_y = body_y + 10 * mm
+    title_y = card_y + card_h - header_h - 8 * mm
+    pdf.setFillColor(accent)
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawCentredString(card_x + card_w / 2, title_y, settings.get("id_card_header_text") or "KAARKA OGOLAANSHAHA IMTIXAANKA")
+
+    body_y = card_y + 16 * mm
+    photo_x = card_x + 5 * mm
+    photo_y = body_y + 30 * mm
     pdf.setStrokeColor(accent)
     pdf.setFillColor(colors.HexColor("#eef6ff"))
-    pdf.roundRect(photo_x, photo_y, 24 * mm, 29 * mm, 6, stroke=1, fill=1)
+    pdf.roundRect(photo_x, photo_y, 29 * mm, 35 * mm, 7, stroke=1, fill=1)
     if issue.student.photo_path:
         image_path = current_app.static_folder + "/" + issue.student.photo_path.replace("\\", "/")
         try:
-            pdf.drawImage(image_path, photo_x + 1, photo_y + 1, 24 * mm - 2, 29 * mm - 2, preserveAspectRatio=True, mask="auto")
+            pdf.drawImage(image_path, photo_x + 1, photo_y + 1, 29 * mm - 2, 35 * mm - 2, preserveAspectRatio=True, mask="auto")
         except Exception:
             pass
-
-    info_x = photo_x + 28 * mm
-    pdf.setFillColor(primary)
-    pdf.setFont("Helvetica-Bold", 10)
-    pdf.drawString(info_x, body_y + 33 * mm, issue.student.full_name[:32])
-    pdf.setFont("Helvetica", 6)
-    pdf.setFillColor(colors.HexColor("#64748b"))
-    pdf.drawString(info_x, body_y + 30 * mm, "STUDENT NAME")
     pdf.setFillColor(primary)
     pdf.setFont("Helvetica-Bold", 7)
-    pdf.drawString(info_x, body_y + 23 * mm, f"ID: {issue.student.student_code}")
-    pdf.drawString(info_x + 30 * mm, body_y + 23 * mm, f"Class: {issue.student.school_class.name[:12]}")
-    pdf.drawString(info_x, body_y + 15 * mm, f"Issue: {issue.issue_date}")
-    pdf.drawString(info_x + 30 * mm, body_y + 15 * mm, f"Expiry: {issue.expiry_date or ''}")
+    pdf.drawCentredString(photo_x + 14.5 * mm, photo_y - 4 * mm, (issue.student.phone or "-")[:18])
+
+    info_x = photo_x + 34 * mm
+    pdf.setFillColor(primary)
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(info_x, body_y + 60 * mm, issue.student.full_name[:36])
+    pdf.setFont("Helvetica", 6)
+    pdf.setFillColor(colors.HexColor("#64748b"))
+    pdf.drawString(info_x, body_y + 56.5 * mm, "STUDENT NAME")
+    pdf.setFillColor(primary)
+    pdf.setFont("Helvetica-Bold", 8)
+    pdf.drawString(info_x, body_y + 47 * mm, f"ID Number: {issue.student.student_code}")
+    pdf.drawString(info_x, body_y + 38 * mm, f"Mother: {(issue.student.mother_name or '-')[:28]}")
+    pdf.drawString(info_x, body_y + 28 * mm, f"Issue Date: {issue.issue_date}")
+    pdf.drawString(info_x, body_y + 20 * mm, f"Expiry Date: {issue.expiry_date or ''}")
 
     qr = qrcode.make(id_card_qr_payload(issue)["url"])
     buffer = BytesIO()
     qr.save(buffer, format="PNG")
     buffer.seek(0)
-    qr_size = 18 * mm
-    qr_x = card_x + card_w - qr_size - 5 * mm
-    qr_y = body_y + 1 * mm
+    qr_size = 23 * mm
+    qr_x = card_x + card_w - qr_size - 8 * mm
+    qr_y = body_y - 1 * mm
     pdf.setFillColor(colors.HexColor("#f8fbff"))
-    pdf.roundRect(qr_x - 2 * mm, qr_y - 2 * mm, qr_size + 4 * mm, qr_size + 5 * mm, 7, stroke=1, fill=1)
+    pdf.roundRect(qr_x - 2 * mm, qr_y - 2 * mm, qr_size + 4 * mm, qr_size + 6 * mm, 7, stroke=1, fill=1)
     pdf.drawImage(ImageReader(buffer), qr_x, qr_y, qr_size, qr_size)
     pdf.setFont("Helvetica-Bold", 5.5)
     pdf.setFillColor(primary)
     pdf.drawCentredString(qr_x + qr_size / 2, qr_y - 1 * mm, "SCAN TO VERIFY")
 
-    if settings.get("id_card_show_barcode") == "on":
-        pdf.setFillColor(colors.black)
-        bx = info_x
-        by = body_y + 6 * mm
-        for n, ch in enumerate(issue.student.student_code[:22]):
-            width = 0.4 * mm if ord(ch) % 2 else 0.8 * mm
-            pdf.rect(bx + n * 1.15 * mm, by, width, 4 * mm, fill=1, stroke=0)
-
-    footer_h = 10 * mm
+    footer_h = 12 * mm
     pdf.setFillColor(primary)
     pdf.rect(card_x, card_y, card_w, footer_h, stroke=0, fill=1)
     pdf.setFillColor(colors.white)
-    pdf.setFont("Helvetica", 6)
-    contact = f"{settings.get('id_card_found_contact_text')} {issue.student.phone or settings.get('school_phone')}"
-    pdf.drawCentredString(card_x + card_w / 2, card_y + 3.6 * mm, contact[:95])
+    pdf.setFont("Helvetica-Bold", 7)
+    contact = f"{settings.get('id_card_footer') or settings.get('id_card_found_contact_text')} {settings.get('school_phone') or settings.get('call_url') or ''}"
+    pdf.drawCentredString(card_x + card_w / 2, card_y + 4.5 * mm, contact[:95])
 
 
 def get_or_create_issue(student):
