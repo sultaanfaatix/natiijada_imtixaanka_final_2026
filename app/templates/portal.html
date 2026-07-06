@@ -1,54 +1,51 @@
 {% extends "base.html" %}
 {% block title %}{{ settings.school_name }} Result Portal{% endblock %}
-{% block body_class %}public-body{% endblock %}
+{% block body_class %}public-body premium-public-body{% endblock %}
 {% block content %}
-<main class="public-hero student-homepage">
-  <nav class="public-nav glass-card">
-    <a class="portal-brand" href="{{ url_for('public.portal') }}">
-      <span class="brand-logo">
-        {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
-      </span>
-      <span><strong>{{ settings.school_name }}</strong><small>{{ settings.school_motto }}</small></span>
-    </a>
-    <div class="nav-actions">
-      <select class="language-switcher" aria-label="Language" onchange="window.location.href='{{ url_for('public.set_language', lang='__LANG__') }}'.replace('__LANG__', this.value)">
-        <option value="so" {% if settings.default_language == 'so' %}selected{% endif %}>Somali</option>
-        <option value="en" {% if settings.default_language == 'en' %}selected{% endif %}>English</option>
-        <option value="ar" {% if settings.default_language == 'ar' %}selected{% endif %}>العربية</option>
-        <option value="tr" {% if settings.default_language == 'tr' %}selected{% endif %}>Turkish</option>
+<main class="public-hero student-homepage premium-homepage">
+  <nav class="premium-language-nav">
+    <label class="premium-language-pill">
+      <i class="fa-solid fa-globe"></i>
+      <select aria-label="Language" onchange="window.location.href='{{ url_for('public.set_language', lang='__LANG__') }}'.replace('__LANG__', this.value)">
+        <option value="so" {% if current_language == 'so' %}selected{% endif %}>Somali</option>
+        <option value="en" {% if current_language == 'en' %}selected{% endif %}>English</option>
+        <option value="ar" {% if current_language == 'ar' %}selected{% endif %}>Arabic</option>
+        <option value="tr" {% if current_language == 'tr' %}selected{% endif %}>Turkish</option>
       </select>
-      <a class="icon-btn" href="{{ settings.call_url or '#' }}" aria-label="Call center"><i class="fa-solid fa-headset"></i></a>
-    </div>
+      <i class="fa-solid fa-chevron-down"></i>
+    </label>
   </nav>
 
-  <section class="portal-layout">
-    <div class="hero-copy">
-      <div class="hero-school-logo">
-        {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
-      </div>
-      <span class="eyebrow"><i class="fa-solid fa-graduation-cap"></i> {{ settings.school_motto }}</span>
-      <h1>{{ settings.school_name }}</h1>
-      <p>{{ _('Find Student Result') }}</p>
+  <section class="premium-portal-hero">
+    <div class="premium-school-logo">
+      {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
     </div>
+    <h1>Taysiir International School <span>(TIS)</span></h1>
+    <div class="premium-motto"><span></span><strong>{{ settings.school_motto }}</strong><span></span></div>
+    <div class="premium-exam-title glass-card">
+      <h2>NATIIJADA IMTIXAANKA FINAL-KA</h2>
+      <p><span></span>Academic Year {{ result.student.academic_year.name if result else settings.current_academic_year or settings.academic_year or '2025 - 2026' }}<span></span></p>
+    </div>
+  </section>
 
-    <section class="search-card glass-card">
-      <div class="card-heading">
-        <span class="icon-pill"><i class="fa-solid fa-magnifying-glass"></i></span>
-        <div><h2>{{ _('Results Portal') }}</h2><p>{{ _('Enter the official Student ID to view the published report.') }}</p></div>
+  <section class="premium-search-shell glass-card">
+    <form method="post" action="{{ url_for('public.result') }}" class="premium-search-form {% if settings.enable_phone_verification == 'on' %}has-phone{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="premium-input-icon"><i class="fa-regular fa-user"></i></div>
+      <div class="floating-field">
+        <input id="student_id" class="student-id-input premium-floating-input" name="student_id" required placeholder="Fadlan halkan geli lambarka aqoonsiga ardayga">
+        <label for="student_id">Fadlan halkan geli lambarka aqoonsiga ardayga</label>
       </div>
-      <form method="post" action="{{ url_for('public.result') }}" class="search-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label for="student_id"><i class="fa-solid fa-id-card"></i> {{ _('Student ID') }}</label>
-        <div class="search-row">
-          <input id="student_id" class="student-id-input" name="student_id" required placeholder="Example: 3007">
-          {% if settings.enable_phone_verification == 'on' %}
-            <input id="phone" name="phone" required placeholder="{{ _('Phone Number') }}">
-          {% endif %}
-          <button type="submit" class="student-search-button"><i class="fa-solid fa-search"></i> {{ _('Search') }}</button>
+      {% if settings.enable_phone_verification == 'on' %}
+        <div class="floating-field phone-floating-field">
+          <input id="phone" name="phone" required placeholder="{{ _('Phone Number') }}">
+          <label for="phone">{{ _('Phone Number') }}</label>
         </div>
-      </form>
-      {% if error %}<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i>{{ error }}</div>{% endif %}
-    </section>
+      {% endif %}
+      <button type="submit" class="student-search-button premium-search-button"><i class="fa-solid fa-magnifying-glass"></i><span>RAADI</span></button>
+      <div class="premium-search-hint"><span></span>Geli ID-ga si aad u aragto natiijada<span></span></div>
+    </form>
+    {% if error %}<div class="empty-state premium-error"><i class="fa-solid fa-circle-exclamation"></i>{{ error }}</div>{% endif %}
   </section>
 
   {% if result %}
@@ -107,18 +104,14 @@
     </section>
   {% endif %}
 
-  <footer class="public-footer glass-card">
-    <div><strong>{{ settings.school_name }}</strong><span>{{ settings.school_address }} | {{ settings.school_phone }} | {{ settings.school_email }} | {{ settings.school_website }}</span></div>
-    <div class="social-links">
-      <a href="{{ settings.facebook_url or '#' }}" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+  <footer class="premium-public-footer">
+    <div class="premium-footer-copy"><strong>SULTAN</strong><span>|</span><b>2026.</b><em>All Rights Reserved.</em></div>
+    <div class="social-links premium-social-links">
       <a href="{{ settings.whatsapp_url or '#' }}" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-      <a href="{{ settings.school_website or '#' }}" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
       <a href="{{ settings.facebook_url or '#' }}" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-      <a href="{{ settings.instagram_url or '#' }}" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
       <a href="{{ settings.telegram_url or '#' }}" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
-      <a href="{{ settings.twitter_url or '#' }}" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
-      <a href="{{ settings.email_url or '#' }}" aria-label="Email"><i class="fa-solid fa-envelope"></i></a>
-      <a href="{{ settings.call_url or '#' }}" aria-label="Call"><i class="fa-solid fa-phone"></i></a>
+      <a href="{{ settings.school_website or '#' }}" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+      <a href="{{ settings.email_url or '#' }}" aria-label="Gmail"><i class="fa-solid fa-envelope"></i></a>
       <a href="{{ settings.maps_url or '#' }}" aria-label="Map"><i class="fa-solid fa-map-location-dot"></i></a>
     </div>
   </footer>
