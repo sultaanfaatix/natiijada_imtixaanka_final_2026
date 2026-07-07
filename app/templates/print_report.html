@@ -15,92 +15,99 @@
   </style>
 </head>
 <body onload="window.print()">
-  <article class="sheet report-{{ result.settings.report_border_style }} table-{{ result.settings.report_table_style }}">
-    {% if result.settings.report_watermark %}<div class="watermark">{{ result.settings.report_watermark }}</div>{% endif %}
-    <header class="print-header header-{{ result.settings.report_header_style }}">
-      <div class="print-logo logo-{{ result.settings.report_logo_position }}">
-        {% if result.settings.logo_path %}<img src="{{ url_for('static', filename=result.settings.logo_path) }}" alt="Logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+  <article class="sheet tis-print-report">
+    <header class="tis-print-header">
+      <div class="tis-print-brand">
+        <div class="tis-print-logo">
+          {% if result.settings.logo_path %}<img src="{{ url_for('static', filename=result.settings.logo_path) }}" alt="{{ result.settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+        </div>
+        <div>
+          <h1>TIS <span>Kaarka Natiijada Imtixaanka</span></h1>
+          <p>{{ result.settings.school_motto }}</p>
+        </div>
       </div>
-      <div class="print-brand">
-        <h1>{{ result.settings.school_name }}</h1>
-        <p>{{ result.settings.school_motto }}</p>
-        <span><i class="fa-solid fa-location-dot"></i> {{ result.settings.school_address }} &nbsp; <i class="fa-solid fa-phone"></i> {{ result.settings.school_phone }} &nbsp; <i class="fa-solid fa-envelope"></i> {{ result.settings.school_email }}</span>
+      <div class="tis-print-exam">
+        <span>{{ result.exam.name if result.exam else 'Imtixaanka Finalka' }}</span>
+        <strong>{{ result.student.academic_year.name }}</strong>
       </div>
-      {% if result.settings.report_qr_position != 'bottom' %}
-      <div class="qr-box">
-        {% if result.verification %}<img src="{{ result.verification.qr_code }}" alt="Verification QR Code">{% else %}<i class="fa-solid fa-qrcode"></i><small>Verify</small>{% endif %}
-      </div>
-      {% endif %}
     </header>
 
-    <section class="report-title">
-      <div><span>Modern International School Report</span><h2>{{ result.exam.name if result.exam else "Exam Result" }}</h2></div>
-      <b>{{ result.student.academic_year.name }}</b>
+    <section class="tis-contact-strip">
+      <div><i class="fa-solid fa-location-dot"></i><span>{{ result.settings.school_address }}</span></div>
+      <div><i class="fa-solid fa-phone"></i><span>{{ result.settings.school_phone }}</span></div>
+      <div><i class="fa-solid fa-envelope"></i><span>{{ result.settings.school_email }}</span></div>
+      <div><i class="fa-solid fa-globe"></i><span>{{ result.settings.school_website }}</span></div>
     </section>
 
-    <section class="student-card-grid photo-{{ result.settings.report_photo_position }}">
-      {% if result.settings.report_photo_position != 'hidden' %}
-        <div class="student-photo">{% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="Student photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}</div>
-      {% endif %}
-      <div><span>Student Name</span><b>{{ result.student.full_name }}</b></div>
-      <div><span>Student ID</span><b>{{ result.student.student_code }}</b></div>
-      <div><span>Class</span><b>{{ result.student.school_class.name }}</b></div>
-      <div><span>Mother Name</span><b>{{ result.student.mother_name }}</b></div>
-    </section>
-
-    <table class="print-table">
-      <thead><tr><th>#</th><th>Icon</th><th>Subject Name</th><th>Score</th><th>Grade</th><th>Comment</th><th>Average</th></tr></thead>
-      <tbody>
-        {% for row in result.subjects %}
-          <tr class="grade-row grade-{{ row.grade.grade|replace('+','plus')|replace('-','minus') }}">
-            <td>{{ loop.index }}</td>
-            <td class="subject-icon-cell">{% if row.icon.type == 'image' %}<img src="{{ url_for('static', filename=row.icon.value) }}" alt="Subject icon">{% else %}<i class="fa-solid {{ row.icon.value }}"></i>{% endif %}</td>
-            <td>{{ row.subject }}</td>
-            <td>{{ row.score }} / {{ row.max_score }}</td>
-            <td><b>{{ row.grade.grade }}</b></td>
-            <td>{{ row.grade.comment }}</td>
-            <td>{{ row.percentage }}%</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <section class="overall-grid">
-      <div><i class="fa-solid fa-percent"></i><span>Average</span><b>{{ result.average }}%</b></div>
-      <div><i class="fa-solid fa-medal"></i><span>Grade</span><b>{{ result.overall_grade.grade }}</b></div>
-      <div><i class="fa-solid fa-ranking-star"></i><span>Rank</span><b>{{ result.rank or "-" }}</b></div>
-      <div><i class="fa-solid fa-circle-check"></i><span>Decision</span><b>{{ result.status }}</b></div>
-    </section>
-
-    <section class="comment-grid comment-{{ result.settings.report_comment_box }}">
-      <div><strong>Automatic Comment</strong><p>{{ result.comment }}</p></div>
-      {% if result.settings.report_qr_position == 'bottom' %}
-      <div class="qr-box bottom-qr">{% if result.verification %}<img src="{{ result.verification.qr_code }}" alt="Verification QR Code">{% else %}<i class="fa-solid fa-qrcode"></i>{% endif %}</div>
-      {% endif %}
-    </section>
-
-    <section class="signatures signature-{{ result.settings.report_signature_position }}">
-      <div>
-        {% if result.settings.principal_signature_path %}<img src="{{ url_for('static', filename=result.settings.principal_signature_path) }}" alt="Principal signature">{% endif %}
-        <b>{{ result.settings.principal_name }}</b><span>Principal</span>
-      </div>
-      <div>
-        {% if result.settings.vice_principal_signature_path %}<img src="{{ url_for('static', filename=result.settings.vice_principal_signature_path) }}" alt="Vice principal signature">{% endif %}
-        <b>Vice Principal</b><span>Academic Office</span>
-      </div>
-      <div>
-        {% if result.settings.exam_officer_signature_path %}<img src="{{ url_for('static', filename=result.settings.exam_officer_signature_path) }}" alt="Exam officer signature">{% endif %}
-        <b>Examination Officer</b><span>Results Office</span>
-      </div>
-      <div class="stamp-box">
-        {% if result.settings.school_stamp_path %}<img src="{{ url_for('static', filename=result.settings.school_stamp_path) }}" alt="School stamp">{% else %}<i class="fa-solid fa-stamp"></i>{% endif %}
-        <span>School Stamp</span>
+    <section class="tis-student-box">
+      <h2><i class="fa-solid fa-user"></i> Xogta Ardeyga</h2>
+      <div class="tis-student-body">
+        <div class="tis-student-photo">
+          {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
+        </div>
+        <div class="tis-student-lines">
+          <div><span><i class="fa-solid fa-user"></i></span><small>Magaca Ardeyga</small><strong>{{ result.student.full_name }}</strong></div>
+          <div><span><i class="fa-solid fa-person-dress"></i></span><small>Magaca Hooyada</small><strong>{{ result.student.mother_name }}</strong></div>
+          <div><span><i class="fa-solid fa-id-card"></i></span><small>Tirataxaane (ID)</small><strong>{{ result.student.student_code }}</strong></div>
+          <div><span><i class="fa-solid fa-graduation-cap"></i></span><small>Fasalka</small><strong>{{ result.student.school_class.name }}</strong></div>
+        </div>
+        <div class="tis-verify-qr">
+          {% if result.verification %}<img src="{{ result.verification.qr_code }}" alt="Verification QR Code">{% else %}<i class="fa-solid fa-qrcode"></i>{% endif %}
+          <strong>Scan To Verify</strong>
+        </div>
       </div>
     </section>
 
-    <footer>
-      <span>{{ result.settings.report_footer_text or result.settings.school_footer }}</span>
-      <span>{{ result.settings.school_website }}</span>
+    <section class="tis-marks-box">
+      <h2><i class="fa-solid fa-clipboard-list"></i> Natiijada Imtixaanka</h2>
+      <table class="tis-print-table">
+        <thead><tr><th>No.</th><th>Maado</th><th>Full Marks</th><th>Marks Obtained</th><th>Grade</th><th>Remarks</th></tr></thead>
+        <tbody>
+          {% for row in result.subjects %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ row.subject }}</td>
+              <td>{{ row.max_score }}</td>
+              <td>{{ row.score }}</td>
+              <td><strong>{{ row.grade.grade }}</strong></td>
+              <td>{{ row.grade.comment }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="tis-print-summary">
+      <div><i class="fa-solid fa-clipboard-check"></i><span>Total Marks</span><strong>{{ result.max_total }}</strong><small>Out of {{ result.max_total }}</small></div>
+      <div><i class="fa-solid fa-chart-line"></i><span>Marks Obtained</span><strong>{{ result.total }}</strong><small>Out of {{ result.max_total }}</small></div>
+      <div><i class="fa-solid fa-chart-pie"></i><span>Percentage</span><strong>{{ result.average }}%</strong></div>
+      <div><i class="fa-solid fa-award"></i><span>Grade</span><strong>{{ result.overall_grade.grade }}</strong><small>{{ result.overall_grade.comment }}</small></div>
+      <div><i class="fa-solid fa-trophy"></i><span>Rank</span><strong>{{ result.rank or '-' }}</strong><small>In Class</small></div>
+    </section>
+
+    <section class="tis-print-bottom">
+      <div class="tis-print-comment">
+        <h3><i class="fa-solid fa-message"></i> Comments</h3>
+        <p>{{ result.comment }}</p>
+      </div>
+      <div class="tis-official-sign">
+        {% if result.settings.principal_signature_path %}<img src="{{ url_for('static', filename=result.settings.principal_signature_path) }}" alt="Official signature">{% else %}<span>Signature</span>{% endif %}
+        <strong>Maamulka Dugsiga</strong>
+        <small>School Administration</small>
+      </div>
+      <div class="tis-official-stamp">
+        {% if result.settings.school_stamp_path %}<img src="{{ url_for('static', filename=result.settings.school_stamp_path) }}" alt="School stamp">{% else %}<strong>TIS</strong>{% endif %}
+      </div>
+    </section>
+
+    <footer class="tis-print-footer">
+      <div>&copy; SULTAAN <span>|</span> 2026. All Rights Reserved.</div>
+      <nav>
+        <i class="fa-solid fa-phone"></i>
+        <i class="fa-brands fa-whatsapp"></i>
+        <i class="fa-brands fa-facebook-f"></i>
+        <i class="fa-brands fa-telegram"></i>
+      </nav>
     </footer>
   </article>
 </body>

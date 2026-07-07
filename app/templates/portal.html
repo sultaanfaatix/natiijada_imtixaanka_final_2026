@@ -51,67 +51,94 @@
   {% endif %}
 
   {% if result %}
-    <section class="premium-result result-dashboard" data-result-status="{{ result.status }}">
-      <div class="student-result-shell">
-        <section class="student-result-card glass-card">
-          <div class="student-result-main">
-            <div class="student-result-photo">
-              {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
-            </div>
-            <div class="student-result-bio">
-              <h2>{{ result.student.full_name }}</h2>
-              <div class="student-detail-grid">
-                <div class="student-detail-item"><span><i class="fa-solid fa-id-card"></i></span><small>Student ID</small><strong>{{ result.student.student_code }}</strong></div>
-                <div class="student-detail-item"><span><i class="fa-solid fa-people-roof"></i></span><small>Class</small><strong>{{ result.student.school_class.name }}</strong></div>
-                <div class="student-detail-item wide"><span><i class="fa-solid fa-user"></i></span><small>Mother's Name</small><strong>{{ result.student.mother_name }}</strong></div>
-              </div>
-            </div>
+    <section class="premium-result result-dashboard reference-one-result" data-result-status="{{ result.status }}">
+      <aside class="reference-student-panel">
+        <div class="reference-photo-wrap">
+          {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
+          <span class="reference-photo-logo">{% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}</span>
+        </div>
+        <h2>{{ result.student.full_name }}</h2>
+        <p>{{ result.student.school_class.name }}</p>
+        <div class="reference-side-lines">
+          <div><span><i class="fa-solid fa-user"></i></span><small>Mother's Name</small><strong>{{ result.student.mother_name }}</strong></div>
+          <div><span><i class="fa-solid fa-id-card"></i></span><small>Student ID</small><strong>{{ result.student.student_code }}</strong></div>
+          <div><span><i class="fa-solid fa-people-roof"></i></span><small>Student Class</small><strong>{{ result.student.school_class.name }}</strong></div>
+          <div><span><i class="fa-solid fa-file-lines"></i></span><small>Exam Type</small><strong>{{ result.exam.name if result.exam else 'Final Examination' }}</strong></div>
+          <div><span><i class="fa-solid fa-calendar-check"></i></span><small>Date Issued</small><strong>{{ result.student.updated_at.strftime('%d %b %Y') if result.student.updated_at else '-' }}</strong></div>
+          <div><span><i class="fa-solid fa-percent"></i></span><small>Percentage of Subjects</small><strong>{{ result.average }}%</strong></div>
+        </div>
+        <div class="reference-school-mark">
+          {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
+          <strong>{{ settings.school_name }}</strong>
+          <small>{{ settings.school_motto }}</small>
+        </div>
+      </aside>
+
+      <div class="reference-result-content">
+        <header class="reference-result-header">
+          <div>
+            <h2>REPORT <span>CARD</span></h2>
+            <p>Academic Year {{ result.student.academic_year.name }}</p>
           </div>
-          <aside class="result-status-panel {{ 'passed' if result.status == 'Gudbay' else 'failed' }}">
-            <div class="status-title">Overall Result</div>
-            <div class="status-row">
-              <strong>{{ 'PASSED' if result.status == 'Gudbay' else 'FAILED' }}</strong>
-              <span><i class="fa-solid {{ 'fa-check' if result.status == 'Gudbay' else 'fa-xmark' }}"></i></span>
-            </div>
-            <dl>
-              <div><dt>Average Mark</dt><dd>{{ result.average }}%</dd></div>
-              <div><dt>Grade</dt><dd>{{ result.overall_grade.grade }}</dd></div>
-              <div><dt>Position in Class</dt><dd>{{ result.rank or '-' }}</dd></div>
-            </dl>
-          </aside>
-        </section>
+          <blockquote>Your hard work today builds your success tomorrow.</blockquote>
+          <span class="reference-award"><i class="fa-solid fa-star"></i></span>
+        </header>
 
-        <section class="result-summary-cards" aria-label="Result summary">
-          <div class="result-summary-card average"><span><i class="fa-solid fa-chart-line"></i></span><small>Average</small><strong>{{ result.average }}%</strong><em>Average Mark</em></div>
-          <div class="result-summary-card grade"><span><i class="fa-regular fa-star"></i></span><small>Grade</small><strong>{{ result.overall_grade.grade }}</strong><em>Final Grade</em></div>
-          <div class="result-summary-card position"><span><i class="fa-solid fa-trophy"></i></span><small>Position</small><strong>{{ result.rank or '-' }}</strong><em>In Class</em></div>
-          <div class="result-summary-card decision {{ 'passed' if result.status == 'Gudbay' else 'failed' }}"><span><i class="fa-solid {{ 'fa-circle-check' if result.status == 'Gudbay' else 'fa-circle-xmark' }}"></i></span><small>Result</small><strong>{{ 'Pass' if result.status == 'Gudbay' else 'Fail' }}</strong><em>{{ result.comment }}</em></div>
-        </section>
-
-        <section class="result-subjects-panel glass-card">
-          <div class="result-section-title"><span><i class="fa-solid fa-square-poll-horizontal"></i></span><h2>Subject Performance</h2></div>
-          <div class="responsive-table result-subjects-table-wrap">
-            <table class="premium-table subject-results-table">
-              <thead><tr><th>#</th><th>Subject</th><th>Full Mark</th><th>Mark Obtained</th><th>Percentage</th><th>Grade</th><th>Remark</th></tr></thead>
+        <main class="reference-result-grid">
+          <section class="reference-table-panel">
+            <table class="reference-result-table">
+              <thead><tr><th>No.</th><th>Subject</th><th>Full Mark</th><th>Mark Obtained</th><th>Grade</th><th>Grade Point</th></tr></thead>
               <tbody>
                 {% for row in result.subjects %}
                   <tr>
-                    <td data-label="#"><strong>{{ loop.index }}</strong></td>
-                    <td data-label="Subject"><span class="subject-icon"><i class="fa-solid fa-book-open"></i></span>{{ row.subject }}</td>
+                    <td data-label="No.">{{ loop.index }}</td>
+                    <td data-label="Subject">{{ row.subject }}</td>
                     <td data-label="Full Mark">{{ row.max_score }}</td>
-                    <td data-label="Mark Obtained"><strong>{{ row.score }}</strong></td>
-                    <td data-label="Percentage"><span class="subject-percent">{{ row.percentage }}%</span></td>
-                    <td data-label="Grade"><span class="grade-badge">{{ row.grade.grade }}</span></td>
-                    <td data-label="Remark"><span class="subject-remark">{{ row.grade.comment }}</span></td>
+                    <td data-label="Mark Obtained">{{ row.score }}</td>
+                    <td data-label="Grade">{{ row.grade.grade }}</td>
+                    <td data-label="Grade Point">{{ '5.0' if row.percentage >= 90 else '4.0' if row.percentage >= 80 else '3.5' if row.percentage >= 70 else '3.0' if row.percentage >= 60 else '2.0' if row.percentage >= 50 else '0.0' }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
+          </section>
+
+          <aside class="reference-academic-summary">
+            <h3>Academic Summary</h3>
+            <div><span><i class="fa-solid fa-book-open"></i> Total Subjects</span><strong>{{ result.subjects|length }}</strong></div>
+            <div><span><i class="fa-solid fa-list-check"></i> Total Marks</span><strong>{{ result.max_total }}</strong></div>
+            <div><span><i class="fa-solid fa-chart-line"></i> Total Obtained Marks</span><strong>{{ result.total }}</strong></div>
+            <div><span><i class="fa-solid fa-chart-pie"></i> Average Percentage</span><strong>{{ result.average }}%</strong></div>
+            <div><span><i class="fa-solid fa-star"></i> Overall Grade</span><strong class="pill">{{ result.overall_grade.grade }}</strong></div>
+            <div><span><i class="fa-solid fa-ranking-star"></i> Position in Class</span><strong>{{ result.rank or '-' }}</strong></div>
+            <div><span><i class="fa-solid fa-face-smile"></i> Behavior</span><strong>Excellent</strong></div>
+          </aside>
+        </main>
+
+        <section class="reference-bottom-grid">
+          <div class="reference-grade-scale">
+            <h3>Grade Scale</h3>
+            <table>
+              <tr><th>Percentage</th><th>Grade</th><th>Point</th></tr>
+              <tr><td>90 - 100</td><td>A+</td><td>5.0</td></tr>
+              <tr><td>80 - 89</td><td>A</td><td>4.0</td></tr>
+              <tr><td>70 - 79</td><td>B+</td><td>3.5</td></tr>
+              <tr><td>60 - 69</td><td>B</td><td>3.0</td></tr>
+              <tr><td>50 - 59</td><td>C</td><td>2.0</td></tr>
+              <tr><td>0 - 49</td><td>F</td><td>0.0</td></tr>
+            </table>
           </div>
-          <div class="grading-note"><i class="fa-solid fa-circle-info"></i> Grading System: A+ (90-100) | A (80-89) | B (70-79) | C (60-69) | D (50-59) | F (0-49)</div>
+          <div class="reference-performance">
+            <h3>Performance Overview</h3>
+            <div class="reference-radar"><i class="fa-solid fa-chart-simple"></i><strong>{{ result.average }}%</strong><span>Average Performance</span></div>
+          </div>
+          <div class="reference-comments">
+            <h3><i class="fa-solid fa-comment"></i> Teacher's Remarks</h3>
+            <p>{{ result.comment }}</p>
+          </div>
         </section>
 
-        <section class="result-action-panel glass-card">
+        <section class="result-action-panel reference-actions glass-card">
           <a class="result-action-button download" href="{{ url_for('public.print_report', student_code=result.student.student_code) }}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i><span>Download Report</span><small>PDF</small></a>
           <a class="result-action-button print" href="{{ url_for('public.print_report', student_code=result.student.student_code) }}" target="_blank" rel="noopener"><i class="fa-solid fa-print"></i><span>Print Result</span><small>Print</small></a>
           <button type="button" class="result-action-button share js-share-result" data-share-url="{{ url_for('public.print_report', student_code=result.student.student_code) }}" data-share-title="{{ result.student.full_name }} Result"><i class="fa-solid fa-share-nodes"></i><span>Share Result</span><small>Share</small></button>
@@ -120,15 +147,22 @@
     </section>
   {% endif %}
 
-  <footer class="premium-public-footer">
-    <div class="premium-footer-copy"><strong>SULTAN</strong><span>|</span><b>2026.</b><em>All Rights Reserved.</em></div>
+  <footer class="premium-public-footer {% if result %}reference-result-footer{% endif %}">
+    <div class="premium-footer-copy">{% if result %}<em>&copy;</em>{% endif %}<strong>{{ 'SULTAAN' if result else 'SULTAN' }}</strong><span>|</span><b>2026.</b><em>All Rights Reserved.</em></div>
     <div class="social-links premium-social-links">
+      {% if result %}
+      <a href="{{ settings.call_url or '#' }}" aria-label="Phone"><i class="fa-solid fa-phone"></i></a>
+      {% endif %}
       <a href="{{ settings.whatsapp_url or '#' }}" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
       <a href="{{ settings.facebook_url or '#' }}" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
       <a href="{{ settings.telegram_url or '#' }}" aria-label="Telegram"><i class="fa-brands fa-telegram"></i></a>
+      {% if not result %}
       <a href="{{ settings.school_website or '#' }}" aria-label="Website"><i class="fa-solid fa-globe"></i></a>
+      {% endif %}
       <a href="{{ settings.email_url or '#' }}" aria-label="Gmail"><i class="fa-solid fa-envelope"></i></a>
+      {% if not result %}
       <a href="{{ settings.maps_url or '#' }}" aria-label="Map"><i class="fa-solid fa-map-location-dot"></i></a>
+      {% endif %}
     </div>
   </footer>
   {% if result %}
