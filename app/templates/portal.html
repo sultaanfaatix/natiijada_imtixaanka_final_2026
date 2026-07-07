@@ -2,7 +2,44 @@
 {% block title %}{{ settings.school_name }} Result Portal{% endblock %}
 {% block body_class %}public-body premium-public-body{% endblock %}
 {% block content %}
-<main class="public-hero student-homepage premium-homepage {% if result %}has-result{% endif %}">
+<main class="public-hero student-homepage premium-homepage {% if result %}has-result{% endif %}" {% if result %}style="
+  --sis-primary: {{ settings.result_dashboard_primary_color }};
+  --sis-secondary: {{ settings.result_dashboard_secondary_color }};
+  --sis-accent: {{ settings.result_dashboard_accent_color }};
+  --sis-bg: {{ settings.result_dashboard_background_color }};
+  --sis-card-solid: {{ settings.result_dashboard_card_color }};
+  --sis-card: {{ settings.result_dashboard_card_color }};
+  --sis-button: {{ settings.result_dashboard_button_color }};
+  --sis-header: {{ settings.result_dashboard_header_color }};
+  --sis-footer: {{ settings.result_dashboard_footer_color }};
+  --sis-table-header: {{ settings.result_dashboard_table_header_color }};
+  --sis-text: {{ settings.result_dashboard_text_color }};
+  --sis-muted: {{ settings.result_dashboard_muted_text_color }};
+  --sis-font-family: {{ settings.result_dashboard_font_family }};
+  --sis-base-font-size: {{ settings.result_dashboard_base_font_size }};
+  --sis-font-weight: {{ settings.result_dashboard_font_weight }};
+  --sis-line-height: {{ settings.result_dashboard_line_height }};
+  --sis-radius-card: {{ settings.result_dashboard_border_radius }};
+  --sis-radius-panel: {{ settings.result_dashboard_border_radius }};
+  --sis-card-gap: {{ settings.result_dashboard_card_spacing }};
+  --sis-card-padding: {{ settings.result_dashboard_padding }};
+  --sis-page-margin: {{ settings.result_dashboard_margin }};
+  --sis-sidebar-width: {{ '260px' if settings.result_dashboard_show_sidebar == 'on' else '0px' }};
+  --sis-shadow: {{ 'none' if settings.result_dashboard_shadow == 'none' else '0 10px 26px rgba(19, 46, 92, .08)' if settings.result_dashboard_shadow == 'soft' else '0 16px 42px rgba(19, 46, 92, .13)' }};
+  --sis-dashboard-bg-image: {% if settings.result_dashboard_background_image %}url('{{ url_for('static', filename=settings.result_dashboard_background_image) }}'){% else %}none{% endif %};
+  --sis-display-student-photo: {{ 'block' if settings.result_dashboard_show_student_photo == 'on' else 'none' }};
+  --sis-display-school-logo: {{ 'block' if settings.result_dashboard_show_school_logo == 'on' else 'none' }};
+  --sis-display-sidebar: {{ 'flex' if settings.result_dashboard_show_sidebar == 'on' else 'none' }};
+  --sis-display-grade-scale: {{ 'block' if settings.result_dashboard_show_grade_scale == 'on' else 'none' }};
+  --sis-display-performance: {{ 'block' if settings.result_dashboard_show_performance == 'on' else 'none' }};
+  --sis-display-teacher-remarks: {{ 'block' if settings.result_dashboard_show_teacher_remarks == 'on' else 'none' }};
+  --sis-display-summary: {{ 'block' if settings.result_dashboard_show_summary == 'on' else 'none' }};
+  --sis-display-footer: {{ 'flex' if settings.result_dashboard_show_footer == 'on' else 'none' }};
+  --sis-display-social-icons: {{ 'flex' if settings.result_dashboard_show_social_icons == 'on' else 'none' }};
+  --sis-display-download-button: {{ 'grid' if settings.result_dashboard_show_download_button == 'on' else 'none' }};
+  --sis-display-print-button: {{ 'grid' if settings.result_dashboard_show_print_button == 'on' else 'none' }};
+  --sis-display-share-button: {{ 'grid' if settings.result_dashboard_show_share_button == 'on' else 'none' }};
+"{% endif %}>
   <nav class="premium-language-nav">
     <label class="premium-language-pill">
       <i class="fa-solid fa-globe"></i>
@@ -56,7 +93,7 @@
     <section class="premium-result result-dashboard reference-one-result" data-result-status="{{ result.status }}">
       <aside class="reference-student-panel">
         <div class="reference-photo-wrap">
-          {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
+          {% if result.student.photo_path %}<img src="{{ url_for('static', filename=result.student.photo_path) }}" alt="{{ result.student.full_name }} photo">{% elif settings.result_dashboard_default_avatar %}<img src="{{ url_for('static', filename=settings.result_dashboard_default_avatar) }}" alt="Default student avatar">{% else %}<i class="fa-solid fa-user-graduate"></i>{% endif %}
           <span class="reference-photo-logo">{% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}</span>
         </div>
         <h2>{{ result.student.full_name }}</h2>
@@ -132,15 +169,14 @@
             <h3>Performance Overview</h3>
             <div class="reference-sunburst" data-average="{{ result.average }}" data-subjects='[
               {% for row in result.subjects %}
-                {"subject": {{ row.subject|tojson }}, "percentage": {{ row.percentage|float }}}{% if not loop.last %},{% endif %}
+                {"subject": {{ row.subject|tojson }}, "score": {{ row.score|float }}, "max_score": {{ row.max_score|float }}, "grade": {{ row.grade.grade|tojson }}, "percentage": {{ row.percentage|float }}}{% if not loop.last %},{% endif %}
               {% endfor %}
             ]'>
               <div class="sunburst-stage">
                 <svg class="sunburst-svg" viewBox="0 0 260 260" role="img" aria-label="Interactive subject performance sunburst"></svg>
                 <div class="sunburst-center"><strong>{{ result.average }}%</strong><span>Average</span></div>
               </div>
-              <div class="sunburst-active" aria-live="polite">Select a subject</div>
-              <div class="sunburst-legend"></div>
+              <div class="sunburst-tooltip" aria-live="polite">Tap or hover a segment</div>
             </div>
           </div>
           <div class="reference-comments">
@@ -159,7 +195,7 @@
   {% endif %}
 
   <footer class="premium-public-footer {% if result %}reference-result-footer{% endif %}">
-    <div class="premium-footer-copy">{% if result %}<em>&copy;</em>{% endif %}<strong>{{ settings.result_footer_owner if result else 'SULTAN' }}</strong><span>|</span><b>2026.</b><em>All Rights Reserved.</em></div>
+    <div class="premium-footer-copy">{% if result and settings.result_dashboard_footer_logo %}<img class="result-footer-logo" src="{{ url_for('static', filename=settings.result_dashboard_footer_logo) }}" alt="Footer logo">{% endif %}{% if result %}<em>&copy;</em>{% endif %}<strong>{{ settings.result_footer_owner if result else 'SULTAN' }}</strong><span>|</span><b>2026.</b><em>All Rights Reserved.</em></div>
     <div class="social-links premium-social-links">
       {% if result %}
       <a href="{{ settings.call_url or '#' }}" aria-label="Phone"><i class="fa-solid fa-phone"></i></a>
@@ -210,8 +246,7 @@
         if (!subjects.length) return;
 
         const svg = chart.querySelector(".sunburst-svg");
-        const active = chart.querySelector(".sunburst-active");
-        const legend = chart.querySelector(".sunburst-legend");
+        const tooltip = chart.querySelector(".sunburst-tooltip");
         const center = chart.querySelector(".sunburst-center");
         const palette = ["#087cff", "#8a43e8", "#f0447b", "#ff8a25", "#12c2a6", "#0ea5e9", "#7c3aed", "#10b981", "#f59e0b", "#2563eb", "#ec4899", "#14b8a6"];
         const total = subjects.reduce((sum, item) => sum + Math.max(Number(item.percentage) || 0, 1), 0);
@@ -236,8 +271,9 @@
           ].join(" ");
         };
         const setActive = (item, index) => {
-          active.textContent = `${item.subject}: ${Number(item.percentage).toFixed(1)}%`;
-          center.innerHTML = `<strong>${Number(item.percentage).toFixed(1)}%</strong><span>${item.subject}</span>`;
+          const percent = Number(item.percentage).toFixed(1);
+          tooltip.innerHTML = `<strong>${item.subject}</strong><span>${item.score}/${item.max_score} marks</span><span>Grade ${item.grade} - ${percent}%</span>`;
+          center.innerHTML = `<strong>${percent}%</strong><span>${item.grade}</span>`;
           chart.querySelectorAll(".sunburst-segment").forEach((segment) => segment.classList.toggle("is-active", Number(segment.dataset.index) === index));
         };
 
@@ -253,14 +289,9 @@
           path.classList.add("sunburst-segment");
           path.dataset.index = String(index);
           path.addEventListener("mouseenter", () => setActive(item, index));
+          path.addEventListener("click", () => setActive(item, index));
           path.addEventListener("focus", () => setActive(item, index));
           svg.appendChild(path);
-
-          const pill = document.createElement("button");
-          pill.type = "button";
-          pill.innerHTML = `<span style="--dot:${palette[index % palette.length]}"></span>${item.subject}`;
-          pill.addEventListener("click", () => setActive(item, index));
-          legend.appendChild(pill);
           startAngle = endAngle;
         });
       })();

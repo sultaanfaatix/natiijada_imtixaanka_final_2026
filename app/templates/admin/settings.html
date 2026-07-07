@@ -98,6 +98,65 @@
     <label><i class="fa-solid fa-icons"></i> Icon Style<select name="result_icon_style"><option value="solid" {% if settings.result_icon_style=='solid' %}selected{% endif %}>Solid</option><option value="minimal" {% if settings.result_icon_style=='minimal' %}selected{% endif %}>Minimal</option></select></label>
   </section>
 
+  <section class="panel form-grid premium-form result-dashboard-customizer">
+    <div class="section-heading wide"><span><i class="fa-solid fa-sliders"></i></span><div><h2>Result Dashboard Customization</h2><p>Customize the student result dashboard appearance without editing code. The preview updates instantly before saving.</p></div></div>
+    <div class="wide result-dashboard-preview" id="resultDashboardPreview">
+      <div class="preview-sidebar"><span></span><strong>Student Panel</strong><small>Photo, class, labels</small></div>
+      <div class="preview-main">
+        <header><strong>Result Dashboard</strong><span>Live Preview</span></header>
+        <div class="preview-grid"><div></div><div></div><div></div></div>
+        <table><tr><th>Subject</th><th>Marks</th><th>Grade</th></tr><tr><td>Somali</td><td>92</td><td>A+</td></tr></table>
+      </div>
+    </div>
+    <div class="section-heading wide"><span><i class="fa-solid fa-palette"></i></span><div><h2>Colors</h2><p>Primary palette and readable text colors for the result dashboard.</p></div></div>
+    <label><i class="fa-solid fa-palette"></i> Primary Color<input data-preview-var="--preview-primary" name="result_dashboard_primary_color" type="color" value="{{ settings.result_dashboard_primary_color }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Secondary Color<input data-preview-var="--preview-secondary" name="result_dashboard_secondary_color" type="color" value="{{ settings.result_dashboard_secondary_color }}"></label>
+    <label><i class="fa-solid fa-wand-magic-sparkles"></i> Accent Color<input data-preview-var="--preview-accent" name="result_dashboard_accent_color" type="color" value="{{ settings.result_dashboard_accent_color }}"></label>
+    <label><i class="fa-solid fa-brush"></i> Background Color<input data-preview-var="--preview-bg" name="result_dashboard_background_color" type="color" value="{{ settings.result_dashboard_background_color }}"></label>
+    <label><i class="fa-solid fa-square"></i> Card Color<input data-preview-var="--preview-card" name="result_dashboard_card_color" type="color" value="{{ settings.result_dashboard_card_color }}"></label>
+    <label><i class="fa-solid fa-hand-pointer"></i> Button Color<input name="result_dashboard_button_color" type="color" value="{{ settings.result_dashboard_button_color }}"></label>
+    <label><i class="fa-solid fa-heading"></i> Header Color<input name="result_dashboard_header_color" type="color" value="{{ settings.result_dashboard_header_color }}"></label>
+    <label><i class="fa-solid fa-shoe-prints"></i> Footer Color<input name="result_dashboard_footer_color" type="color" value="{{ settings.result_dashboard_footer_color }}"></label>
+    <label><i class="fa-solid fa-table-list"></i> Table Header Color<input name="result_dashboard_table_header_color" type="color" value="{{ settings.result_dashboard_table_header_color }}"></label>
+    <label><i class="fa-solid fa-font"></i> Text Color<input data-preview-var="--preview-text" name="result_dashboard_text_color" type="color" value="{{ settings.result_dashboard_text_color }}"></label>
+    <label><i class="fa-solid fa-font"></i> Muted Text Color<input name="result_dashboard_muted_text_color" type="color" value="{{ settings.result_dashboard_muted_text_color }}"></label>
+
+    <div class="section-heading wide"><span><i class="fa-solid fa-text-height"></i></span><div><h2>Typography & Layout</h2><p>Compact spacing and font controls. Use CSS units such as px, rem, or em.</p></div></div>
+    <label><i class="fa-solid fa-font"></i> Font Family<input data-preview-var="--preview-font" name="result_dashboard_font_family" value="{{ settings.result_dashboard_font_family }}"></label>
+    <label><i class="fa-solid fa-text-height"></i> Base Font Size<input name="result_dashboard_base_font_size" value="{{ settings.result_dashboard_base_font_size }}"></label>
+    <label><i class="fa-solid fa-bold"></i> Font Weight<input name="result_dashboard_font_weight" value="{{ settings.result_dashboard_font_weight }}"></label>
+    <label><i class="fa-solid fa-align-left"></i> Line Height<input name="result_dashboard_line_height" value="{{ settings.result_dashboard_line_height }}"></label>
+    <label><i class="fa-solid fa-border-top-left"></i> Border Radius<input data-preview-var="--preview-radius" name="result_dashboard_border_radius" value="{{ settings.result_dashboard_border_radius }}"></label>
+    <label><i class="fa-solid fa-table-cells"></i> Card Spacing<input name="result_dashboard_card_spacing" value="{{ settings.result_dashboard_card_spacing }}"></label>
+    <label><i class="fa-solid fa-layer-group"></i> Shadows<select name="result_dashboard_shadow"><option value="soft" {% if settings.result_dashboard_shadow=='soft' %}selected{% endif %}>Soft</option><option value="medium" {% if settings.result_dashboard_shadow=='medium' %}selected{% endif %}>Medium</option><option value="none" {% if settings.result_dashboard_shadow=='none' %}selected{% endif %}>None</option></select></label>
+    <label><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Padding<input name="result_dashboard_padding" value="{{ settings.result_dashboard_padding }}"></label>
+    <label><i class="fa-solid fa-arrows-left-right"></i> Margins<input name="result_dashboard_margin" value="{{ settings.result_dashboard_margin }}"></label>
+
+    <div class="section-heading wide"><span><i class="fa-solid fa-eye"></i></span><div><h2>Visibility Controls</h2><p>Show or hide result dashboard sections without changing templates.</p></div></div>
+    {% for key, label in [
+      ('result_dashboard_show_student_photo','Student Photo'),
+      ('result_dashboard_show_school_logo','School Logo'),
+      ('result_dashboard_show_qr','QR Code'),
+      ('result_dashboard_show_sidebar','Sidebar'),
+      ('result_dashboard_show_grade_scale','Grade Scale'),
+      ('result_dashboard_show_performance','Performance Overview'),
+      ('result_dashboard_show_teacher_remarks','Teacher Remarks'),
+      ('result_dashboard_show_summary','Summary Card'),
+      ('result_dashboard_show_footer','Footer'),
+      ('result_dashboard_show_social_icons','Social Icons'),
+      ('result_dashboard_show_download_button','Download Button'),
+      ('result_dashboard_show_print_button','Print Button'),
+      ('result_dashboard_show_share_button','Share Button')
+    ] %}
+      <label><i class="fa-solid fa-toggle-on"></i> {{ label }}<select name="{{ key }}"><option value="on" {% if settings.get(key) == 'on' %}selected{% endif %}>ON</option><option value="off" {% if settings.get(key) != 'on' %}selected{% endif %}>OFF</option></select></label>
+    {% endfor %}
+
+    <div class="section-heading wide"><span><i class="fa-solid fa-upload"></i></span><div><h2>Upload Settings</h2><p>Optional branding images used by the result dashboard.</p></div></div>
+    <label><i class="fa-solid fa-image"></i> Result Background Image<input name="result_dashboard_background_image" type="file" accept="image/*"></label>
+    <label><i class="fa-solid fa-user-graduate"></i> Default Student Avatar<input name="result_dashboard_default_avatar" type="file" accept="image/*"></label>
+    <label><i class="fa-solid fa-shoe-prints"></i> Footer Logo<input name="result_dashboard_footer_logo" type="file" accept="image/*"></label>
+  </section>
+
   <section class="panel form-grid premium-form">
     <div class="section-heading wide"><span><i class="fa-solid fa-pen-to-square"></i></span><div><h2>Result & Print Text Controls</h2><p>Super Admin labels and headings for the public result page and printable report.</p></div></div>
     <label><i class="fa-solid fa-heading"></i> Online Title Primary<input name="result_online_title_primary" value="{{ settings.result_online_title_primary }}"></label>
@@ -133,4 +192,15 @@
   </section>
   <button class="floating-save premium"><i class="fa-solid fa-floppy-disk"></i> Save All Settings</button>
 </form>
+<script>
+  (() => {
+    const preview = document.getElementById("resultDashboardPreview");
+    if (!preview) return;
+    document.querySelectorAll("[data-preview-var]").forEach((input) => {
+      const apply = () => preview.style.setProperty(input.dataset.previewVar, input.value);
+      input.addEventListener("input", apply);
+      apply();
+    });
+  })();
+</script>
 {% endblock %}
