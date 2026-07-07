@@ -22,7 +22,7 @@
           {% if result.settings.logo_path %}<img src="{{ url_for('static', filename=result.settings.logo_path) }}" alt="{{ result.settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
         </div>
         <div>
-          <h1>{{ result.settings.print_brand_code }} <span>{{ result.settings.print_report_title }}</span></h1>
+          <h1>{{ result.settings.school_name }}</h1>
           <p>{{ result.settings.school_motto }}</p>
         </div>
       </div>
@@ -31,13 +31,6 @@
         <strong>{{ result.student.academic_year.name }}</strong>
       </div>
     </header>
-
-    <section class="tis-contact-strip">
-      <div><i class="fa-solid fa-location-dot"></i><span>{{ result.settings.school_address }}</span></div>
-      <div><i class="fa-solid fa-phone"></i><span>{{ result.settings.school_phone }}</span></div>
-      <div><i class="fa-solid fa-envelope"></i><span>{{ result.settings.school_email }}</span></div>
-      <div><i class="fa-solid fa-globe"></i><span>{{ result.settings.school_website }}</span></div>
-    </section>
 
     <section class="tis-student-box">
       <h2><i class="fa-solid fa-user"></i> {{ result.settings.print_student_heading }}</h2>
@@ -100,16 +93,6 @@
       </div>
     </section>
 
-    <footer class="tis-print-footer">
-      <div>&copy; {{ result.settings.print_footer_owner }} <span>|</span> 2026. All Rights Reserved.</div>
-      <nav>
-        <i class="fa-solid fa-phone"></i>
-        <i class="fa-brands fa-whatsapp"></i>
-        <i class="fa-brands fa-facebook-f"></i>
-        <i class="fa-brands fa-telegram"></i>
-        <i class="fa-solid fa-envelope"></i>
-      </nav>
-    </footer>
   </article>
 </body>
 </html>

@@ -12,10 +12,10 @@ body {
   width: 202mm;
   height: 289mm;
   margin: 0 auto;
-  padding: 4.2mm;
+  padding: 3.6mm;
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto auto auto;
-  gap: 2.8mm;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 2.2mm;
   overflow: hidden;
   border: 1px solid #d4e2f6;
   border-radius: 2mm;
@@ -27,20 +27,20 @@ body {
 .tis-print-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 70mm;
-  min-height: 28mm;
-  gap: 4mm;
+  min-height: 24mm;
+  gap: 3mm;
   align-items: start;
 }
 .tis-print-brand {
   display: grid;
-  grid-template-columns: 28mm minmax(0, 1fr);
-  gap: 4mm;
+  grid-template-columns: 24mm minmax(0, 1fr);
+  gap: 3mm;
   align-items: center;
   min-width: 0;
 }
 .tis-print-logo {
-  width: 24mm;
-  height: 24mm;
+  width: 21mm;
+  height: 21mm;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -55,9 +55,9 @@ body {
 .tis-print-brand h1 {
   margin: 0;
   color: #08266e;
-  font-size: 28pt;
-  line-height: .95;
-  letter-spacing: .03em;
+  font-size: 22pt;
+  line-height: 1.02;
+  letter-spacing: 0;
 }
 .tis-print-brand h1 span {
   display: inline-block;
@@ -67,7 +67,7 @@ body {
   text-transform: uppercase;
 }
 .tis-print-brand p {
-  margin: 2.5mm 0 0;
+  margin: 1.5mm 0 0;
   color: #063b9b;
   font-size: 11pt;
   font-weight: 800;
@@ -76,8 +76,8 @@ body {
 }
 .tis-print-exam {
   position: relative;
-  min-height: 27mm;
-  padding: 5.5mm 7mm 4mm 18mm;
+  min-height: 23mm;
+  padding: 4.5mm 6mm 3.5mm 17mm;
   color: #fff;
   text-align: center;
   border-radius: 0 3mm 0 18mm;
@@ -97,17 +97,21 @@ body {
 .tis-print-exam span {
   display: block;
   color: #22d3ee;
-  font-size: 13pt;
+  font-size: 11pt;
   font-weight: 900;
   letter-spacing: .06em;
   text-transform: uppercase;
 }
 .tis-print-exam strong {
   display: block;
-  margin-top: 2mm;
+  margin-top: 1.6mm;
   color: #fff;
-  font-size: 26pt;
+  font-size: 22pt;
   line-height: 1;
+}
+.tis-contact-strip,
+.tis-print-footer {
+  display: none;
 }
 .tis-contact-strip {
   display: grid;
@@ -155,7 +159,7 @@ body {
   align-items: center;
   gap: 3mm;
   margin: -1px 0 0 4mm;
-  padding: 2.8mm 6mm;
+  padding: 2.2mm 5mm;
   color: #fff;
   font-size: 14pt;
   line-height: 1;
@@ -165,14 +169,14 @@ body {
 }
 .tis-student-body {
   display: grid;
-  grid-template-columns: 40mm minmax(0, 1fr) 39mm;
-  gap: 6mm;
+  grid-template-columns: 34mm minmax(0, 1fr) 34mm;
+  gap: 4mm;
   align-items: center;
-  padding: 3.6mm 5mm 4.2mm;
+  padding: 2.6mm 4mm 3mm;
 }
 .tis-student-photo {
-  width: 36mm;
-  height: 42mm;
+  width: 31mm;
+  height: 36mm;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -185,7 +189,7 @@ body {
 .tis-student-photo img { width: 100%; height: 100%; object-fit: cover; }
 .tis-student-lines {
   display: grid;
-  gap: 2.2mm;
+  gap: 1.5mm;
 }
 .tis-student-lines div {
   display: grid;
@@ -194,13 +198,13 @@ body {
   column-gap: 3mm;
   align-items: center;
   min-width: 0;
-  padding-bottom: 1.7mm;
+  padding-bottom: 1.1mm;
   border-bottom: 1px solid #ccd9ec;
 }
 .tis-student-lines span {
   grid-area: icon;
-  width: 8.5mm;
-  height: 8.5mm;
+  width: 7.5mm;
+  height: 7.5mm;
   display: grid;
   place-items: center;
   color: #fff;
@@ -211,20 +215,20 @@ body {
 .tis-student-lines small {
   grid-area: label;
   color: #071f58;
-  font-size: 7.6pt;
+  font-size: 7pt;
   font-weight: 900;
   text-transform: uppercase;
 }
 .tis-student-lines strong {
   grid-area: value;
   color: #07143b;
-  font-size: 10.4pt;
+  font-size: 9.6pt;
   line-height: 1.2;
   overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 .tis-verify-qr {
-  width: 36mm;
+  width: 31mm;
   overflow: hidden;
   justify-self: end;
   text-align: center;
@@ -234,18 +238,18 @@ body {
 }
 .tis-verify-qr img,
 .tis-verify-qr > i {
-  width: 30mm;
-  height: 30mm;
+  width: 25mm;
+  height: 25mm;
   display: grid;
   place-items: center;
-  margin: 3.5mm auto 2mm;
+  margin: 2.5mm auto 1.6mm;
   object-fit: contain;
   color: #07143b;
   font-size: 25pt;
 }
 .tis-verify-qr strong {
   display: block;
-  padding: 2.4mm 2mm;
+  padding: 1.8mm 1.4mm;
   color: #fff;
   background: #073986;
   font-size: 10pt;
@@ -260,46 +264,46 @@ body {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 8.3pt;
+  font-size: 7.8pt;
 }
 .tis-print-table th,
 .tis-print-table td {
-  padding: 1.75mm 1.8mm;
+  padding: 1.18mm 1.35mm;
   border: 1px solid #dbe5f3;
   text-align: center;
 }
 .tis-print-table th {
   color: #071f58;
   background: #f8fbff;
-  font-size: 7.4pt;
+  font-size: 6.9pt;
   text-transform: uppercase;
 }
 .tis-print-table th:nth-child(2),
 .tis-print-table td:nth-child(2) {
-  width: 34%;
+  width: 38%;
   text-align: left;
   text-transform: uppercase;
 }
 .tis-print-table th:first-child,
 .tis-print-table td:first-child {
-  width: 8mm;
-  padding-left: .8mm;
-  padding-right: .8mm;
+  width: 6.5mm;
+  padding-left: .4mm;
+  padding-right: .4mm;
 }
 .tis-print-table th:nth-child(3),
 .tis-print-table td:nth-child(3),
 .tis-print-table th:nth-child(4),
 .tis-print-table td:nth-child(4) {
-  width: 22mm;
+  width: 20mm;
 }
 .tis-print-table th:nth-child(5),
 .tis-print-table td:nth-child(5) {
-  width: 17mm;
+  width: 15mm;
 }
 .tis-print-table td { color: #07143b; }
 .tis-print-table td:nth-child(5) strong {
   color: #078148;
-  font-size: 13pt;
+  font-size: 11pt;
 }
 .tis-print-table td:nth-child(6) {
   color: #0047c2;
@@ -309,16 +313,16 @@ body {
 .tis-print-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 2.2mm;
+  gap: 1.8mm;
 }
 .tis-print-summary div {
-  min-height: 21mm;
+  min-height: 16mm;
   display: grid;
-  grid-template-columns: 11mm minmax(0, 1fr);
+  grid-template-columns: 8.5mm minmax(0, 1fr);
   grid-template-areas: "icon label" "icon value" "icon note";
-  gap: .6mm 3mm;
+  gap: .4mm 2mm;
   align-content: center;
-  padding: 2.2mm;
+  padding: 1.6mm;
   border: 1px solid #d4e2f6;
   border-radius: 3mm;
   background: #fff;
@@ -327,27 +331,27 @@ body {
 .tis-print-summary i {
   grid-area: icon;
   color: #073986;
-  font-size: 14pt;
-  align-self: start;
-  padding-top: 1mm;
+  font-size: 11pt;
+  align-self: center;
+  padding-top: 0;
 }
 .tis-print-summary span {
   grid-area: label;
   color: #071f58;
-  font-size: 7.4pt;
+  font-size: 6.6pt;
   font-weight: 900;
   text-transform: uppercase;
 }
 .tis-print-summary strong {
   grid-area: value;
   color: #07143b;
-  font-size: 17pt;
+  font-size: 14pt;
   line-height: 1;
 }
 .tis-print-summary small {
   grid-area: note;
   color: #07143b;
-  font-size: 7.2pt;
+  font-size: 6.4pt;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -355,12 +359,12 @@ body {
 .tis-print-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 48mm 32mm;
-  gap: 3.5mm;
+  gap: 2.5mm;
   align-items: center;
 }
 .tis-print-comment {
-  min-height: 20mm;
-  padding: 2.8mm 3.4mm;
+  min-height: 15mm;
+  padding: 2mm 2.7mm;
   border: 1px solid #d4e2f6;
   border-radius: 3mm;
   background: #fff;
@@ -369,16 +373,16 @@ body {
   display: flex;
   gap: 2mm;
   align-items: center;
-  margin: 0 0 2mm;
+  margin: 0 0 1.2mm;
   color: #073986;
-  font-size: 10pt;
+  font-size: 8.8pt;
   text-transform: uppercase;
 }
 .tis-print-comment p {
   margin: 0;
   color: #07143b;
-  font-size: 9pt;
-  line-height: 1.4;
+  font-size: 8pt;
+  line-height: 1.25;
 }
 .tis-official-sign {
   display: grid;
@@ -388,8 +392,8 @@ body {
 }
 .tis-official-sign img,
 .tis-official-sign span {
-  width: 42mm;
-  height: 13mm;
+  width: 38mm;
+  height: 10mm;
   display: grid;
   place-items: center;
   object-fit: contain;
@@ -399,7 +403,7 @@ body {
   border-bottom: 1px solid #073986;
 }
 .tis-official-sign strong {
-  margin-top: 2mm;
+  margin-top: 1.2mm;
   color: #071f58;
   font-size: 9pt;
   text-transform: uppercase;
@@ -411,8 +415,8 @@ body {
   text-transform: uppercase;
 }
 .tis-official-stamp {
-  width: 27mm;
-  height: 27mm;
+  width: 23mm;
+  height: 23mm;
   display: grid;
   place-items: center;
   justify-self: center;

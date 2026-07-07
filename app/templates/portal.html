@@ -16,6 +16,7 @@
     </label>
   </nav>
 
+  {% if not result %}
   <section class="premium-portal-hero">
     <div class="premium-school-logo">
       {% if settings.logo_path %}<img src="{{ url_for('static', filename=settings.logo_path) }}" alt="{{ settings.school_name }} logo">{% else %}<i class="fa-solid fa-school"></i>{% endif %}
@@ -27,6 +28,7 @@
       <p><span></span>Academic Year {{ result.student.academic_year.name if result else settings.current_academic_year or settings.academic_year or '2025 - 2026' }}<span></span></p>
     </div>
   </section>
+  {% endif %}
 
   {% if not result %}
     <section class="premium-search-shell glass-card">
@@ -80,8 +82,6 @@
             <h2>{{ settings.result_online_title_primary }} <span>{{ settings.result_online_title_accent }}</span></h2>
             <p>Academic Year {{ result.student.academic_year.name }}</p>
           </div>
-          <blockquote>{{ settings.result_online_quote }}</blockquote>
-          <span class="reference-award"><i class="fa-solid fa-star"></i></span>
         </header>
 
         <main class="reference-result-grid">
@@ -130,7 +130,18 @@
           </div>
           <div class="reference-performance">
             <h3>Performance Overview</h3>
-            <div class="reference-radar"><i class="fa-solid fa-chart-simple"></i><strong>{{ result.average }}%</strong><span>Average Performance</span></div>
+            <div class="reference-sunburst" data-average="{{ result.average }}" data-subjects='[
+              {% for row in result.subjects %}
+                {"subject": {{ row.subject|tojson }}, "percentage": {{ row.percentage|float }}}{% if not loop.last %},{% endif %}
+              {% endfor %}
+            ]'>
+              <div class="sunburst-stage">
+                <svg class="sunburst-svg" viewBox="0 0 260 260" role="img" aria-label="Interactive subject performance sunburst"></svg>
+                <div class="sunburst-center"><strong>{{ result.average }}%</strong><span>Average</span></div>
+              </div>
+              <div class="sunburst-active" aria-live="polite">Select a subject</div>
+              <div class="sunburst-legend"></div>
+            </div>
           </div>
           <div class="reference-comments">
             <h3><i class="fa-solid fa-comment"></i> {{ settings.result_teacher_remarks_title }}</h3>
@@ -184,6 +195,73 @@
           } catch (error) {
             button.classList.remove("copied");
           }
+        });
+      })();
+      (() => {
+        const chart = document.querySelector(".reference-sunburst");
+        if (!chart) return;
+
+        let subjects = [];
+        try {
+          subjects = JSON.parse(chart.dataset.subjects || "[]").filter((item) => Number(item.percentage) >= 0);
+        } catch (error) {
+          subjects = [];
+        }
+        if (!subjects.length) return;
+
+        const svg = chart.querySelector(".sunburst-svg");
+        const active = chart.querySelector(".sunburst-active");
+        const legend = chart.querySelector(".sunburst-legend");
+        const center = chart.querySelector(".sunburst-center");
+        const palette = ["#087cff", "#8a43e8", "#f0447b", "#ff8a25", "#12c2a6", "#0ea5e9", "#7c3aed", "#10b981", "#f59e0b", "#2563eb", "#ec4899", "#14b8a6"];
+        const total = subjects.reduce((sum, item) => sum + Math.max(Number(item.percentage) || 0, 1), 0);
+        let startAngle = -90;
+
+        const point = (cx, cy, radius, angle) => {
+          const radians = (angle - 90) * Math.PI / 180;
+          return { x: cx + radius * Math.cos(radians), y: cy + radius * Math.sin(radians) };
+        };
+        const arcPath = (start, end, innerRadius, outerRadius) => {
+          const largeArc = end - start <= 180 ? 0 : 1;
+          const outerStart = point(130, 130, outerRadius, end);
+          const outerEnd = point(130, 130, outerRadius, start);
+          const innerStart = point(130, 130, innerRadius, start);
+          const innerEnd = point(130, 130, innerRadius, end);
+          return [
+            "M", outerStart.x, outerStart.y,
+            "A", outerRadius, outerRadius, 0, largeArc, 0, outerEnd.x, outerEnd.y,
+            "L", innerStart.x, innerStart.y,
+            "A", innerRadius, innerRadius, 0, largeArc, 1, innerEnd.x, innerEnd.y,
+            "Z"
+          ].join(" ");
+        };
+        const setActive = (item, index) => {
+          active.textContent = `${item.subject}: ${Number(item.percentage).toFixed(1)}%`;
+          center.innerHTML = `<strong>${Number(item.percentage).toFixed(1)}%</strong><span>${item.subject}</span>`;
+          chart.querySelectorAll(".sunburst-segment").forEach((segment) => segment.classList.toggle("is-active", Number(segment.dataset.index) === index));
+        };
+
+        subjects.forEach((item, index) => {
+          const weight = Math.max(Number(item.percentage) || 0, 1);
+          const endAngle = startAngle + (weight / total) * 360;
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", arcPath(startAngle, endAngle - 1, 58, 116));
+          path.setAttribute("fill", palette[index % palette.length]);
+          path.setAttribute("tabindex", "0");
+          path.setAttribute("role", "button");
+          path.setAttribute("aria-label", `${item.subject} ${Number(item.percentage).toFixed(1)} percent`);
+          path.classList.add("sunburst-segment");
+          path.dataset.index = String(index);
+          path.addEventListener("mouseenter", () => setActive(item, index));
+          path.addEventListener("focus", () => setActive(item, index));
+          svg.appendChild(path);
+
+          const pill = document.createElement("button");
+          pill.type = "button";
+          pill.innerHTML = `<span style="--dot:${palette[index % palette.length]}"></span>${item.subject}`;
+          pill.addEventListener("click", () => setActive(item, index));
+          legend.appendChild(pill);
+          startAngle = endAngle;
         });
       })();
     </script>
