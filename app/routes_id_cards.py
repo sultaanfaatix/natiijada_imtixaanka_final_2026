@@ -225,15 +225,18 @@ def draw_id_card_pdf(pdf, issue, settings, x, y, w, h, primary, accent, qrcode, 
     pdf.drawCentredString(card_x + card_w / 2, title_y, settings.get("id_card_header_text") or "KAARKA OGOLAANSHAHA IMTIXAANKA")
 
     body_y = card_y + 16 * mm
+    photo_size_map = {"small": 25, "medium": 29, "large": 33}
+    photo_size = photo_size_map.get(settings.get("student_photo_size") or "medium", 29) * mm
+    photo_radius = 7 if settings.get("student_photo_shape") == "rounded" else photo_size / 2
     photo_x = card_x + 5 * mm
     photo_y = body_y + 30 * mm
     pdf.setStrokeColor(accent)
     pdf.setFillColor(colors.HexColor("#eef6ff"))
-    pdf.roundRect(photo_x, photo_y, 29 * mm, 35 * mm, 7, stroke=1, fill=1)
+    pdf.roundRect(photo_x, photo_y, photo_size, photo_size, photo_radius, stroke=1 if settings.get("student_photo_border") == "on" else 0, fill=1)
     if issue.student.photo_path:
         image_path = current_app.static_folder + "/" + issue.student.photo_path.replace("\\", "/")
         try:
-            pdf.drawImage(image_path, photo_x + 1, photo_y + 1, 29 * mm - 2, 35 * mm - 2, preserveAspectRatio=True, mask="auto")
+            pdf.drawImage(image_path, photo_x + 1, photo_y + 1, photo_size - 2, photo_size - 2, preserveAspectRatio=True, mask="auto")
         except Exception:
             pass
     pdf.setFillColor(primary)

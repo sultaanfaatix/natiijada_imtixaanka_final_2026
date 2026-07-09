@@ -7,6 +7,13 @@
   <style>
     @page { size: A4 landscape; margin: {{ settings.id_card_print_margin or 8 }}mm; }
     * { box-sizing: border-box; }
+    :root {
+      --student-photo-size: {{ '25mm' if settings.student_photo_size == 'small' else '33mm' if settings.student_photo_size == 'large' else '29mm' }};
+      --student-photo-radius: {{ '3mm' if settings.student_photo_shape == 'rounded' else '50%' }};
+      --student-photo-border: {{ '1.3mm solid #fff' if settings.student_photo_border == 'on' else '0' }};
+      --student-photo-outline: {{ '.65mm solid var(--id-primary)' if settings.student_photo_border == 'on' else '0' }};
+      --student-photo-shadow: {{ '0 2mm 5mm rgba(0,31,82,.16)' if settings.student_photo_shadow == 'on' else 'none' }};
+    }
     body {
       margin: 0;
       background: #fff;
@@ -186,9 +193,9 @@
       overflow: hidden;
     }
     .photo-frame {
-      border: 1.3mm solid #fff;
-      outline: .65mm solid var(--id-primary);
-      border-radius: 3mm;
+      border: var(--student-photo-border);
+      outline: var(--student-photo-outline);
+      border-radius: var(--student-photo-radius);
       overflow: hidden;
       background: #f3f7fb;
       display: grid;
@@ -196,13 +203,14 @@
       color: var(--id-primary);
       font-size: 15mm;
       min-height: 0;
-      aspect-ratio: 3 / 4;
-      width: 29mm;
+      aspect-ratio: 1 / 1;
+      width: var(--student-photo-size);
       max-height: 38mm;
       align-self: center;
       justify-self: center;
+      box-shadow: var(--student-photo-shadow);
     }
-    .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-frame img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
     .phone-tag {
       min-height: 5.6mm;
       border-radius: 2mm;

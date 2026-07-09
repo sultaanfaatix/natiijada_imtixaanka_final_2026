@@ -13,6 +13,10 @@
       --primary: {{ ui_settings.primary_color or '#002060' }};
       --secondary: {{ ui_settings.secondary_color or '#007bff' }};
       --sidebar: {{ ui_settings.sidebar_color or '#001a4d' }};
+      --student-photo-size: {{ '74px' if ui_settings.student_photo_size == 'small' else '124px' if ui_settings.student_photo_size == 'large' else '96px' }};
+      --student-photo-radius: {{ '18px' if ui_settings.student_photo_shape == 'rounded' else '50%' }};
+      --student-photo-border: {{ '1px solid rgba(0,32,96,.16)' if ui_settings.student_photo_border == 'on' else '0' }};
+      --student-photo-shadow: {{ '0 14px 30px rgba(0,32,96,.14)' if ui_settings.student_photo_shadow == 'on' else 'none' }};
     }
   </style>
 </head>

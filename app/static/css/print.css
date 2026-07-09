@@ -220,18 +220,19 @@ body {
   padding: 2.2mm 3.4mm 2.6mm;
 }
 .tis-student-photo {
-  width: 29mm;
-  height: 33mm;
+  width: var(--student-photo-size, 29mm);
+  height: var(--student-photo-size, 33mm);
   display: var(--print-display-photo, grid);
   place-items: center;
   overflow: hidden;
   color: #fff;
-  border-radius: 3mm;
+  border: var(--student-photo-border, 0);
+  border-radius: var(--student-photo-radius, 3mm);
   background: linear-gradient(135deg, #0b4aa1, #75b4ff);
   font-size: 24pt;
-  box-shadow: 0 12px 24px rgba(0, 45, 120, .16);
+  box-shadow: var(--student-photo-shadow, 0 12px 24px rgba(0, 45, 120, .16));
 }
-.tis-student-photo img { width: 100%; height: 100%; object-fit: cover; }
+.tis-student-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .tis-student-lines {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

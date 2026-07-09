@@ -2,7 +2,7 @@
 {% block title %}{{ settings.verify_page_title if verified else _('Invalid Result') }}{% endblock %}
 {% block body_class %}public-body verification-public-body{% endblock %}
 {% block content %}
-<main class="verification-page preset-{{ settings.verify_design_preset }}"
+<main class="verification-page preset-{{ settings.verify_design_preset }} badge-style-{{ settings.verify_badge_style }} badge-theme-{{ settings.verify_theme }}"
   style="
     --verify-primary: {{ settings.verify_primary_color }};
     --verify-secondary: {{ settings.verify_secondary_color }};
@@ -10,6 +10,8 @@
     --verify-bg: {{ settings.verify_background_color }};
     --verify-card: {{ settings.verify_card_color }};
     --verify-success: {{ settings.verify_success_color }};
+    --verify-theme-color: {{ '#0f5bd7' if settings.verify_theme == 'blue' else '#d4a017' if settings.verify_theme == 'gold' else '#0f9f4a' }};
+    --verify-theme-glow: {{ 'rgba(15,91,215,.34)' if settings.verify_theme == 'blue' else 'rgba(212,160,23,.34)' if settings.verify_theme == 'gold' else 'rgba(15,159,74,.34)' }};
     --verify-text: {{ settings.verify_text_color }};
     --verify-muted: {{ settings.verify_muted_text_color }};
     --verify-button: {{ settings.verify_button_color }};
@@ -47,7 +49,7 @@
       {% set verify_order = settings.verify_section_order.split(',') %}
       <section class="verification-status-card" style="order: {{ verify_order.index('status') + 1 if 'status' in verify_order else 1 }}">
         <div class="verification-success-badge" aria-label="{{ settings.verify_badge_text }}">
-          <i class="fa-solid fa-check"></i>
+          <i class="fa-solid {{ 'fa-certificate' if settings.verify_badge_style == 'classic' else 'fa-shield-halved' if settings.verify_badge_style == 'shield' else 'fa-check' if settings.verify_badge_style == 'modern' else 'fa-award' }}"></i>
           <span></span>
         </div>
         <div class="verification-stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
@@ -104,8 +106,12 @@
 
       <footer class="verification-footer-card" style="order: {{ verify_order.index('footer') + 1 if 'footer' in verify_order else 5 }}">
         <div class="verification-seal">
-          <i class="fa-solid fa-shield-heart"></i>
-          <span>Official<br>Digital<br>Seal</span>
+          {% if settings.school_stamp_path %}
+            <img src="{{ url_for('static', filename=settings.school_stamp_path) }}" alt="{{ settings.school_name }} official seal">
+          {% else %}
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>Official<br>Digital<br>Seal</span>
+          {% endif %}
         </div>
         <div>
           <h4>{{ settings.verify_footer_heading }}</h4>

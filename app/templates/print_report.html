@@ -41,6 +41,10 @@
       --print-display-watermark: {{ 'block' if result.settings.print_show_watermark == 'on' else 'none' }};
       --print-bg-image: {% if result.settings.print_background_image %}url('{{ url_for('static', filename=result.settings.print_background_image) }}'){% else %}none{% endif %};
       --print-watermark-image: {% if result.settings.print_watermark_image %}url('{{ url_for('static', filename=result.settings.print_watermark_image) }}'){% else %}none{% endif %};
+      --student-photo-size: {{ '27mm' if result.settings.student_photo_size == 'small' else '35mm' if result.settings.student_photo_size == 'large' else '31mm' }};
+      --student-photo-radius: {{ '3mm' if result.settings.student_photo_shape == 'rounded' else '50%' }};
+      --student-photo-border: {{ '1px solid var(--print-border)' if result.settings.student_photo_border == 'on' else '0' }};
+      --student-photo-shadow: {{ '0 10px 22px rgba(0,45,120,.14)' if result.settings.student_photo_shadow == 'on' else 'none' }};
     }
   </style>
 </head>
