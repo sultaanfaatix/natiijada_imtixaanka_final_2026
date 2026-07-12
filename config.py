@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -30,6 +31,7 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
     JSON_SORT_KEYS = False
 
     # Cloudinary

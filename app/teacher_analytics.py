@@ -172,12 +172,14 @@ def dashboard_summary(teacher, filters):
     pass_count = sum(1 for avg in overall_averages.values() if grade_for(avg).get("is_pass"))
     fail_count = len(overall_averages) - pass_count
     exam_ids = {result.exam_id for result in results}
+    published_results = len(results)
     prev_trend = _trend_delta(results, teacher, filters)
     return {
         "total_students": len(students),
         "total_classes": len(classes),
         "total_subjects": len(subjects),
         "total_exams": len(exam_ids),
+        "published_results": published_results,
         "overall_average": _safe_mean(percentages),
         "pass_rate": round(pass_count / len(overall_averages) * 100, 2) if overall_averages else 0,
         "fail_rate": round(fail_count / len(overall_averages) * 100, 2) if overall_averages else 0,
@@ -704,3 +706,86 @@ def report_summary(teacher, filters):
         "pass_fail": pass_fail_analysis_data(teacher, filters),
         "insights": generate_ai_insights(teacher, filters),
     }
+
+
+def students_list_data(teacher, filters):
+    filters = validate_filter_ids(teacher, filters)
+    students = scoped_students(teacher, filters)
+    results = scoped_results(teacher, filters, students)
+    overall_averages = student_overall_averages(results)
+    rows = []
+    for student in students:
+        average = overall_averages.get(student.id, 0)
+        grade = grade_for(average).get("grade", "-")
+        rows.append(
+            {
+                "student": student,
+                "class_name": student.school_class.name if student.school_class else "-",
+                "section": student.section or "-",
+                "average": round(average, 2),
+                "grade": grade,
+            }
+        )
+    rows.sort(key=lambda item: item["student"].full_name.lower())
+    return rows
+
+
+def examinations_list_data(teacher, filters):
+    filters = validate_filter_ids(teacher, filters)
+    students = scoped_students(teacher, filters)
+    results = scoped_results(teacher, filters, students)
+    exam_map = {}
+    for result in results:
+        exam = result.exam
+        bucket = exam_map.setdefault(
+            exam.id,
+            {
+                "exam": exam,
+                "result_count": 0,
+                "student_ids": set(),
+                "average_values": [],
+            },
+        )
+        bucket["result_count"] += 1
+        bucket["student_ids"].add(result.student_id)
+        bucket["average_values"].append(_pct(result))
+    rows = []
+    for payload in exam_map.values():
+        rows.append(
+            {
+                "exam": payload["exam"],
+                "result_count": payload["result_count"],
+                "student_count": len(payload["student_ids"]),
+                "average": _safe_mean(payload["average_values"]),
+                "academic_year": payload["exam"].academic_year.name if payload["exam"].academic_year else "-",
+            }
+        )
+    rows.sort(key=lambda item: item["exam"].created_at, reverse=True)
+    return rows
+
+
+def results_list_data(teacher, filters):
+    filters = validate_filter_ids(teacher, filters)
+    students = scoped_students(teacher, filters)
+    student_map = {student.id: student for student in students}
+    results = scoped_results(teacher, filters, students)
+    rows = []
+    for result in results:
+        student = student_map.get(result.student_id)
+        if not student:
+            continue
+        percentage = _pct(result)
+        rows.append(
+            {
+                "student": student,
+                "exam": result.exam,
+                "subject": result.subject,
+                "score": float(result.score),
+                "max_score": float(result.subject.max_score or 0),
+                "percentage": round(percentage, 2),
+                "grade": grade_for(percentage).get("grade", "-"),
+                "is_published": result.is_published,
+            }
+        )
+    rows.sort(key=lambda item: (item["exam"].created_at, item["student"].full_name), reverse=True)
+    return rows

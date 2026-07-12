@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from flask import request
@@ -11,22 +11,76 @@ from .models import Result, SchoolClass, Setting, Student, Subject, Teacher, Tea
 from .services import get_settings, grade_for
 
 TEACHER_PERMISSIONS = [
-    ("view_assigned_students", "View Assigned Students"),
+    ("view_dashboard", "View Dashboard"),
+    ("view_students", "View Students"),
+    ("view_student_profiles", "View Student Profiles"),
+    ("view_student_results", "View Student Results"),
     ("view_assigned_subjects", "View Assigned Subjects"),
     ("view_assigned_classes", "View Assigned Classes"),
-    ("view_examination_results", "View Examination Results"),
-    ("subject_analysis", "Subject Analysis"),
-    ("student_analysis", "Student Analysis"),
-    ("exam_comparison", "Exam Comparison"),
-    ("grade_distribution", "Grade Distribution"),
-    ("performance_trends", "Performance Trends"),
-    ("student_ranking", "Student Ranking"),
-    ("weak_students", "Weak Students"),
-    ("top_performers", "Top Performers"),
-    ("ai_insights", "AI Insights"),
-    ("reports", "Reports"),
-    ("download_reports", "Download Reports"),
+    ("view_examinations", "View Examinations"),
+    ("generate_reports", "Generate Reports"),
+    ("export_excel", "Export Excel"),
+    ("export_pdf", "Export PDF"),
+    ("print_reports", "Print Reports"),
+    ("future_ai_features", "Future AI Features"),
+    ("future_analysis_features", "Future Analysis Features"),
 ]
+
+# Backward compatibility for teachers assigned legacy permission keys.
+TEACHER_PERMISSION_GROUPS = {
+    "view_dashboard": {
+        "view_dashboard",
+        "view_examination_results",
+    },
+    "view_students": {
+        "view_students",
+        "view_assigned_students",
+    },
+    "view_student_profiles": {
+        "view_student_profiles",
+        "student_analysis",
+    },
+    "view_student_results": {
+        "view_student_results",
+        "view_examination_results",
+    },
+    "view_assigned_subjects": {"view_assigned_subjects"},
+    "view_assigned_classes": {"view_assigned_classes"},
+    "view_examinations": {
+        "view_examinations",
+        "view_examination_results",
+    },
+    "generate_reports": {
+        "generate_reports",
+        "reports",
+    },
+    "export_excel": {
+        "export_excel",
+        "download_reports",
+    },
+    "export_pdf": {
+        "export_pdf",
+        "download_reports",
+    },
+    "print_reports": {
+        "print_reports",
+        "reports",
+    },
+    "future_ai_features": {
+        "future_ai_features",
+        "ai_insights",
+    },
+    "future_analysis_features": {
+        "future_analysis_features",
+        "subject_analysis",
+        "exam_comparison",
+        "grade_distribution",
+        "performance_trends",
+        "student_ranking",
+        "weak_students",
+        "top_performers",
+    },
+}
 
 SCHOOL_LEVELS = ["Primary", "Middle", "Secondary", "High School"]
 EMPLOYMENT_TYPES = ["Full Time", "Part Time", "Contract"]
@@ -61,6 +115,21 @@ def seed_teacher_settings():
 
 def teacher_permission_set(teacher):
     return {row.permission for row in teacher.permission_rows}
+
+
+def teacher_permission_aliases(permission):
+    return TEACHER_PERMISSION_GROUPS.get(permission, {permission})
+
+
+def teacher_has_permission(teacher, permission):
+    assigned = teacher_permission_set(teacher)
+    if not assigned:
+        return True
+    granted = set()
+    for key in assigned:
+        granted.update(teacher_permission_aliases(key))
+    required = teacher_permission_aliases(permission)
+    return bool(granted & required)
 
 
 def set_teacher_permissions(teacher, permissions):
@@ -309,3 +378,34 @@ def audit_teacher_action(action, details):
     username = current_user.username if current_user.is_authenticated else "system"
     audit(action, details)
     return username
+
+
+def authenticate_teacher_login(username, password):
+    user = User.query.filter_by(username=username.strip(), is_active=True).first()
+    if not user or not user.check_password(password):
+        return None, None, "Invalid username or password."
+    teacher = getattr(user, "teacher_profile", None)
+    if not teacher or teacher.user_id != user.id:
+        return None, None, "This account is not authorized for the Teacher Portal."
+    if not teacher.is_active or teacher.employment_status != "Active":
+        return None, None, "Your account is inactive. Please contact the school administrator."
+    return user, teacher, None
+
+
+def record_teacher_login(teacher):
+    teacher.last_login_at = datetime.utcnow()
+    log_teacher_activity(teacher, "Login", "Teacher signed in to the portal")
+
+
+def record_teacher_logout(teacher):
+    teacher.last_logout_at = datetime.utcnow()
+    log_teacher_activity(teacher, "Logout", "Teacher signed out of the portal")
+
+
+def request_teacher_password_reset(username):
+    user = User.query.filter_by(username=username.strip()).first()
+    teacher = getattr(user, "teacher_profile", None) if user else None
+    if teacher and teacher.user_id == user.id:
+        log_teacher_activity(teacher, "Password Reset Request", f"Reset requested for {username}")
+        return teacher
+    return None

@@ -3,16 +3,20 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from .models import User
 from .audit import audit
-from .teacher_portal import is_teacher_account
 from . import db
 
 auth_bp = Blueprint("auth", __name__)
 
 
+def _is_linked_teacher_user(user):
+    teacher = getattr(user, "teacher_profile", None)
+    return bool(teacher and teacher.user_id == user.id and teacher.is_active and teacher.employment_status == "Active")
+
+
 @auth_bp.route("/admin/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        if is_teacher_account():
+        if _is_linked_teacher_user(current_user):
             return redirect(url_for("teacher_portal.dashboard"))
         return redirect(url_for("admin.dashboard"))
     if request.method == "POST":
@@ -20,13 +24,15 @@ def login():
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username, is_active=True).first()
         if user and user.check_password(password):
+            if _is_linked_teacher_user(user):
+                audit("Failed Login", f"Teacher account {username} attempted admin login")
+                db.session.commit()
+                flash("Teachers must use the dedicated Teacher Portal login.", "warning")
+                return redirect(url_for("teacher_portal.login"))
             login_user(user)
             audit("Login", f"User {username} logged in")
             db.session.commit()
-            next_url = request.args.get("next")
-            if is_teacher_account():
-                return redirect(next_url or url_for("teacher_portal.dashboard"))
-            return redirect(next_url or url_for("admin.dashboard"))
+            return redirect(request.args.get("next") or url_for("admin.dashboard"))
         audit("Failed Login", f"Failed login for username {username}")
         db.session.commit()
         flash("Invalid username or password.", "danger")
@@ -46,6 +52,8 @@ def logout():
 @auth_bp.route("/admin/change-password", methods=["GET", "POST"])
 @login_required
 def change_password():
+    if _is_linked_teacher_user(current_user):
+        return redirect(url_for("teacher_portal.change_password"))
     if request.method == "POST":
         current = request.form.get("current_password", "")
         new_password = request.form.get("new_password", "")
@@ -60,7 +68,5 @@ def change_password():
             current_user.set_password(new_password)
             db.session.commit()
             flash("Password changed successfully.", "success")
-            if is_teacher_account():
-                return redirect(url_for("teacher_portal.dashboard"))
             return redirect(url_for("admin.dashboard"))
     return render_template("admin/change_password.html")

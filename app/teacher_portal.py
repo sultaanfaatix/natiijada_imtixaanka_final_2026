@@ -3,7 +3,20 @@ from functools import wraps
 from flask import abort, flash, redirect, request, url_for
 from flask_login import current_user
 
-from .teacher_services import TEACHER_PERMISSIONS, get_teacher_settings, log_teacher_activity, teacher_permission_set
+from .teacher_services import (
+    TEACHER_PERMISSIONS,
+    get_teacher_settings,
+    log_teacher_activity,
+    teacher_has_permission,
+    teacher_permission_set,
+)
+
+TEACHER_PUBLIC_ENDPOINTS = frozenset(
+    {
+        "teacher_portal.login",
+        "teacher_portal.forgot_password",
+    }
+)
 
 
 def get_current_teacher():
@@ -26,10 +39,20 @@ def teacher_can(permission):
     teacher = get_current_teacher()
     if not teacher:
         return False
-    perms = teacher_permission_set(teacher)
-    if not perms:
-        return True
-    return permission in perms
+    return teacher_has_permission(teacher, permission)
+
+
+def safe_teacher_next_url(next_url):
+    from flask import url_has_allowed_host_and_scheme
+
+    if next_url and url_has_allowed_host_and_scheme(next_url, request.host):
+        return next_url
+    return url_for("teacher_portal.dashboard")
+
+
+def teacher_requires_password_change():
+    teacher = get_current_teacher()
+    return bool(teacher and teacher.force_password_change)
 
 
 def teacher_permission_required(permission):
@@ -37,10 +60,13 @@ def teacher_permission_required(permission):
         @wraps(view)
         def wrapped(*args, **kwargs):
             if not current_user.is_authenticated:
-                return redirect(url_for("auth.login", next=request.url))
+                return redirect(url_for("teacher_portal.login", next=request.url))
             if not is_teacher_account():
                 flash("This area is only available to teacher accounts.", "danger")
-                return redirect(url_for("auth.login"))
+                return redirect(url_for("teacher_portal.login"))
+            if teacher_requires_password_change() and request.endpoint != "teacher_portal.change_password":
+                flash("Please change your password before continuing.", "warning")
+                return redirect(url_for("teacher_portal.change_password"))
             if not teacher_can(permission):
                 flash("You do not have permission to access this feature.", "danger")
                 return redirect(url_for("teacher_portal.dashboard"))
@@ -55,12 +81,15 @@ def teacher_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not current_user.is_authenticated:
-            return redirect(url_for("auth.login", next=request.url))
+            return redirect(url_for("teacher_portal.login", next=request.url))
         if not is_teacher_account():
             flash("This area is only available to teacher accounts.", "danger")
             if current_user.role in ("super_admin", "admin"):
                 return redirect(url_for("admin.dashboard"))
-            return redirect(url_for("auth.login"))
+            return redirect(url_for("teacher_portal.login"))
+        if teacher_requires_password_change() and request.endpoint != "teacher_portal.change_password":
+            flash("Please change your password before continuing.", "warning")
+            return redirect(url_for("teacher_portal.change_password"))
         return view(*args, **kwargs)
 
     return wrapped
@@ -108,22 +137,27 @@ def parse_teacher_filters(args):
 
 def teacher_nav_items():
     items = [
-        ("teacher_portal.dashboard", "Dashboard", "fa-chart-pie", "view_examination_results"),
+        ("teacher_portal.dashboard", "Dashboard", "fa-chart-pie", "view_dashboard"),
+        ("teacher_portal.profile", "My Profile", "fa-user", None),
         ("teacher_portal.subjects", "My Subjects", "fa-book-open", "view_assigned_subjects"),
         ("teacher_portal.classes", "My Classes", "fa-people-roof", "view_assigned_classes"),
-        ("teacher_portal.exam_analysis", "Exam Analysis", "fa-file-circle-check", "view_examination_results"),
-        ("teacher_portal.subject_analysis", "Subject Analysis", "fa-book", "subject_analysis"),
-        ("teacher_portal.student_analysis", "Student Analysis", "fa-user-graduate", "student_analysis"),
-        ("teacher_portal.trends", "Performance Trends", "fa-chart-line", "performance_trends"),
-        ("teacher_portal.grades", "Grade Distribution", "fa-layer-group", "grade_distribution"),
-        ("teacher_portal.pass_fail", "Pass / Fail Analysis", "fa-circle-half-stroke", "grade_distribution"),
-        ("teacher_portal.top_performers", "Top Performers", "fa-trophy", "top_performers"),
-        ("teacher_portal.weak_students", "Weak Students", "fa-triangle-exclamation", "weak_students"),
-        ("teacher_portal.comparison", "Comparison", "fa-code-compare", "exam_comparison"),
-        ("teacher_portal.reports", "Reports", "fa-file-export", "reports"),
-        ("teacher_portal.ai_insights", "AI Insights", "fa-wand-magic-sparkles", "ai_insights"),
+        ("teacher_portal.my_students", "My Students", "fa-user-graduate", "view_students"),
+        ("teacher_portal.examinations", "Examinations", "fa-file-circle-check", "view_examinations"),
+        ("teacher_portal.results", "Results", "fa-clipboard-list", "view_student_results"),
+        ("teacher_portal.reports", "Reports", "fa-file-export", "generate_reports"),
         ("teacher_portal.settings", "Settings", "fa-sliders", None),
     ]
+    if teacher_can("future_analysis_features"):
+        items.extend(
+            [
+                ("teacher_portal.trends", "Performance Trends", "fa-chart-line", "future_analysis_features"),
+                ("teacher_portal.grades", "Grade Distribution", "fa-layer-group", "future_analysis_features"),
+                ("teacher_portal.top_performers", "Top Performers", "fa-trophy", "future_analysis_features"),
+                ("teacher_portal.weak_students", "Weak Students", "fa-triangle-exclamation", "future_analysis_features"),
+            ]
+        )
+    if teacher_can("future_ai_features"):
+        items.append(("teacher_portal.ai_insights", "AI Insights", "fa-wand-magic-sparkles", "future_ai_features"))
     return items
 
 
