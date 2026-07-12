@@ -193,8 +193,9 @@ def attendance_rate_for_students(students, filters):
 
 
 def dashboard_summary(teacher, filters):
+    """Examination-focused dashboard summary for new design"""
     filters = validate_filter_ids(teacher, filters)
-    classes, subjects, _, _ = teacher_assignments(teacher)
+    _, academic_classes, sections, subjects, _, class_ids, _, subject_ids = teacher_assignments(teacher)
     students = scoped_students(teacher, filters)
     results = scoped_results(teacher, filters, students)
     percentages = [_pct(result) for result in results]
@@ -204,17 +205,43 @@ def dashboard_summary(teacher, filters):
     exam_ids = {result.exam_id for result in results}
     published_results = len(results)
     prev_trend = _trend_delta(results, teacher, filters)
+    
+    # Get latest exam statistics
+    latest_exam = _get_latest_exam(results)
+    latest_exam_stats = _get_latest_exam_stats(latest_exam, students, results) if latest_exam else {}
+    
+    # Class performance grouping
+    class_performance = _get_class_performance(results, academic_classes)
+    
+    # Top students
+    top_students = _get_top_students(students, overall_averages, limit=5)
+    
+    # Grade distribution for analytics
+    grade_distribution = _get_grade_distribution(percentages)
+    
+    # Class averages for progress bars
+    class_averages = _get_class_averages(results, academic_classes)
+    
+    # Important overview data
+    important_overview = _get_important_overview(results, students, academic_classes, overall_averages)
+    
     return {
-        "total_students": len(students),
-        "total_classes": len(classes),
-        "total_subjects": len(subjects),
         "total_exams": len(exam_ids),
-        "published_results": published_results,
-        "overall_average": _safe_mean(percentages),
+        "latest_exam": latest_exam_stats,
+        "passed_students": pass_count,
+        "failed_students": fail_count,
+        "absent_students": len(students) - len(overall_averages),
+        "total_students": len(students),
         "pass_rate": round(pass_count / len(overall_averages) * 100, 2) if overall_averages else 0,
         "fail_rate": round(fail_count / len(overall_averages) * 100, 2) if overall_averages else 0,
-        "highest_mark": round(max(percentages), 2) if percentages else 0,
-        "lowest_mark": round(min(percentages), 2) if percentages else 0,
+        "absent_rate": round((len(students) - len(overall_averages)) / len(students) * 100, 2) if students else 0,
+        "class_performance": class_performance,
+        "top_students": top_students,
+        "grade_distribution": grade_distribution,
+        "class_averages": class_averages,
+        "important_overview": important_overview,
+        "recent_exams": _get_recent_exams(exam_ids, results),
+        "overall_average": _safe_mean(percentages),
         "trends": prev_trend,
         "chart_labels": [exam.name for exam in _ordered_exams(results)],
         "chart_values": _exam_average_series(results),
@@ -272,6 +299,191 @@ def _pass_rate_from_results(results):
         return 0
     passed = sum(1 for avg in averages.values() if grade_for(avg).get("is_pass"))
     return round(passed / len(averages) * 100, 2)
+
+
+def _get_latest_exam(results):
+    """Get the most recent exam from results"""
+    seen = {}
+    for result in results:
+        seen[result.exam_id] = result.exam
+    if not seen:
+        return None
+    return max(seen.values(), key=lambda exam: exam.created_at)
+
+
+def _get_latest_exam_stats(latest_exam, students, results):
+    """Get statistics for the latest exam"""
+    exam_results = [r for r in results if r.exam_id == latest_exam.id]
+    exam_student_ids = {r.student_id for r in exam_results}
+    students_took_exam = len(exam_student_ids)
+    total_students = len(students)
+    percentage = round(students_took_exam / total_students * 100, 2) if total_students else 0
+    return {
+        "exam_name": latest_exam.name,
+        "students_took": students_took_exam,
+        "total_students": total_students,
+        "percentage": percentage,
+        "date": latest_exam.created_at.strftime("%Y-%m-%d") if latest_exam.created_at else "N/A"
+    }
+
+
+def _get_class_performance(results, academic_classes):
+    """Group classes by performance level"""
+    class_averages = {}
+    for result in results:
+        if result.student.academic_class_id:
+            class_id = result.student.academic_class_id
+            if class_id not in class_averages:
+                class_averages[class_id] = []
+            class_averages[class_id].append(_pct(result))
+    
+    class_stats = []
+    for cls in academic_classes:
+        if cls.id in class_averages:
+            avg = _safe_mean(class_averages[cls.id])
+            class_stats.append({
+                "name": cls.name,
+                "average": avg,
+                "id": cls.id
+            })
+    
+    class_stats.sort(key=lambda x: x["average"], reverse=True)
+    
+    # Split into top, middle, and low performing
+    n = len(class_stats)
+    if n == 0:
+        return {"top": [], "middle": [], "low": []}
+    
+    top_count = max(1, n // 3)
+    low_count = max(1, n // 3)
+    middle_count = n - top_count - low_count
+    
+    return {
+        "top": class_stats[:top_count],
+        "middle": class_stats[top_count:top_count + middle_count],
+        "low": class_stats[-low_count:] if low_count > 0 else []
+    }
+
+
+def _get_top_students(students, overall_averages, limit=5):
+    """Get top performing students"""
+    student_list = []
+    for student in students:
+        avg = overall_averages.get(student.id, 0)
+        student_list.append({
+            "student": student,
+            "average": avg
+        })
+    
+    student_list.sort(key=lambda x: x["average"], reverse=True)
+    return student_list[:limit]
+
+
+def _get_grade_distribution(percentages):
+    """Get distribution of grades for analytics"""
+    if not percentages:
+        return {
+            "excellent": {"count": 0, "percentage": 0},
+            "good": {"count": 0, "percentage": 0},
+            "average": {"count": 0, "percentage": 0},
+            "poor": {"count": 0, "percentage": 0},
+            "fail": {"count": 0, "percentage": 0}
+        }
+    
+    excellent = sum(1 for p in percentages if p >= 80)
+    good = sum(1 for p in percentages if 70 <= p < 80)
+    average = sum(1 for p in percentages if 60 <= p < 70)
+    poor = sum(1 for p in percentages if 50 <= p < 60)
+    fail = sum(1 for p in percentages if p < 50)
+    
+    total = len(percentages)
+    
+    return {
+        "excellent": {"count": excellent, "percentage": round(excellent / total * 100, 1) if total else 0},
+        "good": {"count": good, "percentage": round(good / total * 100, 1) if total else 0},
+        "average": {"count": average, "percentage": round(average / total * 100, 1) if total else 0},
+        "poor": {"count": poor, "percentage": round(poor / total * 100, 1) if total else 0},
+        "fail": {"count": fail, "percentage": round(fail / total * 100, 1) if total else 0}
+    }
+
+
+def _get_class_averages(results, academic_classes):
+    """Get average scores for each class for progress bars"""
+    class_averages = {}
+    for result in results:
+        if result.student.academic_class_id:
+            class_id = result.student.academic_class_id
+            if class_id not in class_averages:
+                class_averages[class_id] = []
+            class_averages[class_id].append(_pct(result))
+    
+    averages = []
+    for cls in academic_classes:
+        if cls.id in class_averages:
+            avg = _safe_mean(class_averages[cls.id])
+            averages.append({
+                "name": cls.name,
+                "average": avg,
+                "percentage": round(avg)
+            })
+    
+    averages.sort(key=lambda x: x["average"], reverse=True)
+    return averages
+
+
+def _get_important_overview(results, students, academic_classes, overall_averages):
+    """Get important overview information"""
+    # Get class averages for best/worst class
+    class_averages = _get_class_averages(results, academic_classes)
+    best_class = class_averages[0] if class_averages else None
+    worst_class = class_averages[-1] if class_averages else None
+    
+    # Get highest/lowest scoring students
+    top_students = _get_top_students(students, overall_averages, limit=1)
+    highest_student = top_students[0] if top_students else None
+    
+    # Students requiring support (below 50%)
+    weak_students = [s for s in students if overall_averages.get(s.id, 0) < 50]
+    
+    # Exam status
+    exam_ids = {result.exam_id for result in results}
+    published_exams = [exam for exam in Exam.query.filter(Exam.id.in_(exam_ids)).all() if exam.is_published]
+    unpublished_exams = [exam for exam in Exam.query.filter(Exam.id.in_(exam_ids)).all() if not exam.is_published]
+    
+    return {
+        "pending_mark_entry": len(unpublished_exams),
+        "awaiting_publication": len(unpublished_exams),
+        "recently_published": len(published_exams),
+        "students_requiring_support": len(weak_students),
+        "best_performing_class": best_class["name"] if best_class else "N/A",
+        "lowest_performing_class": worst_class["name"] if worst_class else "N/A",
+        "highest_scoring_student": highest_student["student"].full_name if highest_student else "N/A",
+        "lowest_class_average": worst_class["average"] if worst_class else 0
+    }
+
+
+def _get_recent_exams(exam_ids, results):
+    """Get recent exams with details"""
+    if not exam_ids:
+        return []
+    
+    exams = Exam.query.filter(Exam.id.in_(exam_ids)).order_by(Exam.created_at.desc()).limit(5).all()
+    recent_exams = []
+    
+    for exam in exams:
+        exam_results = [r for r in results if r.exam_id == exam.id]
+        avg = _safe_mean([_pct(r) for r in exam_results]) if exam_results else 0
+        
+        recent_exams.append({
+            "name": exam.name,
+            "class": exam_results[0].student.academic_class.name if exam_results and exam_results[0].student.academic_class else "N/A",
+            "subject": exam_results[0].subject.name if exam_results else "N/A",
+            "average": round(avg, 1),
+            "date": exam.created_at.strftime("%Y-%m-%d") if exam.created_at else "N/A",
+            "status": "Published" if exam.is_published else "Draft"
+        })
+    
+    return recent_exams
 
 
 def subjects_cards(teacher, filters):

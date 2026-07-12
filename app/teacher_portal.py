@@ -138,14 +138,18 @@ def parse_teacher_filters(args):
 def teacher_nav_items():
     items = [
         ("teacher_portal.dashboard", "Dashboard", "fa-chart-pie", "view_dashboard"),
-        ("teacher_portal.profile", "My Profile", "fa-user", None),
-        ("teacher_portal.subjects", "My Subjects", "fa-book-open", "view_assigned_subjects"),
         ("teacher_portal.classes", "My Classes", "fa-people-roof", "view_assigned_classes"),
-        ("teacher_portal.my_students", "My Students", "fa-user-graduate", "view_students"),
-        ("teacher_portal.examinations", "Examinations", "fa-file-circle-check", "view_examinations"),
+        ("teacher_portal.subjects", "My Subjects", "fa-book-open", "view_assigned_subjects"),
+        ("teacher_portal.examinations", "Exams", "fa-file-circle-check", "view_examinations"),
+        ("teacher_portal.results", "Marks Entry", "fa-pen-to-square", "view_student_results"),
         ("teacher_portal.results", "Results", "fa-clipboard-list", "view_student_results"),
+        ("teacher_portal.my_students", "Students", "fa-user-graduate", "view_students"),
+        ("teacher_portal.exam_analysis", "Exam Analytics", "fa-chart-line", "view_examinations"),
         ("teacher_portal.reports", "Reports", "fa-file-export", "generate_reports"),
+        ("teacher_portal.messages", "Messages", "fa-envelope", None),
+        ("teacher_portal.profile", "Profile", "fa-user", None),
         ("teacher_portal.settings", "Settings", "fa-sliders", None),
+        ("teacher_portal.logout", "Logout", "fa-right-from-bracket", None),
     ]
     if teacher_can("future_analysis_features"):
         items.extend(
