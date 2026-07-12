@@ -64,8 +64,8 @@
       <div class="class-list">
         {% for class in summary.class_performance.top %}
         <div class="class-item">
-          <span class="class-name">{{ class.get('name', 'N/A') }}</span>
-          <span class="class-average">{{ class.get('average', 0)|round }}%</span>
+          <span class="class-name">{{ class.name }}</span>
+          <span class="class-average">{{ class.average|round }}%</span>
         </div>
         {% else %}
         <div class="no-data">No data available</div>
@@ -82,8 +82,8 @@
       <div class="class-list">
         {% for class in summary.class_performance.middle %}
         <div class="class-item">
-          <span class="class-name">{{ class.get('name', 'N/A') }}</span>
-          <span class="class-average">{{ class.get('average', 0)|round }}%</span>
+          <span class="class-name">{{ class.name }}</span>
+          <span class="class-average">{{ class.average|round }}%</span>
         </div>
         {% else %}
         <div class="no-data">No data available</div>
@@ -100,8 +100,8 @@
       <div class="class-list">
         {% for class in summary.class_performance.low %}
         <div class="class-item">
-          <span class="class-name">{{ class.get('name', 'N/A') }}</span>
-          <span class="class-average">{{ class.get('average', 0)|round }}%</span>
+          <span class="class-name">{{ class.name }}</span>
+          <span class="class-average">{{ class.average|round }}%</span>
         </div>
         {% else %}
         <div class="no-data">No data available</div>
@@ -130,12 +130,12 @@
         </div>
         {% for exam in summary.recent_exams %}
         <div class="exam-table-row">
-          <span class="exam-name">{{ exam.get('name', 'N/A') }}</span>
-          <span class="exam-class">{{ exam.get('class', 'N/A') }}</span>
-          <span class="exam-subject">{{ exam.get('subject', 'N/A') }}</span>
-          <span class="exam-average">{{ exam.get('average', 0) }}%</span>
-          <span class="exam-date">{{ exam.get('date', 'N/A') }}</span>
-          <span class="exam-status {{ 'published' if exam.get('status') == 'Published' else 'draft' }}">{{ exam.get('status', 'Draft') }}</span>
+          <span class="exam-name">{{ exam.name }}</span>
+          <span class="exam-class">{{ exam.class }}</span>
+          <span class="exam-subject">{{ exam.subject }}</span>
+          <span class="exam-average">{{ exam.average }}%</span>
+          <span class="exam-date">{{ exam.date }}</span>
+          <span class="exam-status {{ 'published' if exam.status == 'Published' else 'draft' }}">{{ exam.status }}</span>
         </div>
         {% else %}
         <div class="no-data">No recent exams</div>
@@ -154,18 +154,18 @@
         {% for item in summary.top_students %}
         <div class="student-item">
           <div class="student-avatar">
-            {% if item.get('student') and item.student.photo_path %}
+            {% if item.student and item.student.photo_path %}
             <img src="{{ asset_url(item.student.photo_path) }}" alt="{{ item.student.full_name }}">
             {% else %}
-            <div class="avatar-placeholder">{{ item.student.full_name[:2]|upper if item.get('student') else 'NA' }}</div>
+            <div class="avatar-placeholder">{{ item.student.full_name[:2]|upper if item.student else 'NA' }}</div>
             {% endif %}
           </div>
           <div class="student-info">
-            <span class="student-name">{{ item.student.full_name if item.get('student') else 'N/A' }}</span>
-            <span class="student-class">{{ item.student.academic_class.name if item.get('student') and item.student.academic_class else 'N/A' }}</span>
+            <span class="student-name">{{ item.student.full_name if item.student else 'N/A' }}</span>
+            <span class="student-class">{{ item.student.academic_class.name if item.student and item.student.academic_class else 'N/A' }}</span>
           </div>
           <div class="student-average">
-            <span class="average-value">{{ item.get('average', 0)|round }}%</span>
+            <span class="average-value">{{ item.average|round }}%</span>
           </div>
         </div>
         {% else %}
@@ -190,28 +190,28 @@
       <div class="analytics-legend">
         <div class="legend-item excellent">
           <span class="legend-color"></span>
-          <span class="legend-label">Excellent ({{ summary.grade_distribution.get('excellent', {}).get('count', 0) }})</span>
-          <span class="legend-value">{{ summary.grade_distribution.get('excellent', {}).get('percentage', 0) }}%</span>
+          <span class="legend-label">Excellent ({{ summary.grade_distribution.excellent.count }})</span>
+          <span class="legend-value">{{ summary.grade_distribution.excellent.percentage }}%</span>
         </div>
         <div class="legend-item good">
           <span class="legend-color"></span>
-          <span class="legend-label">Good ({{ summary.grade_distribution.get('good', {}).get('count', 0) }})</span>
-          <span class="legend-value">{{ summary.grade_distribution.get('good', {}).get('percentage', 0) }}%</span>
+          <span class="legend-label">Good ({{ summary.grade_distribution.good.count }})</span>
+          <span class="legend-value">{{ summary.grade_distribution.good.percentage }}%</span>
         </div>
         <div class="legend-item average">
           <span class="legend-color"></span>
-          <span class="legend-label">Average ({{ summary.grade_distribution.get('average', {}).get('count', 0) }})</span>
-          <span class="legend-value">{{ summary.grade_distribution.get('average', {}).get('percentage', 0) }}%</span>
+          <span class="legend-label">Average ({{ summary.grade_distribution.average.count }})</span>
+          <span class="legend-value">{{ summary.grade_distribution.average.percentage }}%</span>
         </div>
         <div class="legend-item poor">
           <span class="legend-color"></span>
-          <span class="legend-label">Poor ({{ summary.grade_distribution.get('poor', {}).get('count', 0) }})</span>
-          <span class="legend-value">{{ summary.grade_distribution.get('poor', {}).get('percentage', 0) }}%</span>
+          <span class="legend-label">Poor ({{ summary.grade_distribution.poor.count }})</span>
+          <span class="legend-value">{{ summary.grade_distribution.poor.percentage }}%</span>
         </div>
         <div class="legend-item fail">
           <span class="legend-color"></span>
-          <span class="legend-label">Fail ({{ summary.grade_distribution.get('fail', {}).get('count', 0) }})</span>
-          <span class="legend-value">{{ summary.grade_distribution.get('fail', {}).get('percentage', 0) }}%</span>
+          <span class="legend-label">Fail ({{ summary.grade_distribution.fail.count }})</span>
+          <span class="legend-value">{{ summary.grade_distribution.fail.percentage }}%</span>
         </div>
       </div>
       <div class="overall-average">
@@ -230,11 +230,11 @@
       <div class="class-averages-list">
         {% for class_avg in summary.class_averages %}
         <div class="class-average-item">
-          <span class="class-name">{{ class_avg.get('name', 'N/A') }}</span>
+          <span class="class-name">{{ class_avg.name }}</span>
           <div class="progress-bar">
-            <div class="progress-fill" style="width: {{ class_avg.get('percentage', 0) }}%"></div>
+            <div class="progress-fill" style="width: {{ class_avg.percentage }}%"></div>
           </div>
-          <span class="class-percentage">{{ class_avg.get('percentage', 0) }}%</span>
+          <span class="class-percentage">{{ class_avg.percentage }}%</span>
         </div>
         {% else %}
         <div class="no-data">No class data available</div>
@@ -299,56 +299,56 @@
       <div class="overview-icon"><i class="fa-solid fa-clock"></i></div>
       <div class="overview-content">
         <span class="overview-label">Pending Mark Entry</span>
-        <span class="overview-value">{{ summary.important_overview.get('pending_mark_entry', 0) }}</span>
+        <span class="overview-value">{{ summary.important_overview.pending_mark_entry }}</span>
       </div>
     </div>
     <div class="overview-card awaiting">
       <div class="overview-icon"><i class="fa-solid fa-hourglass-half"></i></div>
       <div class="overview-content">
         <span class="overview-label">Awaiting Publication</span>
-        <span class="overview-value">{{ summary.important_overview.get('awaiting_publication', 0) }}</span>
+        <span class="overview-value">{{ summary.important_overview.awaiting_publication }}</span>
       </div>
     </div>
     <div class="overview-card published">
       <div class="overview-icon"><i class="fa-solid fa-check-circle"></i></div>
       <div class="overview-content">
         <span class="overview-label">Recently Published</span>
-        <span class="overview-value">{{ summary.important_overview.get('recently_published', 0) }}</span>
+        <span class="overview-value">{{ summary.important_overview.recently_published }}</span>
       </div>
     </div>
     <div class="overview-card support">
       <div class="overview-icon"><i class="fa-solid fa-hands-helping"></i></div>
       <div class="overview-content">
         <span class="overview-label">Students Requiring Support</span>
-        <span class="overview-value">{{ summary.important_overview.get('students_requiring_support', 0) }}</span>
+        <span class="overview-value">{{ summary.important_overview.students_requiring_support }}</span>
       </div>
     </div>
     <div class="overview-card best">
       <div class="overview-icon"><i class="fa-solid fa-trophy"></i></div>
       <div class="overview-content">
         <span class="overview-label">Best Performing Class</span>
-        <span class="overview-value">{{ summary.important_overview.get('best_performing_class', 'N/A') }}</span>
+        <span class="overview-value">{{ summary.important_overview.best_performing_class }}</span>
       </div>
     </div>
     <div class="overview-card worst">
       <div class="overview-icon"><i class="fa-solid fa-arrow-down"></i></div>
       <div class="overview-content">
         <span class="overview-label">Lowest Performing Class</span>
-        <span class="overview-value">{{ summary.important_overview.get('lowest_performing_class', 'N/A') }}</span>
+        <span class="overview-value">{{ summary.important_overview.lowest_performing_class }}</span>
       </div>
     </div>
     <div class="overview-card highest">
       <div class="overview-icon"><i class="fa-solid fa-star"></i></div>
       <div class="overview-content">
         <span class="overview-label">Highest Scoring Student</span>
-        <span class="overview-value">{{ summary.important_overview.get('highest_scoring_student', 'N/A') }}</span>
+        <span class="overview-value">{{ summary.important_overview.highest_scoring_student }}</span>
       </div>
     </div>
     <div class="overview-card lowest">
       <div class="overview-icon"><i class="fa-solid fa-chart-line-down"></i></div>
       <div class="overview-content">
         <span class="overview-label">Lowest Class Average</span>
-        <span class="overview-value">{{ summary.important_overview.get('lowest_class_average', 0)|round }}%</span>
+        <span class="overview-value">{{ summary.important_overview.lowest_class_average|round }}%</span>
       </div>
     </div>
   </div>
@@ -364,11 +364,11 @@ if (gradeCtx) {
       labels: ['Excellent', 'Good', 'Average', 'Poor', 'Fail'],
       datasets: [{
         data: [
-          {{ summary.grade_distribution.get('excellent', {}).get('count', 0) }},
-          {{ summary.grade_distribution.get('good', {}).get('count', 0) }},
-          {{ summary.grade_distribution.get('average', {}).get('count', 0) }},
-          {{ summary.grade_distribution.get('poor', {}).get('count', 0) }},
-          {{ summary.grade_distribution.get('fail', {}).get('count', 0) }}
+          {{ summary.grade_distribution.excellent.count }},
+          {{ summary.grade_distribution.good.count }},
+          {{ summary.grade_distribution.average.count }},
+          {{ summary.grade_distribution.poor.count }},
+          {{ summary.grade_distribution.fail.count }}
         ],
         backgroundColor: [
           '#10b981', // Excellent - green
