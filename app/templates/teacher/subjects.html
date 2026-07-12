@@ -19,7 +19,9 @@
       <div><span>Pass %</span><strong class="pass">{{ card.pass_rate }}%</strong></div>
       <div><span>Fail %</span><strong class="fail">{{ card.fail_rate }}%</strong></div>
     </div>
-    <a href="{{ url_for('teacher_portal.subject_analysis', subject_id=card.subject.id, **filters) }}" class="btn td-card-btn">
+    {% set analysis_filters = filters.copy() %}
+    {% set _ = analysis_filters.update({'subject_id': card.subject.id}) %}
+    <a href="{{ url_for('teacher_portal.subject_analysis', **analysis_filters) }}" class="btn td-card-btn">
       <i class="fa-solid fa-chart-column"></i> Open Analysis
     </a>
   </article>

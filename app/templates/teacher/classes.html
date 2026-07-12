@@ -19,7 +19,9 @@
       <div><span>Attendance</span><strong>{{ card.attendance }}%</strong></div>
       <div><span>Exams Taken</span><strong>{{ card.exams_taken }}</strong></div>
     </div>
-    <a href="{{ url_for('teacher_portal.exam_analysis', class_id=card.class.id, **filters) }}" class="btn td-card-btn">
+    {% set analysis_filters = filters.copy() %}
+    {% set _ = analysis_filters.update({'class_id': card.class.id}) %}
+    <a href="{{ url_for('teacher_portal.exam_analysis', **analysis_filters) }}" class="btn td-card-btn">
       <i class="fa-solid fa-chart-line"></i> View Exams
     </a>
   </article>
