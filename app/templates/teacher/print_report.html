@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Teacher Analysis Report — {{ teacher.full_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+</head>
+<body class="print-body">
+  <header class="print-header">
+    <h1>Teacher Analysis Report</h1>
+    <p>{{ teacher.full_name }} ({{ teacher.teacher_code }}) — Generated {{ generated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+  </header>
+
+  <section class="panel">
+    <h2>Dashboard Summary</h2>
+    <table class="premium-table">
+      <tbody>
+        {% for key, value in report.dashboard.items() %}
+          {% if key not in ('trends', 'chart_labels', 'chart_values') %}
+            <tr><td>{{ key.replace('_', ' ').title() }}</td><td>{{ value }}</td></tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Subject Summary</h2>
+    <table class="premium-table">
+      <thead><tr><th>Subject</th><th>Average</th><th>Pass Rate</th></tr></thead>
+      <tbody>
+        {% for card in report.subjects %}
+          <tr><td>{{ card.subject.name }}</td><td>{{ card.average }}%</td><td>{{ card.pass_rate }}%</td></tr>
+        {% else %}
+          <tr><td colspan="3">No subject data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Class Summary</h2>
+    <table class="premium-table">
+      <thead><tr><th>Class</th><th>Average</th><th>Pass Rate</th></tr></thead>
+      <tbody>
+        {% for card in report.classes %}
+          <tr><td>{{ card.class.name }}</td><td>{{ card.average }}%</td><td>{{ card.pass_rate }}%</td></tr>
+        {% else %}
+          <tr><td colspan="3">No class data.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>AI Insights</h2>
+    <ul>
+      {% for insight in report.insights %}
+        <li>{{ insight }}</li>
+      {% else %}
+        <li>No insights available.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <script>window.print()</script>
+</body>
+</html>

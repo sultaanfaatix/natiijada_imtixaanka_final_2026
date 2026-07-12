@@ -3,6 +3,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from .models import User
 from .audit import audit
+from .teacher_portal import is_teacher_account
 from . import db
 
 auth_bp = Blueprint("auth", __name__)
@@ -11,6 +12,8 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/admin/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
+        if is_teacher_account():
+            return redirect(url_for("teacher_portal.dashboard"))
         return redirect(url_for("admin.dashboard"))
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -20,7 +23,10 @@ def login():
             login_user(user)
             audit("Login", f"User {username} logged in")
             db.session.commit()
-            return redirect(request.args.get("next") or url_for("admin.dashboard"))
+            next_url = request.args.get("next")
+            if is_teacher_account():
+                return redirect(next_url or url_for("teacher_portal.dashboard"))
+            return redirect(next_url or url_for("admin.dashboard"))
         audit("Failed Login", f"Failed login for username {username}")
         db.session.commit()
         flash("Invalid username or password.", "danger")
@@ -54,5 +60,7 @@ def change_password():
             current_user.set_password(new_password)
             db.session.commit()
             flash("Password changed successfully.", "success")
+            if is_teacher_account():
+                return redirect(url_for("teacher_portal.dashboard"))
             return redirect(url_for("admin.dashboard"))
     return render_template("admin/change_password.html")

@@ -1,0 +1,11 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-insights-grid">
+  {% for insight in insights %}
+  <article class="td-insight-card glass-card">
+    <span class="td-insight-icon"><i class="fa-solid fa-lightbulb"></i></span>
+    <p>{{ insight }}</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

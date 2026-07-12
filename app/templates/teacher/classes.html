@@ -1,0 +1,30 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-card-grid">
+  {% for card in cards %}
+  <article class="td-data-card glass-card">
+    <div class="td-data-card-head">
+      <span class="td-data-icon"><i class="fa-solid fa-people-roof"></i></span>
+      <div>
+        <h2>{{ card.class.name }}</h2>
+        <p>Sections: {{ card.sections|join(', ') or 'N/A' }}</p>
+      </div>
+    </div>
+    <div class="td-data-metrics">
+      <div><span>Students</span><strong>{{ card.student_count }}</strong></div>
+      <div><span>Average</span><strong>{{ card.average }}%</strong></div>
+      <div><span>Highest</span><strong>{{ card.highest }}%</strong></div>
+      <div><span>Lowest</span><strong>{{ card.lowest }}%</strong></div>
+      <div><span>Pass Rate</span><strong class="pass">{{ card.pass_rate }}%</strong></div>
+      <div><span>Attendance</span><strong>{{ card.attendance }}%</strong></div>
+      <div><span>Exams Taken</span><strong>{{ card.exams_taken }}</strong></div>
+    </div>
+    <a href="{{ url_for('teacher_portal.exam_analysis', class_id=card.class.id, **filters) }}" class="btn td-card-btn">
+      <i class="fa-solid fa-chart-line"></i> View Exams
+    </a>
+  </article>
+  {% else %}
+  <section class="panel glass-card wide"><p>No assigned classes found for your account.</p></section>
+  {% endfor %}
+</section>
+{% endblock %}

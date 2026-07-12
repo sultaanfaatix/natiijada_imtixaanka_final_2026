@@ -1,0 +1,44 @@
+{% extends "teacher/base.html" %}
+{% block extra_filters %}
+<label><i class="fa-solid fa-user-graduate"></i> Student
+  <select name="student_id">
+    <option value="">Select Student</option>
+    {% for student in filter_options.students %}
+      <option value="{{ student.id }}" {% if filters.student_id == student.id %}selected{% endif %}>{{ student.full_name }} ({{ student.student_code }})</option>
+    {% endfor %}
+  </select>
+</label>
+{% endblock %}
+{% block teacher_content %}
+{% if analysis %}
+<section class="td-summary-grid compact">
+  <article class="td-stat-card grad-1"><div class="td-stat-body"><span>Student</span><strong style="font-size:1.1rem;">{{ analysis.student.full_name }}</strong></div></article>
+  <article class="td-stat-card grad-2"><div class="td-stat-body"><span>Average</span><strong>{{ analysis.average }}%</strong></div></article>
+  <article class="td-stat-card grad-3"><div class="td-stat-body"><span>Rank</span><strong>#{{ analysis.rank or '-' }}</strong></div></article>
+  <article class="td-stat-card grad-4"><div class="td-stat-body"><span>Grade</span><strong>{{ analysis.grade }}</strong></div></article>
+  <article class="td-stat-card grad-5"><div class="td-stat-body"><span>Attendance</span><strong>{{ analysis.attendance }}%</strong></div></article>
+  <article class="td-stat-card grad-6"><div class="td-stat-body"><span>vs Class Avg</span><strong>{{ analysis.comparison_delta }}%</strong></div></article>
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-clock-rotate-left"></i></span><div><h2>Marks History</h2></div></div>
+    <table class="premium-table">
+      <thead><tr><th>Exam</th><th>Average</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% for row in analysis.history %}
+          <tr><td>{{ row.exam }}</td><td>{{ row.average }}%</td><td>{{ row.grade }}</td></tr>
+        {% else %}<tr><td colspan="3">No marks history available.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-line"></i></span><div><h2>Performance Trend</h2></div></div>
+    <canvas id="studentTrendChart" data-labels='{{ analysis.trend_labels|tojson }}' data-values='{{ analysis.trend|tojson }}'></canvas>
+    <p><strong>Strengths:</strong> {{ analysis.strengths|join(', ') or '-' }}</p>
+    <p><strong>Weaknesses:</strong> {{ analysis.weaknesses|join(', ') or '-' }}</p>
+  </div>
+</section>
+{% else %}
+<section class="panel glass-card"><p>Select a student from the filters above to view detailed analysis.</p></section>
+{% endif %}
+{% endblock %}

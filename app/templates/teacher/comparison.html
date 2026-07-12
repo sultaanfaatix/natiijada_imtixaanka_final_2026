@@ -1,0 +1,30 @@
+{% extends "teacher/base.html" %}
+{% block extra_filters %}
+<label><i class="fa-solid fa-code-compare"></i> Compare Type
+  <select name="compare_type">
+    {% for value, label in [('exam','Exam vs Exam'),('class','Class vs Class'),('section','Section vs Section'),('year','Year vs Year'),('subject','Subject vs Subject')] %}
+      <option value="{{ value }}" {% if filters.compare_type == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</label>
+{% if filters.compare_type == 'exam' %}
+<label>Compare Exam <select name="compare_exam_id"><option value="">Select</option>{% for exam in filter_options.exams %}<option value="{{ exam.id }}" {% if filters.compare_exam_id == exam.id %}selected{% endif %}>{{ exam.name }}</option>{% endfor %}</select></label>
+{% elif filters.compare_type == 'class' %}
+<label>Compare Class <select name="compare_class_id"><option value="">Select</option>{% for c in filter_options.classes %}<option value="{{ c.id }}" {% if filters.compare_class_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></label>
+{% elif filters.compare_type == 'section' %}
+<label>Compare Section <select name="compare_section"><option value="">Select</option>{% for s in filter_options.sections %}<option value="{{ s }}" {% if filters.compare_section == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+{% elif filters.compare_type == 'year' %}
+<label>Compare Year <select name="compare_year_id"><option value="">Select</option>{% for y in filter_options.academic_years %}<option value="{{ y.id }}" {% if filters.compare_year_id == y.id %}selected{% endif %}>{{ y.name }}</option>{% endfor %}</select></label>
+{% elif filters.compare_type == 'subject' %}
+<label>Compare Subject <select name="compare_subject_id"><option value="">Select</option>{% for s in filter_options.subjects %}<option value="{{ s.id }}" {% if filters.compare_subject_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></label>
+{% endif %}
+{% endblock %}
+{% block teacher_content %}
+<section class="panel glass-card">
+  <div class="section-heading"><span><i class="fa-solid fa-code-compare"></i></span><div><h2>{{ comparison.left_label }} vs {{ comparison.right_label }}</h2></div></div>
+  <canvas id="comparisonChart" height="120"
+    data-labels='{{ [comparison.left_label, comparison.right_label]|tojson }}'
+    data-values='{{ [comparison.left_value, comparison.right_value]|tojson }}'></canvas>
+  <p><strong>Delta:</strong> {{ comparison.delta }}%</p>
+</section>
+{% endblock %}

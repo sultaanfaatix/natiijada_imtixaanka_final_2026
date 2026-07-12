@@ -1,0 +1,30 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-card-grid">
+  {% for card in cards %}
+  <article class="td-data-card glass-card">
+    <div class="td-data-card-head">
+      <span class="td-data-icon"><i class="fa-solid fa-book"></i></span>
+      <div>
+        <h2>{{ card.subject.name }}</h2>
+        <p>{{ card.teacher_name }}</p>
+      </div>
+    </div>
+    <div class="td-data-metrics">
+      <div><span>Classes</span><strong>{{ card.classes|join(', ') or '-' }}</strong></div>
+      <div><span>Students</span><strong>{{ card.student_count }}</strong></div>
+      <div><span>Average</span><strong>{{ card.average }}%</strong></div>
+      <div><span>Highest</span><strong>{{ card.highest }}%</strong></div>
+      <div><span>Lowest</span><strong>{{ card.lowest }}%</strong></div>
+      <div><span>Pass %</span><strong class="pass">{{ card.pass_rate }}%</strong></div>
+      <div><span>Fail %</span><strong class="fail">{{ card.fail_rate }}%</strong></div>
+    </div>
+    <a href="{{ url_for('teacher_portal.subject_analysis', subject_id=card.subject.id, **filters) }}" class="btn td-card-btn">
+      <i class="fa-solid fa-chart-column"></i> Open Analysis
+    </a>
+  </article>
+  {% else %}
+  <section class="panel glass-card wide"><p>No assigned subjects found for your account.</p></section>
+  {% endfor %}
+</section>
+{% endblock %}

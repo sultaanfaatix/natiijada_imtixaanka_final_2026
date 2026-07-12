@@ -67,6 +67,7 @@ def create_app(config_class=Config):
     from .routes_auth import auth_bp
     from .routes_id_cards import id_cards_bp
     from .routes_public import public_bp
+    from .routes_teacher_portal import teacher_portal_bp
     from .routes_teachers import teachers_bp
 
     app.register_blueprint(public_bp)
@@ -76,6 +77,7 @@ def create_app(config_class=Config):
     app.register_blueprint(id_cards_bp, url_prefix="/admin/id-cards")
     app.register_blueprint(advanced_results_bp, url_prefix="/admin/advanced-results")
     app.register_blueprint(teachers_bp, url_prefix="/admin/teachers")
+    app.register_blueprint(teacher_portal_bp, url_prefix="/teacher")
 
     register_cli(app)
 

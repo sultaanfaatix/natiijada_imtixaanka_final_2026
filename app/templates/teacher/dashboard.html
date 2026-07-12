@@ -1,0 +1,48 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-summary-grid">
+  {% set cards = [
+    ("Total Students", "fa-user-graduate", summary.total_students, summary.trends.average, "grad-1"),
+    ("Total Classes", "fa-people-roof", summary.total_classes, 0, "grad-2"),
+    ("Total Subjects", "fa-book-open", summary.total_subjects, 0, "grad-3"),
+    ("Total Exams", "fa-file-circle-check", summary.total_exams, 0, "grad-4"),
+    ("Overall Average", "fa-percent", summary.overall_average ~ "%", summary.trends.average, "grad-5"),
+    ("Pass Rate", "fa-circle-check", summary.pass_rate ~ "%", summary.trends.pass_rate, "grad-6"),
+    ("Fail Rate", "fa-circle-xmark", summary.fail_rate ~ "%", 0, "grad-7"),
+    ("Highest Mark", "fa-arrow-up", summary.highest_mark ~ "%", 0, "grad-8"),
+    ("Lowest Mark", "fa-arrow-down", summary.lowest_mark ~ "%", 0, "grad-9"),
+  ] %}
+  {% for label, icon, value, trend, grad in cards %}
+  <article class="td-stat-card {{ grad }}">
+    <div class="td-stat-icon"><i class="fa-solid {{ icon }}"></i></div>
+    <div class="td-stat-body">
+      <span>{{ label }}</span>
+      <strong class="td-counter" data-target="{{ value|replace('%','') }}">{{ value }}</strong>
+      {% if trend %}
+        <small class="td-trend {% if trend > 0 %}up{% elif trend < 0 %}down{% endif %}">
+          <i class="fa-solid fa-arrow-trend-{% if trend >= 0 %}up{% else %}down{% endif %}"></i>
+          {{ trend|abs }}% vs prev exam
+        </small>
+      {% else %}
+        <small class="td-trend neutral">Assigned scope</small>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-line"></i></span><div><h2>Exam Performance Trend</h2><p>Average scores across examinations</p></div></div>
+    <canvas id="dashboardExamChart" height="120"
+      data-labels='{{ summary.chart_labels|tojson }}'
+      data-values='{{ summary.chart_values|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-pie"></i></span><div><h2>Quick Overview</h2><p>Pass vs fail distribution</p></div></div>
+    <canvas id="dashboardPassChart" height="120"
+      data-labels='["Pass", "Fail"]'
+      data-values='[{{ summary.pass_rate }}, {{ summary.fail_rate }}]'></canvas>
+  </div>
+</section>
+{% endblock %}

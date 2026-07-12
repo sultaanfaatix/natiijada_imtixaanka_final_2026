@@ -1,0 +1,40 @@
+{% extends "teacher/base.html" %}
+{% block extra_filters %}
+<label><i class="fa-solid fa-list-ol"></i> Limit
+  <select name="limit">
+    <option value="10" {% if filters.limit == 10 %}selected{% endif %}>Top 10</option>
+    <option value="20" {% if filters.limit == 20 %}selected{% endif %}>Top 20</option>
+  </select>
+</label>
+{% endblock %}
+{% block teacher_content %}
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-trophy"></i></span><div><h2>Top {{ filters.limit }}</h2></div></div>
+    <table class="premium-table">
+      <thead><tr><th>Rank</th><th>Student</th><th>Average</th><th>Grade</th></tr></thead>
+      <tbody>
+        {% set ranking_list = data.top_10 if filters.limit == 10 else data.top_20 %}
+        {% for item in ranking_list %}
+          <tr><td>#{{ item.rank }}</td><td>{{ item.student.full_name }}</td><td>{{ item.average }}%</td><td>{{ item.grade }}</td></tr>
+        {% else %}<tr><td colspan="4">No ranking data.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-star"></i></span><div><h2>Perfect Scores</h2></div></div>
+    <ul class="td-list">
+      {% for item in data.perfect_scores %}
+        <li>{{ item.student.full_name }} — {{ item.average }}%</li>
+      {% else %}<li>No perfect scores yet.</li>{% endfor %}
+    </ul>
+    <div class="section-heading" style="margin-top:16px;"><span><i class="fa-solid fa-arrow-trend-up"></i></span><div><h3>Most Improved</h3></div></div>
+    <ul class="td-list">
+      {% for item in data.most_improved %}
+        <li>{{ item.student.full_name }} (+{{ item.improvement }}%)</li>
+      {% else %}<li>Not enough exam history.</li>{% endfor %}
+    </ul>
+    <p class="muted">{{ data.gender_note }}</p>
+  </div>
+</section>
+{% endblock %}

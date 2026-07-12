@@ -1,0 +1,38 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="panel glass-card">
+  <div class="section-heading"><span><i class="fa-solid fa-file-export"></i></span><div><h2>Generate Reports</h2><p>Export analytics for your assigned data only</p></div></div>
+  <div class="td-report-actions">
+    {% if teacher_can('download_reports') %}
+      <a class="btn" href="{{ url_for('teacher_portal.export_pdf', **filters) }}"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+      <a class="btn" href="{{ url_for('teacher_portal.export_excel', **filters) }}"><i class="fa-solid fa-file-excel"></i> Excel</a>
+    {% endif %}
+    <a class="btn ghost" href="{{ url_for('teacher_portal.print_report', **filters) }}" target="_blank"><i class="fa-solid fa-print"></i> Printable Report</a>
+  </div>
+</section>
+<section class="td-summary-grid compact">
+  {% for label, value in [
+    ("Students", report.dashboard.total_students),
+    ("Classes", report.dashboard.total_classes),
+    ("Subjects", report.dashboard.total_subjects),
+    ("Average", report.dashboard.overall_average ~ "%"),
+    ("Pass Rate", report.dashboard.pass_rate ~ "%"),
+  ] %}
+  <article class="td-stat-card grad-1"><div class="td-stat-body"><span>{{ label }}</span><strong>{{ value }}</strong></div></article>
+  {% endfor %}
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-book"></i></span><div><h2>Subject Summary</h2></div></div>
+    <table class="premium-table"><thead><tr><th>Subject</th><th>Avg</th><th>Pass %</th></tr></thead><tbody>
+      {% for card in report.subjects %}<tr><td>{{ card.subject.name }}</td><td>{{ card.average }}%</td><td>{{ card.pass_rate }}%</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-people-roof"></i></span><div><h2>Class Summary</h2></div></div>
+    <table class="premium-table"><thead><tr><th>Class</th><th>Avg</th><th>Pass %</th></tr></thead><tbody>
+      {% for card in report.classes %}<tr><td>{{ card.class.name }}</td><td>{{ card.average }}%</td><td>{{ card.pass_rate }}%</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</section>
+{% endblock %}

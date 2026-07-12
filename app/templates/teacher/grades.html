@@ -1,0 +1,24 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-pie"></i></span><div><h2>Grade Pie Chart</h2></div></div>
+    <canvas id="gradePieChart" data-labels='{{ distribution.labels|tojson }}' data-values='{{ distribution.values|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-column"></i></span><div><h2>Grade Bar Chart</h2></div></div>
+    <canvas id="gradeBarChart" data-labels='{{ distribution.labels|tojson }}' data-values='{{ distribution.values|tojson }}'></canvas>
+  </div>
+</section>
+<section class="panel glass-card">
+  <div class="section-heading"><span><i class="fa-solid fa-table"></i></span><div><h2>Grade Distribution Table</h2></div></div>
+  <table class="premium-table">
+    <thead><tr><th>Grade</th><th>Students</th><th>Percentage</th></tr></thead>
+      <tbody>
+        {% for label in distribution.labels %}
+          <tr><td>{{ label }}</td><td>{{ distribution.values[loop.index0] }}</td><td>{{ distribution.percentages[loop.index0] }}%</td></tr>
+        {% else %}<tr><td colspan="3">No grade data available.</td></tr>{% endfor %}
+      </tbody>
+  </table>
+</section>
+{% endblock %}

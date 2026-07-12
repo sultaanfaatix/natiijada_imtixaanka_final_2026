@@ -1,0 +1,17 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-charts-grid triple">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-line"></i></span><div><h2>Line Chart — Exam Trend</h2></div></div>
+    <canvas id="trendLineChart" data-labels='{{ trends.exam_labels|tojson }}' data-values='{{ trends.exam_values|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-column"></i></span><div><h2>Bar Chart — Monthly Trend</h2></div></div>
+    <canvas id="trendBarChart" data-labels='{{ trends.monthly_labels|tojson }}' data-values='{{ trends.monthly_values|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-area"></i></span><div><h2>Area Chart — Year Trend</h2></div></div>
+    <canvas id="trendAreaChart" data-labels='{{ trends.year_labels|tojson }}' data-values='{{ trends.year_values|tojson }}'></canvas>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="panel glass-card" style="max-width:560px;">
+  <div class="section-heading"><span><i class="fa-solid fa-sliders"></i></span><div><h2>Dashboard Settings</h2></div></div>
+  <form method="post" class="form-grid premium-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="wide"><i class="fa-solid fa-moon"></i> Theme
+      <select name="teacher_theme">
+        <option value="light" {% if settings_data.teacher_theme == 'light' %}selected{% endif %}>Light Mode</option>
+        <option value="dark" {% if settings_data.teacher_theme == 'dark' %}selected{% endif %}>Dark Mode</option>
+      </select>
+    </label>
+    <div class="wide"><button type="submit" class="btn"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button></div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,58 @@
+<section class="teacher-filters glass-card">
+  <form method="get" class="teacher-filter-form" id="teacherFilterForm">
+    <label><i class="fa-solid fa-calendar-days"></i> Academic Year
+      <select name="academic_year_id">
+        <option value="">All Years</option>
+        {% for year in filter_options.academic_years %}
+          <option value="{{ year.id }}" {% if filters.academic_year_id == year.id %}selected{% endif %}>{{ year.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><i class="fa-solid fa-file-circle-check"></i> Exam
+      <select name="exam_id">
+        <option value="">All Exams</option>
+        {% for exam in filter_options.exams %}
+          <option value="{{ exam.id }}" {% if filters.exam_id == exam.id %}selected{% endif %}>{{ exam.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><i class="fa-solid fa-book"></i> Subject
+      <select name="subject_id">
+        <option value="">All Subjects</option>
+        {% for subject in filter_options.subjects %}
+          <option value="{{ subject.id }}" {% if filters.subject_id == subject.id %}selected{% endif %}>{{ subject.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><i class="fa-solid fa-people-roof"></i> Class
+      <select name="class_id">
+        <option value="">All Classes</option>
+        {% for school_class in filter_options.classes %}
+          <option value="{{ school_class.id }}" {% if filters.class_id == school_class.id %}selected{% endif %}>{{ school_class.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><i class="fa-solid fa-layer-group"></i> Section
+      <select name="section">
+        <option value="">All Sections</option>
+        {% for section in filter_options.sections %}
+          <option value="{{ section }}" {% if filters.section == section %}selected{% endif %}>{{ section }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><i class="fa-solid fa-calendar"></i> Date From
+      <input type="date" name="date_from" value="{{ filters.date_from or '' }}">
+    </label>
+    <label><i class="fa-solid fa-calendar"></i> Date To
+      <input type="date" name="date_to" value="{{ filters.date_to or '' }}">
+    </label>
+    <label class="search-field"><i class="fa-solid fa-magnifying-glass"></i> Search
+      <input type="search" name="q" value="{{ filters.q or '' }}" placeholder="Student name or ID">
+    </label>
+    {% block extra_filters %}{% endblock %}
+    <div class="filter-actions">
+      <button type="submit" class="btn"><i class="fa-solid fa-filter"></i> Apply</button>
+      <a href="{{ request.path }}" class="btn ghost"><i class="fa-solid fa-rotate-left"></i> Reset Filter</a>
+    </div>
+  </form>
+</section>

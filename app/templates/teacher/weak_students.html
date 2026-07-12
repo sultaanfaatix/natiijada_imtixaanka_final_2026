@@ -1,0 +1,46 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-arrow-down"></i></span><div><h2>Bottom Students</h2></div></div>
+    <table class="premium-table">
+      <thead><tr><th>Rank</th><th>Student</th><th>Average</th></tr></thead>
+      <tbody>
+        {% for item in data.bottom_students %}
+          <tr><td>#{{ item.rank }}</td><td>{{ item.student.full_name }}</td><td>{{ item.average }}%</td></tr>
+        {% else %}<tr><td colspan="3">No data.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-triangle-exclamation"></i></span><div><h2>Needs Intervention</h2></div></div>
+    <ul class="td-list">
+      {% for item in data.needs_intervention %}
+        <li>{{ item.student.full_name }} — {{ item.average }}%</li>
+      {% else %}<li>No students flagged.</li>{% endfor %}
+    </ul>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-repeat"></i></span><div><h2>Repeated Failure</h2></div></div>
+    <ul class="td-list">
+      {% for item in data.repeated_failures %}
+        <li>{{ item.student.full_name }} — {{ item.fail_count }} exams</li>
+      {% else %}<li>No repeated failures detected.</li>{% endfor %}
+    </ul>
+  </div>
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-book"></i></span><div><h2>Recommended Revision</h2></div></div>
+    <p>{{ data.recommended_revision|join(', ') or 'No recommendations yet.' }}</p>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-note-sticky"></i></span><div><h2>Teacher Notes</h2></div></div>
+    <ul class="td-list">
+      {% for note in data.teacher_notes %}
+        <li>{{ note }}</li>
+      {% else %}<li>No student notes available.</li>{% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}

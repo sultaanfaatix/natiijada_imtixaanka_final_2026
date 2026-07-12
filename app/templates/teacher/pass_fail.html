@@ -1,0 +1,37 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-summary-grid compact">
+  <article class="td-stat-card grad-6"><div class="td-stat-body"><span>Total Passed</span><strong>{{ analysis.total_passed }}</strong></div></article>
+  <article class="td-stat-card grad-7"><div class="td-stat-body"><span>Total Failed</span><strong>{{ analysis.total_failed }}</strong></div></article>
+  <article class="td-stat-card grad-5"><div class="td-stat-body"><span>Pass %</span><strong>{{ analysis.pass_rate }}%</strong></div></article>
+  <article class="td-stat-card grad-8"><div class="td-stat-body"><span>Fail %</span><strong>{{ analysis.fail_rate }}%</strong></div></article>
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-people-roof"></i></span><div><h2>Class Comparison</h2></div></div>
+    <table class="premium-table">
+      <thead><tr><th>Class</th><th>Passed</th><th>Failed</th></tr></thead>
+      <tbody>
+        {% for name, stats in analysis.class_comparison.items() %}
+          <tr><td>{{ name }}</td><td>{{ stats.pass }}</td><td>{{ stats.fail }}</td></tr>
+        {% else %}<tr><td colspan="3">No data.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-layer-group"></i></span><div><h2>Section Comparison</h2></div></div>
+    <table class="premium-table">
+      <thead><tr><th>Section</th><th>Passed</th><th>Failed</th></tr></thead>
+      <tbody>
+        {% for name, stats in analysis.section_comparison.items() %}
+          <tr><td>{{ name }}</td><td>{{ stats.pass }}</td><td>{{ stats.fail }}</td></tr>
+        {% else %}<tr><td colspan="3">No data.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-venus-mars"></i></span><div><h2>Gender Comparison</h2></div></div>
+    <p>{{ analysis.gender_comparison.note }}</p>
+  </div>
+</section>
+{% endblock %}

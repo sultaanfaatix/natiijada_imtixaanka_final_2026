@@ -1,0 +1,41 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-summary-grid compact">
+  {% for label, value in [
+    ("Average", analysis.average ~ "%"),
+    ("Median", analysis.median ~ "%"),
+    ("Mode", analysis.mode ~ "%"),
+    ("Highest", analysis.highest ~ "%"),
+    ("Lowest", analysis.lowest ~ "%"),
+    ("Range", analysis.range ~ "%"),
+    ("Std Dev", analysis.std_dev),
+    ("Pass Rate", analysis.pass_rate ~ "%"),
+    ("Fail Rate", analysis.fail_rate ~ "%"),
+    ("Students", analysis.student_count),
+  ] %}
+  <article class="td-stat-card grad-1"><div class="td-stat-body"><span>{{ label }}</span><strong>{{ value }}</strong></div></article>
+  {% endfor %}
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-chart-bar"></i></span><div><h2>Score Distribution</h2></div></div>
+    <canvas id="examDistChart" data-labels='{{ analysis.distribution.labels|tojson }}' data-values='{{ analysis.distribution.values|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-book"></i></span><div><h2>Subject Breakdown</h2></div></div>
+    <div class="bar-chart">
+      {% for name, value in analysis.subject_breakdown.items() %}
+        <div><span>{{ name }}</span><strong style="width: {{ [value, 100]|min }}%"></strong><b>{{ value }}%</b></div>
+      {% else %}<p>No data for selected filters.</p>{% endfor %}
+    </div>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-people-roof"></i></span><div><h2>Class Breakdown</h2></div></div>
+    <div class="bar-chart">
+      {% for name, value in analysis.class_breakdown.items() %}
+        <div><span>{{ name }}</span><strong style="width: {{ [value, 100]|min }}%"></strong><b>{{ value }}%</b></div>
+      {% else %}<p>No data for selected filters.</p>{% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

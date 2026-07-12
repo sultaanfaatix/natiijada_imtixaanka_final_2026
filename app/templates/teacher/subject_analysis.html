@@ -1,0 +1,38 @@
+{% extends "teacher/base.html" %}
+{% block teacher_content %}
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-book"></i></span><div><h2>Average per Class</h2></div></div>
+    <canvas id="subjectClassChart" data-labels='{{ analysis.by_class.keys()|list|tojson }}' data-values='{{ analysis.by_class.values()|list|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-layer-group"></i></span><div><h2>Average per Section</h2></div></div>
+    <canvas id="subjectSectionChart" data-labels='{{ analysis.by_section.keys()|list|tojson }}' data-values='{{ analysis.by_section.values()|list|tojson }}'></canvas>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-file-circle-check"></i></span><div><h2>Average per Exam</h2></div></div>
+    <canvas id="subjectExamChart" data-labels='{{ analysis.by_exam.keys()|list|tojson }}' data-values='{{ analysis.by_exam.values()|list|tojson }}'></canvas>
+  </div>
+</section>
+<section class="td-charts-grid">
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-sitemap"></i></span><div><h2>Chapter Averages</h2><p>Future-ready chapter mapping</p></div></div>
+    <div class="bar-chart">
+      {% for item in analysis.by_chapter %}
+        <div><span>{{ item.name }}</span><strong style="width: {{ [item.average, 100]|min }}%"></strong><b>{{ item.average }}%</b></div>
+      {% else %}<p>Chapter data will appear when chapters are configured.</p>{% endfor %}
+    </div>
+  </div>
+  <div class="panel glass-card">
+    <div class="section-heading"><span><i class="fa-solid fa-scale-balanced"></i></span><div><h2>Difficulty Analysis</h2></div></div>
+    <p><strong>Hardest:</strong>
+      {% for name, avg in analysis.difficulty_analysis.hardest %}{{ name }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}
+    </p>
+    <p><strong>Easiest:</strong>
+      {% for name, avg in analysis.difficulty_analysis.easiest %}{{ name }}{% if not loop.last %}, {% endif %}{% else %}-{% endfor %}
+    </p>
+    <div class="section-heading" style="margin-top:18px;"><span><i class="fa-solid fa-circle-question"></i></span><div><h3>Question Analysis</h3><p>Future ready module</p></div></div>
+    <p class="muted">Per-question analytics will be available when question-level data is added to examinations.</p>
+  </div>
+</section>
+{% endblock %}
