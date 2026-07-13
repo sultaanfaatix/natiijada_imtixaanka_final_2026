@@ -100,6 +100,47 @@
     <label class="wide"><i class="fa-solid fa-shoe-prints"></i> Report Footer<input name="report_footer_text" value="{{ settings.report_footer_text }}"></label>
   </section>
 
+  <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-id-card"></i></span><div><h2>Student ID Verification Page</h2><p>Customize the QR code verification page appearance without editing code.</p></div></div>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-heading"></i></span><div><h3>Header Settings</h3><p>Control logo, school name, and header styling.</p></div></div>
+    <label><i class="fa-solid fa-expand"></i> Logo Size (px)<input name="verify_id_logo_size" value="{{ settings.verify_id_logo_size or '120' }}"></label>
+    <label><i class="fa-solid fa-arrows-up-down"></i> Header Padding (px)<input name="verify_id_header_padding" value="{{ settings.verify_id_header_padding or '48' }}"></label>
+    <label><i class="fa-solid fa-palette"></i> Header Primary Color<input name="verify_id_header_primary" type="color" value="{{ settings.verify_id_header_primary or '#2563eb' }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Header Secondary Color<input name="verify_id_header_secondary" type="color" value="{{ settings.verify_id_header_secondary or '#1e40af' }}"></label>
+    <label><i class="fa-solid fa-toggle-on"></i> Show Watermark Logo<select name="verify_id_show_watermark"><option value="on" {% if settings.verify_id_show_watermark != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.verify_id_show_watermark == 'off' %}selected{% endif %}>OFF</option></select></label>
+    <label><i class="fa-solid fa-file-circle-check"></i> Exam Type<input name="verify_exam_type" value="{{ settings.verify_exam_type or 'Final Exam' }}"></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-user-graduate"></i></span><div><h3>Student Photo</h3><p>Photo size, border, and presentation.</p></div></div>
+    <label><i class="fa-solid fa-expand"></i> Photo Size (px)<input name="verify_id_photo_size" value="{{ settings.verify_id_photo_size or '200' }}"></label>
+    <label><i class="fa-solid fa-border-all"></i> Border Width (px)<input name="verify_id_photo_border_width" value="{{ settings.verify_id_photo_border_width or '4' }}"></label>
+    <label><i class="fa-solid fa-palette"></i> Border Color<input name="verify_id_photo_border_color" type="color" value="{{ settings.verify_id_photo_border_color or '#10b981' }}"></label>
+    <label><i class="fa-solid fa-vector-square"></i> Border Radius (px)<input name="verify_id_photo_radius" value="{{ settings.verify_id_photo_radius or '20' }}"></label>
+    <label><i class="fa-solid fa-toggle-on"></i> Photo Shadow<select name="verify_id_photo_shadow"><option value="on" {% if settings.verify_id_photo_shadow != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.verify_id_photo_shadow == 'off' %}selected{% endif %}>OFF</option></select></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-shield-check"></i></span><div><h3>Verified Badge</h3><p>Badge styling and animations.</p></div></div>
+    <label><i class="fa-solid fa-text-width"></i> Badge Text<input name="verify_id_badge_text" value="{{ settings.verify_id_badge_text or 'VERIFIED STUDENT' }}"></label>
+    <label><i class="fa-solid fa-palette"></i> Badge Primary Color<input name="verify_id_badge_primary" type="color" value="{{ settings.verify_id_badge_primary or '#10b981' }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Badge Secondary Color<input name="verify_id_badge_secondary" type="color" value="{{ settings.verify_id_badge_secondary or '#059669' }}"></label>
+    <label><i class="fa-solid fa-vector-square"></i> Border Radius (px)<input name="verify_id_badge_radius" value="{{ settings.verify_id_badge_radius or '16' }}"></label>
+    <label><i class="fa-solid fa-toggle-on"></i> Enable Badge Animation<select name="verify_id_badge_animation"><option value="on" {% if settings.verify_id_badge_animation != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.verify_id_badge_animation == 'off' %}selected{% endif %}>OFF</option></select></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-circle-info"></i></span><div><h3>Status Card</h3><p>Status card colors and styling.</p></div></div>
+    <label><i class="fa-solid fa-palette"></i> Status Card Color<input name="verify_id_status_color" type="color" value="{{ settings.verify_id_status_color or '#10b981' }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Status Card Dark Color<input name="verify_id_status_dark" type="color" value="{{ settings.verify_id_status_dark or '#059669' }}"></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-stamp"></i></span><div><h3>Verification Section</h3><p>Stamp and verification details.</p></div></div>
+    <label><i class="fa-solid fa-toggle-on"></i> Show Verification Stamp<select name="verify_id_show_stamp"><option value="on" {% if settings.verify_id_show_stamp != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.verify_id_show_stamp == 'off' %}selected{% endif %}>OFF</option></select></label>
+    <label><i class="fa-solid fa-expand"></i> Stamp Size (px)<input name="verify_id_stamp_size" value="{{ settings.verify_id_stamp_size or '140' }}"></label>
+    <label><i class="fa-solid fa-palette"></i> Stamp Color<input name="verify_id_stamp_color" type="color" value="{{ settings.verify_id_stamp_color or '#10b981' }}"></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-layer-group"></i></span><div><h3>Cards & Glass Effect</h3><p>Card background, borders, and shadows.</p></div></div>
+    <label><i class="fa-solid fa-vector-square"></i> Card Border Radius (px)<input name="verify_id_card_radius" value="{{ settings.verify_id_card_radius or '20' }}"></label>
+    <label><i class="fa-solid fa-compress"></i> Card Padding (px)<input name="verify_id_card_padding" value="{{ settings.verify_id_card_padding or '32' }}"></label>
+    <label><i class="fa-solid fa-arrows-up-down"></i> Card Spacing (px)<input name="verify_id_card_spacing" value="{{ settings.verify_id_card_spacing or '24' }}"></label>
+    <label><i class="fa-solid fa-toggle-on"></i> Glass Effect<select name="verify_id_glass_effect"><option value="on" {% if settings.verify_id_glass_effect != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.verify_id_glass_effect == 'off' %}selected{% endif %}>OFF</option></select></label>
+  </section>
+
   <section class="panel form-grid premium-form print-layout-customizer">
     <div class="section-heading wide"><span><i class="fa-solid fa-print"></i></span><div><h2>Print Layout Customization</h2><p>Customize the downloadable/printable A4 report card. Preview changes instantly before saving.</p></div></div>
     <div class="wide print-layout-preview" id="printLayoutPreview">
