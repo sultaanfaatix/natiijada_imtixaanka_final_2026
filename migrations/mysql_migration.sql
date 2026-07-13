@@ -3,13 +3,59 @@
 -- Execute: mysql -h <host> -u <user> -p <database> < migrations/mysql_migration.sql
 
 -- Add invigilator_id column to incident_reports table
-ALTER TABLE incident_reports 
-ADD COLUMN invigilator_id INT NULL 
-AFTER user_id,
-ADD INDEX idx_incident_reports_invigilator_id (invigilator_id),
-ADD CONSTRAINT fk_incident_reports_invigilator_id 
-FOREIGN KEY (invigilator_id) REFERENCES exam_invigilators(id) 
-ON DELETE SET NULL;
+-- Use ALTER TABLE with IF NOT EXISTS pattern for safety
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+    AND table_name = 'incident_reports'
+    AND column_name = 'invigilator_id'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE incident_reports ADD COLUMN invigilator_id INT NULL AFTER user_id',
+    'SELECT "Column invigilator_id already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add index if it doesn't exist
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+    AND table_name = 'incident_reports'
+    AND index_name = 'idx_incident_reports_invigilator_id'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE incident_reports ADD INDEX idx_incident_reports_invigilator_id (invigilator_id)',
+    'SELECT "Index idx_incident_reports_invigilator_id already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add foreign key constraint if it doesn't exist
+SET @fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.table_constraints
+    WHERE table_schema = DATABASE()
+    AND table_name = 'incident_reports'
+    AND constraint_name = 'fk_incident_reports_invigilator_id'
+);
+
+SET @sql = IF(@fk_exists = 0,
+    'ALTER TABLE incident_reports ADD CONSTRAINT fk_incident_reports_invigilator_id FOREIGN KEY (invigilator_id) REFERENCES exam_invigilators(id) ON DELETE SET NULL',
+    'SELECT "Foreign key fk_incident_reports_invigilator_id already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Create exam_invigilators table
 CREATE TABLE IF NOT EXISTS exam_invigilators (
