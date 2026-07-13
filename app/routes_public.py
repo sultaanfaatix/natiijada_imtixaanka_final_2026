@@ -244,7 +244,7 @@ def incident_report_form(token):
         
         # Handle file uploads if any
         if request.files.getlist("evidence"):
-            from .services import upload_image
+            from .cloudinary_service import upload_image
             for file in request.files.getlist("evidence"):
                 if file and file.filename:
                     file_path = upload_image(file, "incident/evidence")
