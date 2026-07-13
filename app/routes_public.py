@@ -226,7 +226,7 @@ def incident_report_form(token):
             report_number=report_num,
             student_id=student.id,
             user_id=current_user.id,
-            teacher_id=current_user.id if current_user.role in ["super_admin", "admin", "staff"] else None,
+            teacher_id=current_user.teacher_profile.id if current_user.teacher_profile else None,
             category_id=int(request.form.get("category_id")),
             severity_id=int(request.form.get("severity_id")),
             exam_id=int(request.form.get("exam_id")) if request.form.get("exam_id") else None,
