@@ -41,69 +41,100 @@
   font-size: 1rem;
 }
 
-.student-info-card {
+.glass-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 2rem;
   margin-bottom: 2rem;
-  display: flex;
-  gap: 2rem;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.student-photo {
-  width: 120px;
-  height: 120px;
+.student-identity-card {
+  display: flex;
+  gap: 2rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(240, 253, 244, 0.95) 100%);
+}
+
+.student-photo-large {
+  width: 140px;
+  height: 140px;
   flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
-  border: 4px solid #10b981;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+  border: 5px solid #10b981;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
 }
 
-.student-photo img {
+.student-photo-large img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.photo-placeholder {
+.photo-placeholder-large {
   width: 100%;
   height: 100%;
-  background: #e5e7eb;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 3rem;
   color: #9ca3af;
 }
 
-.student-details {
+.student-identity-details {
   flex: 1;
 }
 
-.student-details h2 {
-  font-size: 1.5rem;
+.student-identity-details h2 {
+  font-size: 1.75rem;
   font-weight: 700;
   color: #1e293b;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.info-grid {
+.identity-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
 
-.info-item {
+.identity-item {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(16, 185, 129, 0.1);
 }
 
-.info-item .label {
-  font-size: 0.8rem;
+.identity-item .icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 10px;
+  color: white;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.identity-item .icon.status-icon {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.identity-item .content {
+  flex: 1;
+}
+
+.identity-item .label {
+  display: block;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -111,19 +142,21 @@
   margin-bottom: 0.25rem;
 }
 
-.info-item .value {
+.identity-item .value {
   font-size: 0.95rem;
   color: #1e293b;
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.identity-item .value.status-active {
+  color: #10b981;
+  font-weight: 700;
 }
 
 .incident-form {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .form-section h3 {
@@ -133,6 +166,14 @@
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-section h3 i {
+  color: #10b981;
+  font-size: 1.1rem;
 }
 
 .form-row {
@@ -181,6 +222,127 @@
 .form-group textarea {
   resize: vertical;
   min-height: 120px;
+  line-height: 1.6;
+}
+
+.help-text {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+/* Severity Badges */
+.severity-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.severity-badge {
+  padding: 0.75rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.severity-badge input {
+  display: none;
+}
+
+.severity-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.severity-badge input:checked + span {
+  font-weight: 700;
+}
+
+.severity-badge:has(input:checked) {
+  border-color: #1e293b;
+  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.2);
+}
+
+/* Actions Checkboxes */
+.actions-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.action-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-checkbox:hover {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.action-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #10b981;
+}
+
+.action-checkbox span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.action-checkbox input:checked + span {
+  color: #10b981;
+  font-weight: 600;
+}
+
+/* Preview Section */
+.preview-section {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.preview-item {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  border-left: 4px solid #10b981;
+}
+
+.preview-item .label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.preview-item .value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .form-actions {
@@ -235,13 +397,30 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .student-info-card {
+  .student-identity-card {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
   
-  .info-grid {
+  .identity-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .identity-item {
+    justify-content: center;
+  }
+  
+  .severity-badges {
+    flex-direction: column;
+  }
+  
+  .severity-badge {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .actions-checkboxes {
     grid-template-columns: 1fr;
   }
   
@@ -253,7 +432,7 @@
     flex-direction: column;
   }
   
-  .incident-form {
+  .glass-card {
     padding: 1.5rem;
   }
 }
@@ -267,8 +446,12 @@
     font-size: 1.5rem;
   }
   
-  .student-photo {
+  .student-photo-large {
     width: 100px;
     height: 100px;
+  }
+  
+  .preview-grid {
+    grid-template-columns: 1fr;
   }
 }

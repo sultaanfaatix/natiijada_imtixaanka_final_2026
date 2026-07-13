@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 from . import db
 from .i18n import language_redirect
-from .models import AcademicYear, Exam, IdCardIssue, IncidentCategory, IncidentReport, ReportVerification, SeverityLevel, Student, Subject
+from .models import AcademicYear, Exam, IdCardIssue, IncidentAction, IncidentCategory, IncidentReport, ReportVerification, SeverityLevel, Student, Subject
 from .services import get_settings, result_payload
 from .verification import verification_payload
 
@@ -206,7 +206,7 @@ def incident_report_form(token):
     student = issue.student
     
     # Check if user has permission (admin or staff)
-    if current_user.role not in ["super_admin", "admin", "staff"]:
+    if not current_user.is_authenticated or current_user.role not in ["super_admin", "admin", "staff"]:
         return render_template("qr_landing.html", settings=settings, token=token, student=student, error="Unauthorized"), 403
     
     if request.method == "POST":
@@ -217,11 +217,16 @@ def incident_report_form(token):
         
         report_num = f"INC-{datetime.now().strftime('%Y%m%d')}-{''.join(random.choices(string.digits, k=4))}"
         
+        # Handle actions taken as comma-separated string from checkboxes
+        actions_list = request.form.getlist("actions_taken")
+        actions_taken = ", ".join(actions_list) if actions_list else ""
+        
         # Create incident report
         report = IncidentReport(
             report_number=report_num,
             student_id=student.id,
             user_id=current_user.id,
+            teacher_id=current_user.id if current_user.role in ["super_admin", "admin", "staff"] else None,
             category_id=int(request.form.get("category_id")),
             severity_id=int(request.form.get("severity_id")),
             exam_id=int(request.form.get("exam_id")) if request.form.get("exam_id") else None,
@@ -230,20 +235,48 @@ def incident_report_form(token):
             incident_date=datetime.strptime(request.form.get("incident_date"), "%Y-%m-%d").date(),
             incident_time=datetime.strptime(request.form.get("incident_time"), "%H:%M").time(),
             description=request.form.get("description", ""),
-            actions_taken=request.form.get("actions_taken", ""),
+            actions_taken=actions_taken,
             status="Pending Review"
         )
         
         db.session.add(report)
         db.session.commit()
         
+        # Handle file uploads if any
+        if request.files.getlist("evidence"):
+            from .services import upload_image
+            for file in request.files.getlist("evidence"):
+                if file and file.filename:
+                    file_path = upload_image(file, "incident/evidence")
+                    from .models import IncidentAttachment
+                    attachment = IncidentAttachment(
+                        report_id=report.id,
+                        file_path=file_path,
+                        file_name=file.filename,
+                        file_type=file.content_type or "application/octet-stream",
+                        file_size=len(file.read()),
+                        uploaded_by_id=current_user.id
+                    )
+                    db.session.add(attachment)
+            db.session.commit()
+        
         return render_template("incident_success.html", settings=settings, report=report, student=student)
     
     # GET request - show form
     categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
     severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
+    actions = IncidentAction.query.filter_by(is_active=True).order_by(IncidentAction.sort_order).all()
     exams = Exam.query.filter_by(is_published=True).order_by(Exam.id.desc()).all()
     subjects = Subject.query.order_by(Subject.name).all()
+    
+    # Pre-compute current date/time for form defaults
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    current_time = datetime.now().strftime('%H:%M')
+    
+    # Generate preview report number
+    import random
+    import string
+    preview_report_num = f"INC-{datetime.now().strftime('%Y%m%d')}-{''.join(random.choices(string.digits, k=4))}"
     
     return render_template(
         "incident_form.html",
@@ -252,6 +285,11 @@ def incident_report_form(token):
         student=student,
         categories=categories,
         severities=severities,
+        actions=actions,
         exams=exams,
-        subjects=subjects
+        subjects=subjects,
+        current_date=current_date,
+        current_time=current_time,
+        preview_report_num=preview_report_num,
+        current_user=current_user
     )

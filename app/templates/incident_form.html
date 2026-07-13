@@ -16,44 +16,88 @@
     <p>Report an examination incident involving this student</p>
   </div>
 
-  <!-- Student Info Card -->
-  <div class="student-info-card">
-    <div class="student-photo">
+  <!-- Student Identity Card -->
+  <div class="student-identity-card glass-card">
+    <div class="student-photo-large">
       {% if student.photo_path %}
       <img src="{{ student.photo_path }}" alt="{{ student.full_name }}">
       {% else %}
-      <div class="photo-placeholder">
+      <div class="photo-placeholder-large">
         <i class="fa-solid fa-user"></i>
       </div>
       {% endif %}
     </div>
-    <div class="student-details">
+    <div class="student-identity-details">
       <h2>{{ student.full_name }}</h2>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="label">Student ID:</span>
-          <span class="value">{{ student.student_code }}</span>
+      <div class="identity-grid">
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-id-card"></i></span>
+          <div class="content">
+            <span class="label">Student ID</span>
+            <span class="value">{{ student.student_code }}</span>
+          </div>
         </div>
-        <div class="info-item">
-          <span class="label">Class:</span>
-          <span class="value">{{ student.school_class.name if student.school_class else 'N/A' }}</span>
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-graduation-cap"></i></span>
+          <div class="content">
+            <span class="label">Class</span>
+            <span class="value">{{ student.school_class.name if student.school_class else 'N/A' }}</span>
+          </div>
         </div>
-        <div class="info-item">
-          <span class="label">Section:</span>
-          <span class="value">{{ student.section or 'N/A' }}</span>
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-table-cells"></i></span>
+          <div class="content">
+            <span class="label">Section</span>
+            <span class="value">{{ student.section or 'N/A' }}</span>
+          </div>
         </div>
-        <div class="info-item">
-          <span class="label">Academic Year:</span>
-          <span class="value">{{ student.academic_year.name if student.academic_year else 'N/A' }}</span>
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-calendar-days"></i></span>
+          <div class="content">
+            <span class="label">Academic Year</span>
+            <span class="value">{{ student.academic_year.name if student.academic_year else 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-file-alt"></i></span>
+          <div class="content">
+            <span class="label">Exam Type</span>
+            <span class="value">{{ student.level or 'Regular' }}</span>
+          </div>
+        </div>
+        <div class="identity-item">
+          <span class="icon status-icon"><i class="fa-solid fa-circle-check"></i></span>
+          <div class="content">
+            <span class="label">Status</span>
+            <span class="value status-active">ACTIVE STUDENT</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Incident Form -->
-  <form method="POST" action="{{ url_for('public.incident_report_form', token=token) }}" class="incident-form">
-    <div class="form-section">
-      <h3>Incident Details</h3>
+  <form method="POST" action="{{ url_for('public.incident_report_form', token=token) }}" enctype="multipart/form-data" class="incident-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <!-- Teacher Information -->
+    <div class="form-section glass-card">
+      <h3><i class="fa-solid fa-chalkboard-teacher"></i> Teacher Information</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="invigilator_name">Invigilator Name</label>
+          <input type="text" id="invigilator_name" name="invigilator_name" value="{{ current_user.full_name if current_user else '' }}" placeholder="Enter invigilator name">
+        </div>
+        <div class="form-group">
+          <label for="invigilator_id">Invigilator ID (Optional)</label>
+          <input type="text" id="invigilator_id" name="invigilator_id" placeholder="Enter invigilator ID">
+        </div>
+      </div>
+    </div>
+
+    <!-- Incident Details -->
+    <div class="form-section glass-card">
+      <h3><i class="fa-solid fa-triangle-exclamation"></i> Incident Details</h3>
       
       <div class="form-row">
         <div class="form-group">
@@ -65,15 +109,17 @@
             {% endfor %}
           </select>
         </div>
-        
-        <div class="form-group">
-          <label for="severity_id">Severity Level *</label>
-          <select id="severity_id" name="severity_id" required>
-            <option value="">Select severity</option>
-            {% for severity in severities %}
-            <option value="{{ severity.id }}" data-color="{{ severity.color }}">{{ severity.name }}</option>
-            {% endfor %}
-          </select>
+      </div>
+
+      <div class="form-group">
+        <label>Severity Level *</label>
+        <div class="severity-badges">
+          {% for severity in severities %}
+          <label class="severity-badge" style="background: {{ severity.color }}; color: white;">
+            <input type="radio" name="severity_id" value="{{ severity.id }}" required>
+            <span>{{ severity.name }}</span>
+          </label>
+          {% endfor %}
         </div>
       </div>
 
@@ -107,23 +153,63 @@
         
         <div class="form-group">
           <label for="incident_date">Incident Date *</label>
-          <input type="date" id="incident_date" name="incident_date" required value="{{ 'now' | date('Y-m-d') }}">
+          <input type="date" id="incident_date" name="incident_date" required value="{{ current_date }}">
         </div>
         
         <div class="form-group">
           <label for="incident_time">Incident Time *</label>
-          <input type="time" id="incident_time" name="incident_time" required value="{{ 'now' | date('H:i') }}">
+          <input type="time" id="incident_time" name="incident_time" required value="{{ current_time }}">
         </div>
       </div>
+    </div>
 
+    <!-- Description -->
+    <div class="form-section glass-card">
+      <h3><i class="fa-solid fa-align-left"></i> Incident Description *</h3>
       <div class="form-group full-width">
-        <label for="description">Description *</label>
-        <textarea id="description" name="description" rows="6" required placeholder="Please provide a detailed description of what happened..."></textarea>
+        <textarea id="description" name="description" rows="8" required placeholder="Please provide a detailed description of what happened during the incident..."></textarea>
       </div>
+    </div>
 
+    <!-- Actions Taken -->
+    <div class="form-section glass-card">
+      <h3><i class="fa-solid fa-list-check"></i> Actions Taken</h3>
+      <div class="actions-checkboxes">
+        {% for action in actions %}
+        <label class="action-checkbox">
+          <input type="checkbox" name="actions_taken" value="{{ action.name }}">
+          <span>{{ action.name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Evidence Upload -->
+    <div class="form-section glass-card">
+      <h3><i class="fa-solid fa-paperclip"></i> Evidence Upload</h3>
       <div class="form-group full-width">
-        <label for="actions_taken">Actions Taken</label>
-        <textarea id="actions_taken" name="actions_taken" rows="4" placeholder="Describe any actions taken..."></textarea>
+        <label for="evidence">Upload Evidence (Images, Videos, Documents)</label>
+        <input type="file" id="evidence" name="evidence" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx">
+        <p class="help-text">Supported formats: JPG, PNG, MP4, MP3, PDF, DOC, DOCX</p>
+      </div>
+    </div>
+
+    <!-- Report Preview -->
+    <div class="form-section glass-card preview-section">
+      <h3><i class="fa-solid fa-info-circle"></i> Report Information</h3>
+      <div class="preview-grid">
+        <div class="preview-item">
+          <span class="label">Report Number</span>
+          <span class="value">{{ preview_report_num }}</span>
+        </div>
+        <div class="preview-item">
+          <span class="label">Date</span>
+          <span class="value">{{ current_date }}</span>
+        </div>
+        <div class="preview-item">
+          <span class="label">Time</span>
+          <span class="value">{{ current_time }}</span>
+        </div>
       </div>
     </div>
 
@@ -132,7 +218,7 @@
         <i class="fa-solid fa-paper-plane"></i> Submit Report
       </button>
       <a href="{{ url_for('public.qr_landing', token=token) }}" class="btn-cancel">
-        Cancel
+        <i class="fa-solid fa-times"></i> Cancel
       </a>
     </div>
   </form>
