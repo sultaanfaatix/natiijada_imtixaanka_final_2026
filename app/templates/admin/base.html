@@ -28,6 +28,7 @@
     {% if can('advanced_results') or can('results') %}<a href="{{ url_for('admin_advanced_results.dashboard') }}"><i class="fa-solid fa-chart-line"></i><span>Advanced Results</span></a>{% endif %}
     {% if can('attendance') %}<a href="{{ url_for('admin_attendance.dashboard') }}"><i class="fa-solid fa-user-check"></i><span>Attendance</span></a>{% endif %}
     {% if can('id_cards') %}<a href="{{ url_for('admin_id_cards.dashboard') }}"><i class="fa-solid fa-id-card-clip"></i><span>ID Cards</span></a>{% endif %}
+    <a href="{{ url_for('admin.incidents') }}"><i class="fa-solid fa-triangle-exclamation"></i><span>Incident Reports</span></a>
     {% if can('classes') %}<a href="{{ url_for('admin.classes') }}"><i class="fa-solid fa-people-roof"></i><span>{{ _('Classes') }}</span></a>{% endif %}
     {% if can('subjects') %}<a href="{{ url_for('admin.subjects') }}"><i class="fa-solid fa-book-open"></i><span>{{ _('Subjects') }}</span></a>{% endif %}
     {% if can('exams') %}<a href="{{ url_for('admin.exams') }}"><i class="fa-solid fa-file-circle-check"></i><span>{{ _('Exams') }}</span></a>{% endif %}

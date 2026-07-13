@@ -37,6 +37,55 @@
   <button class="premium"><i class="fa-solid fa-floppy-disk"></i> Save Student</button>
 </form>
 
+{% if student.id and incident_reports %}
+<section class="panel" style="margin-top: 2rem;">
+  <div class="section-heading"><span><i class="fa-solid fa-triangle-exclamation"></i></span><div><h2>Incident History</h2><p>Recent examination incident reports for this student.</p></div></div>
+  <div class="responsive-table">
+    <table class="premium-table">
+      <thead>
+        <tr>
+          <th>Report #</th>
+          <th>Category</th>
+          <th>Severity</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in incident_reports %}
+        <tr>
+          <td><strong>{{ report.report_number }}</strong></td>
+          <td>{{ report.category.name if report.category else 'N/A' }}</td>
+          <td>
+            <span class="severity-badge" style="background: {{ report.severity.color if report.severity else '#64748b' }}; color: white; font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 12px;">
+              {{ report.severity.name if report.severity else 'N/A' }}
+            </span>
+          </td>
+          <td>{{ report.incident_date.strftime('%b %d, %Y') }}</td>
+          <td>
+            <span class="status-pill {{ 'warn' if report.status == 'Pending Review' else 'ok' }}">
+              {{ report.status }}
+            </span>
+          </td>
+          <td>
+            <a class="icon-btn small" href="{{ url_for('admin.incident_view', report_id=report.id) }}" title="View Details">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top: 1rem;">
+    <a class="btn ghost" href="{{ url_for('admin.incidents') }}?q={{ student.student_code }}">
+      <i class="fa-solid fa-list"></i> View All Incidents
+    </a>
+  </div>
+</section>
+{% endif %}
+
 <script>
 // Academic hierarchy cascading dropdowns
 const academicClasses = {

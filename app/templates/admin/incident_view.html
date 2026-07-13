@@ -1,0 +1,407 @@
+{% extends "admin/base.html" %}
+{% block title %}View Incident Report{% endblock %}
+{% block page_title %}Incident Report Details{% endblock %}
+{% block admin_content %}
+<div class="admin-header">
+  <div class="header-actions">
+    <a href="{{ url_for('admin.incidents') }}" class="btn-secondary">
+      <i class="fa-solid fa-arrow-left"></i> Back to Reports
+    </a>
+    <a href="{{ url_for('admin.incident_edit', report_id=report.id) }}" class="btn-primary">
+      <i class="fa-solid fa-pen"></i> Edit Report
+    </a>
+  </div>
+</div>
+
+<div class="incident-detail-container">
+  <!-- Report Header -->
+  <div class="report-header">
+    <div class="report-number">
+      <span class="label">Report Number</span>
+      <span class="value">{{ report.report_number }}</span>
+    </div>
+    <div class="report-status">
+      <span class="status-badge status-{{ report.status.lower().replace(' ', '-') }}">
+        {{ report.status }}
+      </span>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Student Information -->
+    <div class="detail-card">
+      <h3><i class="fa-solid fa-user"></i> Student Information</h3>
+      <div class="student-info">
+        <div class="student-photo-large">
+          {% if report.student.photo_path %}
+          <img src="{{ report.student.photo_path }}" alt="{{ report.student.full_name }}">
+          {% else %}
+          <div class="photo-placeholder"><i class="fa-solid fa-user"></i></div>
+          {% endif %}
+        </div>
+        <div class="student-details">
+          <h4>{{ report.student.full_name }}</h4>
+          <div class="info-row">
+            <span class="label">Student ID:</span>
+            <span class="value">{{ report.student.student_code }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Class:</span>
+            <span class="value">{{ report.student.school_class.name if report.student.school_class else 'N/A' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Section:</span>
+            <span class="value">{{ report.student.section or 'N/A' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Academic Year:</span>
+            <span class="value">{{ report.student.academic_year.name if report.student.academic_year else 'N/A' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incident Details -->
+    <div class="detail-card">
+      <h3><i class="fa-solid fa-triangle-exclamation"></i> Incident Details</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Category:</span>
+          <span class="value">{{ report.category.name if report.category else 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Severity:</span>
+          <span class="severity-badge" style="background: {{ report.severity.color if report.severity else '#64748b' }}; color: white;">
+            {{ report.severity.name if report.severity else 'N/A' }}
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="label">Date:</span>
+          <span class="value">{{ report.incident_date.strftime('%B %d, %Y') }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Time:</span>
+          <span class="value">{{ report.incident_time.strftime('%I:%M %p') }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Exam Room:</span>
+          <span class="value">{{ report.exam_room or 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Exam:</span>
+          <span class="value">{{ report.exam.name if report.exam else 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Subject:</span>
+          <span class="value">{{ report.subject.name if report.subject else 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="detail-card full-width">
+      <h3><i class="fa-solid fa-align-left"></i> Description</h3>
+      <p class="description-text">{{ report.description }}</p>
+    </div>
+
+    <!-- Actions Taken -->
+    <div class="detail-card full-width">
+      <h3><i class="fa-solid fa-list-check"></i> Actions Taken</h3>
+      <p class="description-text">{{ report.actions_taken or 'No actions recorded' }}</p>
+    </div>
+
+    <!-- Review Information -->
+    {% if report.reviewed_by %}
+    <div class="detail-card full-width">
+      <h3><i class="fa-solid fa-clipboard-check"></i> Review Information</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Reviewed By:</span>
+          <span class="value">{{ report.reviewed_by.full_name }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Reviewed At:</span>
+          <span class="value">{{ report.reviewed_at.strftime('%B %d, %Y at %I:%M %p') if report.reviewed_at else 'N/A' }}</span>
+        </div>
+      </div>
+      {% if report.review_notes %}
+      <div class="review-notes">
+        <span class="label">Review Notes:</span>
+        <p>{{ report.review_notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Metadata -->
+    <div class="detail-card full-width">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> Report Metadata</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Submitted By:</span>
+          <span class="value">{{ report.user.full_name if report.user else 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Created At:</span>
+          <span class="value">{{ report.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Last Updated:</span>
+          <span class="value">{{ report.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 2px solid #e5e7eb;
+}
+
+.incident-detail-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.report-header {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.report-number .label {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.report-number .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.status-pending-review { background: #fef3c7; color: #92400e; }
+.status-under-investigation { background: #dbeafe; color: #1e40af; }
+.status-resolved { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.detail-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.detail-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-card h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.student-info {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.student-photo-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #10b981;
+  flex-shrink: 0;
+}
+
+.student-photo-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #9ca3af;
+}
+
+.student-details h4 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.info-row .value {
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-item .label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item .value {
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.severity-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.description-text {
+  color: #475569;
+  line-height: 1.7;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.review-notes {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 10px;
+  border-left: 4px solid #2563eb;
+}
+
+.review-notes .label {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.review-notes p {
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .student-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+}
+</style>
+{% endblock %}

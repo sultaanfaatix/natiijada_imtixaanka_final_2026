@@ -109,6 +109,53 @@ def incidents():
     )
 
 
+@admin_bp.route("/incidents/<int:report_id>")
+def incident_view(report_id):
+    """View single incident report details"""
+    report = IncidentReport.query.get_or_404(report_id)
+    categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
+    severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
+    return render_template("admin/incident_view.html", report=report, categories=categories, severities=severities)
+
+
+@admin_bp.route("/incidents/<int:report_id>/edit", methods=["GET", "POST"])
+def incident_edit(report_id):
+    """Edit incident report"""
+    report = IncidentReport.query.get_or_404(report_id)
+    
+    if request.method == "POST":
+        report.category_id = int(request.form.get("category_id"))
+        report.severity_id = int(request.form.get("severity_id"))
+        report.exam_room = request.form.get("exam_room", "")
+        report.description = request.form.get("description", "")
+        report.actions_taken = request.form.get("actions_taken", "")
+        report.status = request.form.get("status", "Pending Review")
+        report.reviewed_by_id = current_user.id
+        report.reviewed_at = datetime.utcnow()
+        report.review_notes = request.form.get("review_notes", "")
+        
+        db.session.commit()
+        audit("Incident Report Updated", f"Updated report {report.report_number}")
+        flash("Incident report updated successfully.", "success")
+        return redirect(url_for("admin.incidents"))
+    
+    categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
+    severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
+    return render_template("admin/incident_edit.html", report=report, categories=categories, severities=severities)
+
+
+@admin_bp.route("/incidents/<int:report_id>/delete", methods=["POST"])
+def incident_delete(report_id):
+    """Delete incident report"""
+    report = IncidentReport.query.get_or_404(report_id)
+    report_number = report.report_number
+    db.session.delete(report)
+    db.session.commit()
+    audit("Incident Report Deleted", f"Deleted report {report_number}")
+    flash("Incident report deleted successfully.", "success")
+    return redirect(url_for("admin.incidents"))
+
+
 @admin_bp.route("/students")
 def students():
     q = request.args.get("q", "").strip()
@@ -157,12 +204,17 @@ def student_form(student_id=None):
         return redirect(url_for("admin.students"))
     
     academic_levels = AcademicLevel.query.filter_by(is_active=True).order_by(AcademicLevel.sort_order).all()
+    
+    # Get incident reports for this student
+    incident_reports = IncidentReport.query.filter_by(student_id=student.id).order_by(IncidentReport.created_at.desc()).limit(10).all() if student.id else []
+    
     return render_template(
         "admin/student_form.html",
         student=student,
         classes=SchoolClass.query.order_by(SchoolClass.name).all(),
         years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
         academic_levels=academic_levels,
+        incident_reports=incident_reports,
     )
 
 
