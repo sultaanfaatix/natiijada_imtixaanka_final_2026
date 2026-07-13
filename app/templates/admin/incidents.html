@@ -1,0 +1,368 @@
+{% extends "admin/base.html" %}
+{% block title %}Incident Reports{% endblock %}
+{% block content %}
+<div class="admin-header">
+  <h1><i class="fa-solid fa-triangle-exclamation"></i> Exam Incident Reports</h1>
+  <p>Manage and review examination incident reports</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+  <div class="stat-card total">
+    <div class="stat-icon"><i class="fa-solid fa-file-lines"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.total }}</span>
+      <span class="stat-label">Total Reports</span>
+    </div>
+  </div>
+  <div class="stat-card today">
+    <div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.today }}</span>
+      <span class="stat-label">Today</span>
+    </div>
+  </div>
+  <div class="stat-card week">
+    <div class="stat-icon"><i class="fa-solid fa-calendar-week"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.week }}</span>
+      <span class="stat-label">This Week</span>
+    </div>
+  </div>
+  <div class="stat-card month">
+    <div class="stat-icon"><i class="fa-solid fa-calendar"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.month }}</span>
+      <span class="stat-label">This Month</span>
+    </div>
+  </div>
+  <div class="stat-card pending">
+    <div class="stat-icon"><i class="fa-solid fa-clock"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.pending }}</span>
+      <span class="stat-label">Pending</span>
+    </div>
+  </div>
+  <div class="stat-card resolved">
+    <div class="stat-icon"><i class="fa-solid fa-check-circle"></i></div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.resolved }}</span>
+      <span class="stat-label">Resolved</span>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('admin.incidents') }}" class="filter-form">
+    <div class="filter-group">
+      <input type="text" name="q" placeholder="Search student..." value="{{ q }}">
+    </div>
+    <div class="filter-group">
+      <select name="status">
+        <option value="">All Statuses</option>
+        <option value="Pending Review" {% if status_filter == 'Pending Review' %}selected{% endif %}>Pending Review</option>
+        <option value="Under Investigation" {% if status_filter == 'Under Investigation' %}selected{% endif %}>Under Investigation</option>
+        <option value="Resolved" {% if status_filter == 'Resolved' %}selected{% endif %}>Resolved</option>
+        <option value="Rejected" {% if status_filter == 'Rejected' %}selected{% endif %}>Rejected</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <select name="severity">
+        <option value="">All Severities</option>
+        {% for severity in severities %}
+        <option value="{{ severity.id }}" {% if severity_filter == severity.id|string %}selected{% endif %}>{{ severity.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <select name="category">
+        <option value="">All Categories</option>
+        {% for category in categories %}
+        <option value="{{ category.id }}" {% if category_filter == category.id|string %}selected{% endif %}>{{ category.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <input type="date" name="date_from" placeholder="From" value="{{ date_from }}">
+    </div>
+    <div class="filter-group">
+      <input type="date" name="date_to" placeholder="To" value="{{ date_to }}">
+    </div>
+    <button type="submit" class="btn-filter">
+      <i class="fa-solid fa-filter"></i> Filter
+    </button>
+    <a href="{{ url_for('admin.incidents') }}" class="btn-clear">
+      <i class="fa-solid fa-xmark"></i> Clear
+    </a>
+  </form>
+</div>
+
+<!-- Reports Table -->
+<div class="table-container">
+  <table class="premium-table">
+    <thead>
+      <tr>
+        <th>Report #</th>
+        <th>Student</th>
+        <th>Category</th>
+        <th>Severity</th>
+        <th>Date</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for report in reports %}
+      <tr>
+        <td><strong>{{ report.report_number }}</strong></td>
+        <td>
+          <div class="student-cell">
+            {% if report.student.photo_path %}
+            <img src="{{ report.student.photo_path }}" alt="{{ report.student.full_name }}" class="mini-photo">
+            {% endif %}
+            <div>
+              <strong>{{ report.student.full_name }}</strong><br>
+              <small>{{ report.student.student_code }}</small>
+            </div>
+          </div>
+        </td>
+        <td>{{ report.category.name if report.category else 'N/A' }}</td>
+        <td>
+          <span class="severity-badge" style="background: {{ report.severity.color if report.severity else '#64748b' }}; color: white;">
+            {{ report.severity.name if report.severity else 'N/A' }}
+          </span>
+        </td>
+        <td>{{ report.incident_date.strftime('%b %d, %Y') }}</td>
+        <td>
+          <span class="status-badge status-{{ report.status.lower().replace(' ', '-') }}">
+            {{ report.status }}
+          </span>
+        </td>
+        <td>
+          <div class="action-buttons">
+            <a href="#" class="btn-view" title="View Details">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+            <a href="#" class="btn-edit" title="Edit">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+            <a href="#" class="btn-delete" title="Delete">
+              <i class="fa-solid fa-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="no-data">No incident reports found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.stat-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.stat-card.total .stat-icon { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.stat-card.today .stat-icon { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.stat-card.week .stat-icon { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+.stat-card.month .stat-icon { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+.stat-card.pending .stat-icon { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+.stat-card.resolved .stat-icon { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.filter-bar {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.filter-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-group input,
+.filter-group select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.btn-filter,
+.btn-clear {
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-filter {
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-clear {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 2px solid #e5e7eb;
+}
+
+.table-container {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mini-photo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.severity-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-pending-review { background: #fef3c7; color: #92400e; }
+.status-under-investigation { background: #dbeafe; color: #1e40af; }
+.status-resolved { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-buttons a {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.btn-view { background: #dbeafe; color: #1e40af; }
+.btn-view:hover { background: #bfdbfe; }
+
+.btn-edit { background: #fef3c7; color: #92400e; }
+.btn-edit:hover { background: #fde68a; }
+
+.btn-delete { background: #fee2e2; color: #991b1b; }
+.btn-delete:hover { background: #fecaca; }
+
+.no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filter-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

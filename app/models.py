@@ -410,3 +410,93 @@ class TeacherCodeSequence(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     prefix = db.Column(db.String(40), unique=True, nullable=False)
     last_number = db.Column(db.Integer, default=0, nullable=False)
+
+
+class IncidentCategory(TimestampMixin, db.Model):
+    __tablename__ = "incident_categories"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+
+
+class SeverityLevel(TimestampMixin, db.Model):
+    __tablename__ = "severity_levels"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    color = db.Column(db.String(20), default="#64748b", nullable=False)
+    description = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+
+
+class IncidentAction(TimestampMixin, db.Model):
+    __tablename__ = "incident_actions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=0, nullable=False)
+
+
+class IncidentReport(TimestampMixin, db.Model):
+    __tablename__ = "incident_reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    report_number = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    teacher_id = db.Column(db.Integer, db.ForeignKey("teachers.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    exam_id = db.Column(db.Integer, db.ForeignKey("exams.id", ondelete="SET NULL"), nullable=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True)
+    
+    category_id = db.Column(db.Integer, db.ForeignKey("incident_categories.id", ondelete="SET NULL"), nullable=False)
+    severity_id = db.Column(db.Integer, db.ForeignKey("severity_levels.id", ondelete="SET NULL"), nullable=False)
+    
+    exam_room = db.Column(db.String(120))
+    incident_date = db.Column(db.Date, nullable=False, index=True)
+    incident_time = db.Column(db.Time, nullable=False)
+    
+    description = db.Column(db.Text, nullable=False)
+    actions_taken = db.Column(db.Text)
+    
+    status = db.Column(
+        db.Enum("Pending Review", "Under Investigation", "Resolved", "Rejected"),
+        default="Pending Review",
+        nullable=False,
+        index=True
+    )
+    
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_at = db.Column(db.DateTime)
+    review_notes = db.Column(db.Text)
+    
+    student = db.relationship("Student", backref=db.backref("incident_reports", lazy="dynamic"))
+    teacher = db.relationship("Teacher", backref=db.backref("incident_reports", lazy="dynamic"))
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("submitted_reports", lazy="dynamic"))
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id], backref=db.backref("reviewed_reports", lazy="dynamic"))
+    exam = db.relationship("Exam")
+    subject = db.relationship("Subject")
+    category = db.relationship("IncidentCategory")
+    severity = db.relationship("SeverityLevel")
+
+
+class IncidentAttachment(TimestampMixin, db.Model):
+    __tablename__ = "incident_attachments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.Integer, db.ForeignKey("incident_reports.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_path = db.Column(db.String(255), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_type = db.Column(db.String(50), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)
+    uploaded_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    report = db.relationship("IncidentReport", backref=db.backref("attachments", cascade="all, delete-orphan"))
+    uploaded_by = db.relationship("User")

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Student QR Code{% endblock %}
+{% block body_class %}public-body qr-landing-body{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/qr-landing.css') }}">
+{% endblock %}
+{% block content %}
+<div class="qr-landing-container">
+  <div class="landing-header">
+    <div class="school-logo">
+      {% if settings.logo_path %}
+      <img src="{{ settings.logo_path }}" alt="School Logo">
+      {% endif %}
+    </div>
+    <h1>{{ settings.school_name or 'School' }}</h1>
+    <p class="subtitle">Scan QR Code to Access Student Information</p>
+  </div>
+
+  <div class="action-cards">
+    <!-- Verify Student Card -->
+    <a href="{{ url_for('public.verify_id_card', token=token) }}" class="action-card verify-card">
+      <div class="card-icon verify-icon">
+        <i class="fa-solid fa-user-check"></i>
+      </div>
+      <h2>Verify Student</h2>
+      <p>Verify the student's official identity and view their ID card information.</p>
+      <div class="card-footer">
+        <span class="badge public-access">
+          <i class="fa-solid fa-globe"></i> Public Access
+        </span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </div>
+    </a>
+
+    <!-- Submit Incident Report Card -->
+    <a href="{{ url_for('public.incident_report_form', token=token) }}" class="action-card incident-card">
+      <div class="card-icon incident-icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h2>Submit Incident Report</h2>
+      <p>Report an examination incident involving this student (Teachers & Admin only).</p>
+      <div class="card-footer">
+        <span class="badge restricted-access">
+          <i class="fa-solid fa-lock"></i> Staff Only
+        </span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </div>
+    </a>
+  </div>
+
+  <div class="landing-footer">
+    <p>{{ settings.school_motto or '' }}</p>
+    <p class="copyright">Secure • Professional • Reliable</p>
+  </div>
+</div>
+{% endblock %}

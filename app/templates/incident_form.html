@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Submit Incident Report{% endblock %}
+{% block body_class %}public-body incident-form-body{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/incident-form.css') }}">
+{% endblock %}
+{% block content %}
+<div class="incident-form-container">
+  <div class="form-header">
+    <div class="back-link">
+      <a href="{{ url_for('public.qr_landing', token=token) }}">
+        <i class="fa-solid fa-arrow-left"></i> Back
+      </a>
+    </div>
+    <h1>Submit Incident Report</h1>
+    <p>Report an examination incident involving this student</p>
+  </div>
+
+  <!-- Student Info Card -->
+  <div class="student-info-card">
+    <div class="student-photo">
+      {% if student.photo_path %}
+      <img src="{{ student.photo_path }}" alt="{{ student.full_name }}">
+      {% else %}
+      <div class="photo-placeholder">
+        <i class="fa-solid fa-user"></i>
+      </div>
+      {% endif %}
+    </div>
+    <div class="student-details">
+      <h2>{{ student.full_name }}</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Student ID:</span>
+          <span class="value">{{ student.student_code }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Class:</span>
+          <span class="value">{{ student.school_class.name if student.school_class else 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Section:</span>
+          <span class="value">{{ student.section or 'N/A' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Academic Year:</span>
+          <span class="value">{{ student.academic_year.name if student.academic_year else 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Form -->
+  <form method="POST" action="{{ url_for('public.incident_report_form', token=token) }}" class="incident-form">
+    <div class="form-section">
+      <h3>Incident Details</h3>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="category_id">Incident Category *</label>
+          <select id="category_id" name="category_id" required>
+            <option value="">Select category</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="severity_id">Severity Level *</label>
+          <select id="severity_id" name="severity_id" required>
+            <option value="">Select severity</option>
+            {% for severity in severities %}
+            <option value="{{ severity.id }}" data-color="{{ severity.color }}">{{ severity.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="exam_id">Exam</label>
+          <select id="exam_id" name="exam_id">
+            <option value="">Select exam (optional)</option>
+            {% for exam in exams %}
+            <option value="{{ exam.id }}">{{ exam.name }} - {{ exam.academic_year.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="subject_id">Subject</label>
+          <select id="subject_id" name="subject_id">
+            <option value="">Select subject (optional)</option>
+            {% for subject in subjects %}
+            <option value="{{ subject.id }}">{{ subject.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="exam_room">Exam Room</label>
+          <input type="text" id="exam_room" name="exam_room" placeholder="e.g., Room 101">
+        </div>
+        
+        <div class="form-group">
+          <label for="incident_date">Incident Date *</label>
+          <input type="date" id="incident_date" name="incident_date" required value="{{ 'now' | date('Y-m-d') }}">
+        </div>
+        
+        <div class="form-group">
+          <label for="incident_time">Incident Time *</label>
+          <input type="time" id="incident_time" name="incident_time" required value="{{ 'now' | date('H:i') }}">
+        </div>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="description">Description *</label>
+        <textarea id="description" name="description" rows="6" required placeholder="Please provide a detailed description of what happened..."></textarea>
+      </div>
+
+      <div class="form-group full-width">
+        <label for="actions_taken">Actions Taken</label>
+        <textarea id="actions_taken" name="actions_taken" rows="4" placeholder="Describe any actions taken..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-submit">
+        <i class="fa-solid fa-paper-plane"></i> Submit Report
+      </button>
+      <a href="{{ url_for('public.qr_landing', token=token) }}" class="btn-cancel">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

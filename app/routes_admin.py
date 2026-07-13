@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user, login_required
@@ -9,7 +9,7 @@ from . import db
 from .audit import audit
 from .cloudinary_service import upload_image
 from .import_wizard import preview_results, preview_students, result_template, student_template
-from .models import AcademicLevel, AcademicClass, AcademicSection, AcademicYear, AuditLog, Exam, GradeScale, Result, SchoolClass, Setting, Student, Subject, User
+from .models import AcademicLevel, AcademicClass, AcademicSection, AcademicYear, AuditLog, Exam, GradeScale, IncidentAction, IncidentAttachment, IncidentCategory, IncidentReport, Result, SchoolClass, SeverityLevel, Setting, Student, Subject, User
 from .permissions import PERMISSIONS, can, enforce_endpoint_permission, permission_required
 from .security import ALLOWED_PHOTOS, ALLOWED_SHEETS, allowed_file
 from .services import get_settings, grade_for, result_payload
@@ -37,6 +37,76 @@ def dashboard():
     }
     latest_results = Result.query.order_by(Result.updated_at.desc()).limit(10).all()
     return render_template("admin/dashboard.html", stats=stats, current_year=current_year, latest_results=latest_results)
+
+
+@admin_bp.route("/incidents")
+def incidents():
+    """Incident Reports Dashboard"""
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "")
+    severity_filter = request.args.get("severity", "")
+    category_filter = request.args.get("category", "")
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    
+    query = IncidentReport.query
+    
+    if q:
+        query = query.join(IncidentReport.student).filter(
+            or_(
+                Student.student_code.like(f"%{q}%"),
+                Student.full_name.like(f"%{q}%")
+            )
+        )
+    
+    if status_filter:
+        query = query.filter(IncidentReport.status == status_filter)
+    
+    if severity_filter:
+        query = query.filter(IncidentReport.severity_id == int(severity_filter))
+    
+    if category_filter:
+        query = query.filter(IncidentReport.category_id == int(category_filter))
+    
+    if date_from:
+        query = query.filter(IncidentReport.incident_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
+    
+    if date_to:
+        query = query.filter(IncidentReport.incident_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
+    
+    # Statistics
+    today = date.today()
+    week_ago = today - datetime.timedelta(days=7)
+    month_ago = today - datetime.timedelta(days=30)
+    
+    stats = {
+        "total": IncidentReport.query.count(),
+        "today": IncidentReport.query.filter(IncidentReport.incident_date == today).count(),
+        "week": IncidentReport.query.filter(IncidentReport.incident_date >= week_ago).count(),
+        "month": IncidentReport.query.filter(IncidentReport.incident_date >= month_ago).count(),
+        "pending": IncidentReport.query.filter_by(status="Pending Review").count(),
+        "investigating": IncidentReport.query.filter_by(status="Under Investigation").count(),
+        "resolved": IncidentReport.query.filter_by(status="Resolved").count(),
+        "rejected": IncidentReport.query.filter_by(status="Rejected").count(),
+    }
+    
+    reports = query.order_by(IncidentReport.created_at.desc()).all()
+    categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
+    severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
+    
+    return render_template(
+        "admin/incidents.html",
+        reports=reports,
+        stats=stats,
+        categories=categories,
+        severities=severities,
+        q=q,
+        status_filter=status_filter,
+        severity_filter=severity_filter,
+        category_filter=category_filter,
+        date_from=date_from,
+        date_to=date_to
+    )
 
 
 @admin_bp.route("/students")

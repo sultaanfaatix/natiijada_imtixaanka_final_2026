@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Incident Report Submitted{% endblock %}
+{% block body_class %}public-body incident-success-body{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/incident-success.css') }}">
+{% endblock %}
+{% block content %}
+<div class="success-container">
+  <div class="success-card">
+    <div class="success-icon">
+      <i class="fa-solid fa-circle-check"></i>
+    </div>
+    <h1>Incident Report Submitted Successfully</h1>
+    <p class="subtitle">Your report has been recorded and will be reviewed by administration.</p>
+
+    <div class="report-details">
+      <div class="detail-row">
+        <span class="label">Report Number:</span>
+        <span class="value">{{ report.report_number }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Student:</span>
+        <span class="value">{{ student.full_name }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Student ID:</span>
+        <span class="value">{{ student.student_code }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Category:</span>
+        <span class="value">{{ report.category.name if report.category else 'N/A' }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Severity:</span>
+        <span class="value severity-badge" style="background: {{ report.severity.color if report.severity else '#64748b' }}; color: white;">
+          {{ report.severity.name if report.severity else 'N/A' }}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Status:</span>
+        <span class="value status-badge">{{ report.status }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="label">Submitted:</span>
+        <span class="value">{{ report.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+      </div>
+    </div>
+
+    <div class="success-actions">
+      <a href="{{ url_for('public.qr_landing', token=token) }}" class="btn-primary">
+        <i class="fa-solid fa-qrcode"></i> Scan Another QR Code
+      </a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">
+        <i class="fa-solid fa-gauge"></i> Go to Dashboard
+      </a>
+    </div>
+
+    <div class="note">
+      <i class="fa-solid fa-info-circle"></i>
+      <p>You will be notified when the administration reviews this report.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

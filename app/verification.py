@@ -34,5 +34,5 @@ def verification_payload(student, exam):
 
 
 def id_card_qr_payload(issue):
-    verify_url = url_for("public.verify_id_card", token=issue.token, _external=True)
+    verify_url = url_for("public.qr_landing", token=issue.token, _external=True)
     return {"url": verify_url, "qr_code": qr_data_uri(verify_url)}

@@ -1,11 +1,12 @@
 from datetime import date, datetime
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from . import db
 from .i18n import language_redirect
-from .models import Exam, IdCardIssue, ReportVerification, Student
+from .models import AcademicYear, Exam, IdCardIssue, IncidentCategory, IncidentReport, ReportVerification, SeverityLevel, Student, Subject
 from .services import get_settings, result_payload
 from .verification import verification_payload
 
@@ -180,3 +181,77 @@ def verify_id_card(token):
         return render_template("verify_id.html", settings=settings, verified=False), 404
     status = "Expired" if issue.expiry_date and issue.expiry_date < date.today() else issue.status
     return render_template("verify_id.html", settings=settings, verified=True, issue=issue, display_status=status)
+
+
+@public_bp.route("/qr/<token>")
+def qr_landing(token):
+    """QR Landing Page with two action cards"""
+    settings = get_settings()
+    issue = IdCardIssue.query.filter_by(token=token).first()
+    if not issue:
+        return render_template("qr_landing.html", settings=settings, token=token, student=None), 404
+    return render_template("qr_landing.html", settings=settings, token=token, student=issue.student)
+
+
+@public_bp.route("/incident-report/<token>", methods=["GET", "POST"])
+@login_required
+def incident_report_form(token):
+    """Incident Report Form - Requires authentication"""
+    settings = get_settings()
+    issue = IdCardIssue.query.filter_by(token=token).first()
+    
+    if not issue:
+        return render_template("qr_landing.html", settings=settings, token=token, student=None), 404
+    
+    student = issue.student
+    
+    # Check if user has permission (admin or staff)
+    if current_user.role not in ["super_admin", "admin", "staff"]:
+        return render_template("qr_landing.html", settings=settings, token=token, student=student, error="Unauthorized"), 403
+    
+    if request.method == "POST":
+        # Generate report number
+        from .models import IncidentReport
+        import random
+        import string
+        
+        report_num = f"INC-{datetime.now().strftime('%Y%m%d')}-{''.join(random.choices(string.digits, k=4))}"
+        
+        # Create incident report
+        report = IncidentReport(
+            report_number=report_num,
+            student_id=student.id,
+            user_id=current_user.id,
+            category_id=int(request.form.get("category_id")),
+            severity_id=int(request.form.get("severity_id")),
+            exam_id=int(request.form.get("exam_id")) if request.form.get("exam_id") else None,
+            subject_id=int(request.form.get("subject_id")) if request.form.get("subject_id") else None,
+            exam_room=request.form.get("exam_room", ""),
+            incident_date=datetime.strptime(request.form.get("incident_date"), "%Y-%m-%d").date(),
+            incident_time=datetime.strptime(request.form.get("incident_time"), "%H:%M").time(),
+            description=request.form.get("description", ""),
+            actions_taken=request.form.get("actions_taken", ""),
+            status="Pending Review"
+        )
+        
+        db.session.add(report)
+        db.session.commit()
+        
+        return render_template("incident_success.html", settings=settings, report=report, student=student)
+    
+    # GET request - show form
+    categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
+    severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
+    exams = Exam.query.filter_by(is_published=True).order_by(Exam.id.desc()).all()
+    subjects = Subject.query.order_by(Subject.name).all()
+    
+    return render_template(
+        "incident_form.html",
+        settings=settings,
+        token=token,
+        student=student,
+        categories=categories,
+        severities=severities,
+        exams=exams,
+        subjects=subjects
+    )
