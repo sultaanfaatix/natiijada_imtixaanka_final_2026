@@ -391,6 +391,13 @@
   padding: 8px;
 }
 
+.verification-stamp-image {
+  width: var(--verify-stamp-size);
+  height: var(--verify-stamp-size);
+  object-fit: contain;
+  animation: stampAppear 0.8s ease-out;
+}
+
 .verification-stamp {
   position: relative;
   width: var(--verify-stamp-size);
