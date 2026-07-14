@@ -1,307 +1,1180 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ 'Add' if not invigilator else 'Edit' }} Invigilator{% endblock %}
-{% block content %}
-<div class="admin-header">
-  <h1><i class="fa-solid fa-user-shield"></i> {{ 'Add' if not invigilator else 'Edit' }} Invigilator</h1>
-  <p>{{ 'Create a new invigilator account' if not invigilator else 'Update invigilator information' }}</p>
-</div>
-
-<div class="form-container">
-  <form method="POST" action="{{ url_for('admin.invigilator_add' if not invigilator else 'admin.invigilator_edit', invigilator_id=invigilator.id if invigilator else None) }}" enctype="multipart/form-data" class="invigilator-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    
-    <div class="form-section">
-      <h2><i class="fa-solid fa-user"></i> Basic Information</h2>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="invigilator_id">Invigilator ID *</label>
-          <input type="text" id="invigilator_id" name="invigilator_id" value="{{ invigilator.invigilator_id if invigilator else '' }}" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="username">Username *</label>
-          <input type="text" id="username" name="username" value="{{ invigilator.username if invigilator else '' }}" required>
-        </div>
+{% block page_title %}{{ 'Add' if not invigilator else 'Edit' }} Invigilator{% endblock %}
+{% block admin_content %}
+<div class="invigilator-page-wrapper">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="breadcrumb">
+        <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <a href="{{ url_for('admin.invigilators') }}">Invigilators</a>
+        <i class="fa-solid fa-chevron-right"></i>
+        <span>{{ 'Add New' if not invigilator else 'Edit' }}</span>
       </div>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="full_name">Full Name *</label>
-          <input type="text" id="full_name" name="full_name" value="{{ invigilator.full_name if invigilator else '' }}" required>
+      <div class="title-section">
+        <div class="page-icon">
+          <i class="fa-solid fa-user-shield"></i>
         </div>
-        
-        <div class="form-group">
-          <label for="mobile_number">Mobile Number</label>
-          <input type="tel" id="mobile_number" name="mobile_number" value="{{ invigilator.mobile_number if invigilator else '' }}">
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="school">School</label>
-        <input type="text" id="school" name="school" value="{{ invigilator.school if invigilator else '' }}">
-      </div>
-    </div>
-    
-    <div class="form-section">
-      <h2><i class="fa-solid fa-shield-halved"></i> Authentication</h2>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="password">Password {% if not invigilator %}*{% else %}(leave blank to keep current){% endif %}</label>
-          <input type="password" id="password" name="password" {% if not invigilator %}required{% endif %} minlength="8">
-        </div>
-        
-        <div class="form-group">
-          <label for="role">Role *</label>
-          <select id="role" name="role" required>
-            <option value="Invigilator" {% if invigilator and invigilator.role == 'Invigilator' %}selected{% endif %}>Invigilator</option>
-            <option value="Supervisor" {% if invigilator and invigilator.role == 'Supervisor' %}selected{% endif %}>Supervisor</option>
-            <option value="Chief Invigilator" {% if invigilator and invigilator.role == 'Chief Invigilator' %}selected{% endif %}>Chief Invigilator</option>
-            <option value="Administrator" {% if invigilator and invigilator.role == 'Administrator' %}selected{% endif %}>Administrator</option>
-          </select>
+        <div class="title-text">
+          <h1>{{ 'Add Invigilator' if not invigilator else 'Edit Invigilator' }}</h1>
+          <p>{{ 'Create a new examination invigilator account' if not invigilator else 'Update invigilator information' }}</p>
         </div>
       </div>
     </div>
-    
-    <div class="form-section">
-      <h2><i class="fa-solid fa-calendar"></i> Validity Period</h2>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="active_from">Active From</label>
-          <input type="date" id="active_from" name="active_from" value="{{ invigilator.active_from.strftime('%Y-%m-%d') if invigilator and invigilator.active_from else '' }}">
-        </div>
-        
-        <div class="form-group">
-          <label for="active_until">Active Until</label>
-          <input type="date" id="active_until" name="active_until" value="{{ invigilator.active_until.strftime('%Y-%m-%d') if invigilator and invigilator.active_until else '' }}">
-        </div>
-      </div>
-      
-      {% if invigilator %}
-      <div class="form-group">
-        <label for="status">Status</label>
-        <select id="status" name="status">
-          <option value="Active" {% if invigilator.status == 'Active' %}selected{% endif %}>Active</option>
-          <option value="Inactive" {% if invigilator.status == 'Inactive' %}selected{% endif %}>Inactive</option>
-          <option value="Locked" {% if invigilator.status == 'Locked' %}selected{% endif %}>Locked</option>
-        </select>
-      </div>
-      {% endif %}
-    </div>
-    
-    <div class="form-section">
-      <h2><i class="fa-solid fa-image"></i> Photo</h2>
-      
-      <div class="photo-upload">
-        {% if invigilator and invigilator.photo_path %}
-        <img src="{{ invigilator.photo_path }}" alt="{{ invigilator.full_name }}" class="current-photo">
-        {% endif %}
-        <div class="upload-area">
-          <input type="file" id="photo" name="photo" accept="image/*">
-          <label for="photo" class="upload-label">
-            <i class="fa-solid fa-cloud-upload-alt"></i>
-            Choose Photo
-          </label>
-        </div>
-      </div>
-    </div>
-    
-    <div class="form-section">
-      <h2><i class="fa-solid fa-sticky-note"></i> Additional Information</h2>
-      
-      <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="4">{{ invigilator.notes if invigilator else '' }}</textarea>
-      </div>
-    </div>
-    
-    <div class="form-actions">
-      <button type="submit" class="btn-submit">
-        <i class="fa-solid fa-save"></i> {{ 'Add Invigilator' if not invigilator else 'Update Invigilator' }}
-      </button>
-      <a href="{{ url_for('admin.invigilators') }}" class="btn-cancel">
+    <div class="header-actions">
+      <a href="{{ url_for('admin.invigilators') }}" class="btn-cancel-header">
         <i class="fa-solid fa-xmark"></i> Cancel
       </a>
     </div>
-  </form>
+  </div>
+
+  <!-- Progress Steps -->
+  <div class="progress-steps">
+    <div class="step active">
+      <div class="step-number">1</div>
+      <div class="step-label">Basic Information</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-label">Authentication</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-label">Validity Period</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="form-layout">
+    <!-- Left Column - Form Sections -->
+    <div class="form-column">
+      <form method="POST" action="{{ url_for('admin.invigilator_add' if not invigilator else 'admin.invigilator_edit', invigilator_id=invigilator.id if invigilator else None) }}" enctype="multipart/form-data" class="invigilator-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Basic Information Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <i class="fa-solid fa-user"></i>
+            <h3>Basic Information</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="invigilator_id">
+                  Invigilator ID <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-id-card input-icon"></i>
+                  <input type="text" id="invigilator_id" name="invigilator_id" value="{{ invigilator.invigilator_id if invigilator else '' }}" required placeholder="Enter invigilator ID">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="username">
+                  Username <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-user input-icon"></i>
+                  <input type="text" id="username" name="username" value="{{ invigilator.username if invigilator else '' }}" required placeholder="Enter username">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="full_name">
+                  Full Name <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-user-circle input-icon"></i>
+                  <input type="text" id="full_name" name="full_name" value="{{ invigilator.full_name if invigilator else '' }}" required placeholder="Enter full name">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="mobile_number">Mobile Number</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-phone input-icon"></i>
+                  <input type="tel" id="mobile_number" name="mobile_number" value="{{ invigilator.mobile_number if invigilator else '' }}" placeholder="Enter mobile number">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="school">School / Center</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-school input-icon"></i>
+                <input type="text" id="school" name="school" value="{{ invigilator.school if invigilator else '' }}" placeholder="Enter school or center name">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Authentication Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <i class="fa-solid fa-shield-halved"></i>
+            <h3>Authentication</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="password">
+                  Password {% if not invigilator %}<span class="required">*</span>{% else %}(leave blank to keep current){% endif %}
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-lock input-icon"></i>
+                  <input type="password" id="password" name="password" {% if not invigilator %}required{% endif %} minlength="8" placeholder="Enter password">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="role">
+                  Role <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-user-tag input-icon"></i>
+                  <select id="role" name="role" required>
+                    <option value="" disabled selected>Select role</option>
+                    <option value="Invigilator" {% if invigilator and invigilator.role == 'Invigilator' %}selected{% endif %}>Invigilator</option>
+                    <option value="Supervisor" {% if invigilator and invigilator.role == 'Supervisor' %}selected{% endif %}>Supervisor</option>
+                    <option value="Chief Invigilator" {% if invigilator and invigilator.role == 'Chief Invigilator' %}selected{% endif %}>Chief Invigilator</option>
+                    <option value="Administrator" {% if invigilator and invigilator.role == 'Administrator' %}selected{% endif %}>Administrator</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Validity Period Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <i class="fa-solid fa-calendar"></i>
+            <h3>Validity Period</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="active_from">Active From</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-calendar-days input-icon"></i>
+                  <input type="date" id="active_from" name="active_from" value="{{ invigilator.active_from.strftime('%Y-%m-%d') if invigilator and invigilator.active_from else '' }}">
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="active_until">Active Until</label>
+                <div class="input-wrapper">
+                  <i class="fa-solid fa-calendar-check input-icon"></i>
+                  <input type="date" id="active_until" name="active_until" value="{{ invigilator.active_until.strftime('%Y-%m-%d') if invigilator and invigilator.active_until else '' }}">
+                </div>
+              </div>
+            </div>
+            
+            {% if invigilator %}
+            <div class="form-group">
+              <label for="status">Status</label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-circle-dot input-icon"></i>
+                <select id="status" name="status">
+                  <option value="Active" {% if invigilator.status == 'Active' %}selected{% endif %}>Active</option>
+                  <option value="Inactive" {% if invigilator.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                  <option value="Locked" {% if invigilator.status == 'Locked' %}selected{% endif %}>Locked</option>
+                </select>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        <!-- Photo Upload Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <i class="fa-solid fa-image"></i>
+            <h3>Photo</h3>
+          </div>
+          <div class="card-body">
+            <div class="photo-upload-section">
+              <div class="upload-area" id="uploadArea">
+                <input type="file" id="photo" name="photo" accept="image/*" style="display: none;">
+                <div class="upload-placeholder" id="uploadPlaceholder">
+                  <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+                  <p class="upload-text">Click or Drag Photo Here</p>
+                  <p class="upload-subtext">PNG, JPG up to 5MB</p>
+                </div>
+                <div class="preview-area" id="previewArea" style="display: none;">
+                  <img id="photoPreview" src="" alt="Photo preview">
+                  <div class="preview-actions">
+                    <button type="button" class="btn-replace" onclick="document.getElementById('photo').click()">
+                      <i class="fa-solid fa-arrows-rotate"></i> Replace
+                    </button>
+                    <button type="button" class="btn-remove" onclick="removePhoto()">
+                      <i class="fa-solid fa-trash"></i> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {% if invigilator and invigilator.photo_path %}
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  showPreview('{{ invigilator.photo_path }}');
+                });
+              </script>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Additional Information Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <i class="fa-solid fa-sticky-note"></i>
+            <h3>Additional Information</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label for="notes">Notes (Optional)</label>
+              <div class="textarea-wrapper">
+                <i class="fa-solid fa-pen textarea-icon"></i>
+                <textarea id="notes" name="notes" rows="5" placeholder="Add any additional notes or comments...">{{ invigilator.notes if invigilator else '' }}</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button type="submit" class="btn-submit">
+            <i class="fa-solid fa-save"></i> {{ 'Save Invigilator' if not invigilator else 'Update Invigilator' }}
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Right Column - Preview & Info -->
+    <div class="preview-column">
+      <!-- Profile Preview Card -->
+      <div class="preview-card">
+        <div class="preview-header">
+          <i class="fa-solid fa-eye"></i>
+          <h3>Profile Preview</h3>
+        </div>
+        <div class="preview-body">
+          <div class="preview-avatar">
+            <div class="avatar-placeholder" id="previewAvatarPlaceholder">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <img id="previewAvatar" src="" alt="" style="display: none;">
+          </div>
+          <div class="preview-info">
+            <div class="preview-item">
+              <span class="preview-label">Invigilator ID</span>
+              <span class="preview-value" id="previewId">-</span>
+            </div>
+            <div class="preview-item">
+              <span class="preview-label">Username</span>
+              <span class="preview-value" id="previewUsername">-</span>
+            </div>
+            <div class="preview-item">
+              <span class="preview-label">Role</span>
+              <span class="preview-value" id="previewRole">-</span>
+            </div>
+            <div class="preview-item">
+              <span class="preview-label">Status</span>
+              <span class="preview-badge" id="previewStatus">Active</span>
+            </div>
+            <div class="preview-item">
+              <span class="preview-label">Valid Period</span>
+              <span class="preview-value" id="previewPeriod">Not set</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Information Card -->
+      <div class="info-card">
+        <div class="info-icon">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="info-content">
+          <h4>Required Fields</h4>
+          <p>All fields marked with an asterisk (<span class="required">*</span>) are required and must be completed before submission.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
-.form-container {
-  max-width: 900px;
+/* Page Wrapper */
+.invigilator-page-wrapper {
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 2rem 2rem;
 }
 
-.invigilator-form {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+/* Page Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 0;
 }
 
-.form-section {
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #e5e7eb;
+.header-left {
+  flex: 1;
 }
 
-.form-section:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.form-section h2 {
-  color: #1e293b;
-  margin: 0 0 1.5rem 0;
-  font-size: 1.2rem;
+.breadcrumb {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 1rem;
 }
 
+.breadcrumb a {
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+  color: #3b82f6;
+}
+
+.breadcrumb i {
+  font-size: 0.625rem;
+}
+
+.breadcrumb span {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.title-text h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.title-text p {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0.25rem 0 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-cancel-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: #64748b;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel-header:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.step.active .step-label {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 0.5rem;
+}
+
+/* Form Layout */
+.form-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Form Column */
+.form-column {
+  min-width: 0;
+}
+
+.invigilator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Form Cards */
+.form-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.form-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(to bottom, #f8fafc, white);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.card-header i {
+  color: #3b82f6;
+  font-size: 1.125rem;
+}
+
+.card-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-body {
+  padding: 1.5rem;
+}
+
+/* Form Rows & Groups */
 .form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #334155;
+  color: #475569;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+.required {
+  color: #ef4444;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.photo-upload {
+/* Input Wrappers with Icons */
+.input-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 2rem;
 }
 
-.current-photo {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid #e5e7eb;
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input-wrapper input,
+.input-wrapper select {
+  width: 100%;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: white;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.input-wrapper select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 2.75rem;
+  cursor: pointer;
+}
+
+.input-wrapper input:focus,
+.input-wrapper select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.input-wrapper input::placeholder {
+  color: #94a3b8;
+}
+
+/* Textarea Wrapper */
+.textarea-wrapper {
+  position: relative;
+}
+
+.textarea-icon {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.textarea-wrapper textarea {
+  width: 100%;
+  padding: 1rem 1rem 1rem 2.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: white;
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.textarea-wrapper textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.textarea-wrapper textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* Photo Upload Section */
+.photo-upload-section {
+  width: 100%;
 }
 
 .upload-area {
-  flex: 1;
-}
-
-.upload-area input[type="file"] {
-  display: none;
-}
-
-.upload-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 2rem;
-  background: #f1f5f9;
-  color: #64748b;
+  width: 100%;
+  min-height: 200px;
   border: 2px dashed #cbd5e1;
-  border-radius: 8px;
+  border-radius: 16px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.upload-label:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
+.upload-area:hover {
+  border-color: #3b82f6;
+  background: #f1f5f9;
 }
 
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
+.upload-placeholder {
+  text-align: center;
+  padding: 2rem;
 }
 
-.btn-submit,
-.btn-cancel {
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
+.upload-icon {
+  font-size: 3rem;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.upload-text {
   font-size: 1rem;
   font-weight: 600;
-  text-decoration: none;
+  color: #475569;
+  margin: 0 0 0.25rem;
+}
+
+.upload-subtext {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.preview-area {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-area img {
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btn-replace,
+.btn-remove {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-replace {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-replace:hover {
+  background: #2563eb;
+}
+
+.btn-remove {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-remove:hover {
+  background: #fecaca;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
 }
 
 .btn-submit {
-  background: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-submit:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
-.btn-cancel {
-  background: #f1f5f9;
+.btn-submit:active {
+  transform: translateY(0);
+}
+
+/* Preview Column */
+.preview-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 2rem;
+}
+
+.preview-card,
+.info-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(to bottom, #f8fafc, white);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.preview-header i {
+  color: #3b82f6;
+  font-size: 1.125rem;
+}
+
+.preview-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.preview-body {
+  padding: 1.5rem;
+}
+
+.preview-avatar {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #64748b;
-  border: 2px solid #e5e7eb;
+  font-size: 2.5rem;
 }
 
-.btn-cancel:hover {
-  background: #e2e8f0;
+.preview-avatar img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #f1f5f9;
+}
+
+.preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.preview-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.preview-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.preview-value {
+  font-size: 0.875rem;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.preview-badge {
+  padding: 0.25rem 0.75rem;
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Info Card */
+.info-card {
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.info-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.info-content h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem;
+}
+
+.info-content p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .form-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .preview-column {
+    position: static;
+    order: -1;
+    flex-direction: row;
+  }
+  
+  .preview-card,
+  .info-card {
+    flex: 1;
+  }
 }
 
 @media (max-width: 768px) {
+  .invigilator-page-wrapper {
+    padding: 0 1rem 1rem;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .btn-cancel-header {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .progress-steps {
+    overflow-x: auto;
+    padding-bottom: 1.5rem;
+  }
+  
   .form-row {
     grid-template-columns: 1fr;
   }
   
-  .photo-upload {
+  .preview-column {
     flex-direction: column;
-    text-align: center;
+  }
+  
+  .preview-card,
+  .info-card {
+    width: 100%;
   }
   
   .form-actions {
     flex-direction: column;
   }
   
-  .btn-submit,
-  .btn-cancel {
+  .btn-submit {
     width: 100%;
     justify-content: center;
   }
 }
+
+@media (max-width: 480px) {
+  .title-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .page-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+  
+  .title-text h1 {
+    font-size: 1.5rem;
+  }
+  
+  .card-header,
+  .card-body,
+  .preview-body {
+    padding: 1rem;
+  }
+  
+  .input-wrapper input,
+  .input-wrapper select {
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .input-icon {
+    left: 0.875rem;
+    font-size: 0.8125rem;
+  }
+}
 </style>
+
+<script>
+// Photo upload functionality
+const uploadArea = document.getElementById('uploadArea');
+const photoInput = document.getElementById('photo');
+const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+const previewArea = document.getElementById('previewArea');
+const photoPreview = document.getElementById('photoPreview');
+
+if (uploadArea && photoInput) {
+  uploadArea.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-replace') || e.target.closest('.btn-remove')) return;
+    photoInput.click();
+  });
+  
+  uploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#3b82f6';
+    uploadArea.style.background = '#f1f5f9';
+  });
+  
+  uploadArea.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#cbd5e1';
+    uploadArea.style.background = '#f8fafc';
+  });
+  
+  uploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#cbd5e1';
+    uploadArea.style.background = '#f8fafc';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      photoInput.files = files;
+      showPreview(files[0]);
+    }
+  });
+  
+  photoInput.addEventListener('change', function(e) {
+    if (e.target.files.length > 0) {
+      showPreview(e.target.files[0]);
+    }
+  });
+}
+
+function showPreview(fileOrUrl) {
+  if (typeof fileOrUrl === 'string') {
+    photoPreview.src = fileOrUrl;
+  } else {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      photoPreview.src = e.target.result;
+    };
+    reader.readAsDataURL(fileOrUrl);
+  }
+  
+  uploadPlaceholder.style.display = 'none';
+  previewArea.style.display = 'flex';
+  
+  // Update preview avatar
+  const previewAvatar = document.getElementById('previewAvatar');
+  const previewAvatarPlaceholder = document.getElementById('previewAvatarPlaceholder');
+  if (previewAvatar && previewAvatarPlaceholder) {
+    previewAvatar.src = photoPreview.src;
+    previewAvatar.style.display = 'block';
+    previewAvatarPlaceholder.style.display = 'none';
+  }
+}
+
+function removePhoto() {
+  photoInput.value = '';
+  photoPreview.src = '';
+  uploadPlaceholder.style.display = 'block';
+  previewArea.style.display = 'none';
+  
+  // Reset preview avatar
+  const previewAvatar = document.getElementById('previewAvatar');
+  const previewAvatarPlaceholder = document.getElementById('previewAvatarPlaceholder');
+  if (previewAvatar && previewAvatarPlaceholder) {
+    previewAvatar.src = '';
+    previewAvatar.style.display = 'none';
+    previewAvatarPlaceholder.style.display = 'flex';
+  }
+}
+
+// Live preview updates
+document.addEventListener('DOMContentLoaded', function() {
+  const invigilatorId = document.getElementById('invigilator_id');
+  const username = document.getElementById('username');
+  const role = document.getElementById('role');
+  const activeFrom = document.getElementById('active_from');
+  const activeUntil = document.getElementById('active_until');
+  
+  const previewId = document.getElementById('previewId');
+  const previewUsername = document.getElementById('previewUsername');
+  const previewRole = document.getElementById('previewRole');
+  const previewPeriod = document.getElementById('previewPeriod');
+  
+  if (invigilatorId && previewId) {
+    invigilatorId.addEventListener('input', function() {
+      previewId.textContent = this.value || '-';
+    });
+    previewId.textContent = invigilatorId.value || '-';
+  }
+  
+  if (username && previewUsername) {
+    username.addEventListener('input', function() {
+      previewUsername.textContent = this.value || '-';
+    });
+    previewUsername.textContent = username.value || '-';
+  }
+  
+  if (role && previewRole) {
+    role.addEventListener('change', function() {
+      previewRole.textContent = this.value || '-';
+    });
+    previewRole.textContent = role.value || '-';
+  }
+  
+  if (activeFrom && activeUntil && previewPeriod) {
+    const updatePeriod = function() {
+      const from = activeFrom.value ? new Date(activeFrom.value).toLocaleDateString() : 'Not set';
+      const until = activeUntil.value ? new Date(activeUntil.value).toLocaleDateString() : 'Not set';
+      previewPeriod.textContent = `${from} - ${until}`;
+    };
+    
+    activeFrom.addEventListener('change', updatePeriod);
+    activeUntil.addEventListener('change', updatePeriod);
+    updatePeriod();
+  }
+  
+  // Initialize with existing values for edit mode
+  {% if invigilator %}
+  if (previewId) previewId.textContent = '{{ invigilator.invigilator_id or "-" }}';
+  if (previewUsername) previewUsername.textContent = '{{ invigilator.username or "-" }}';
+  if (previewRole) previewRole.textContent = '{{ invigilator.role or "-" }}';
+  {% endif %}
+});
+</script>
 {% endblock %}
