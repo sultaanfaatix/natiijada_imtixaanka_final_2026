@@ -11,7 +11,7 @@ from . import db
 from .audit import audit
 from .models import AcademicYear, Exam, Result, SchoolClass, Student, Subject
 from .permissions import enforce_endpoint_permission
-from .services import grade_for, result_payload
+from .services import get_settings, grade_for, result_payload
 
 advanced_results_bp = Blueprint("admin_advanced_results", __name__)
 
