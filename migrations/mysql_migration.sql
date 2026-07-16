@@ -2,6 +2,60 @@
 -- Run this script on your production MySQL database to add invigilator support
 -- Execute: mysql -h <host> -u <user> -p <database> < migrations/mysql_migration.sql
 
+-- Add exam_id column to grade_scales table
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+    AND table_name = 'grade_scales'
+    AND column_name = 'exam_id'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE grade_scales ADD COLUMN exam_id INT NULL AFTER is_active',
+    'SELECT "Column exam_id already exists in grade_scales" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add foreign key constraint for exam_id if it doesn't exist
+SET @fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.table_constraints
+    WHERE table_schema = DATABASE()
+    AND table_name = 'grade_scales'
+    AND constraint_name = 'fk_grade_scales_exam_id'
+);
+
+SET @sql = IF(@fk_exists = 0,
+    'ALTER TABLE grade_scales ADD CONSTRAINT fk_grade_scales_exam_id FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE SET NULL',
+    'SELECT "Foreign key fk_grade_scales_exam_id already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add index for exam_id if it doesn't exist
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.statistics
+    WHERE table_schema = DATABASE()
+    AND table_name = 'grade_scales'
+    AND index_name = 'idx_grade_scales_exam_id'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE grade_scales ADD INDEX idx_grade_scales_exam_id (exam_id)',
+    'SELECT "Index idx_grade_scales_exam_id already exists" AS message'
+);
+
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- Add invigilator_id column to incident_reports table
 -- Use ALTER TABLE with IF NOT EXISTS pattern for safety
 SET @column_exists = (
