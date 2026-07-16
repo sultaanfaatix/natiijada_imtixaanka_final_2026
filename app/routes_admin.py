@@ -500,8 +500,8 @@ def subjects():
         db.session.add(subject)
         db.session.commit()
         flash("Subject saved.", "success")
-        return redirect(url_for("admin_advanced_results.new_dashboard"))
-    return redirect(url_for("admin_advanced_results.new_dashboard"))
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    return redirect(url_for("admin_advanced_results.new_setup"))
 
 
 @admin_bp.route("/exams", methods=["GET", "POST"])
@@ -509,18 +509,22 @@ def exams():
     if request.method == "POST":
         exam = db.session.get(Exam, int(request.form.get("id") or 0)) or Exam()
         exam.name = request.form["name"].strip()
+        exam.short_code = request.form.get("short_code", "").strip()
         exam.academic_year_id = int(request.form["academic_year_id"])
+        exam.weight_percentage = float(request.form.get("weight_percentage", 0))
+        exam.sort_order = int(request.form.get("sort_order", 0))
+        exam.is_active = bool(request.form.get("is_active"))
         exam.is_published = bool(request.form.get("is_published"))
         db.session.add(exam)
         db.session.commit()
         flash("Exam saved.", "success")
-        return redirect(url_for("admin_advanced_results.new_dashboard"))
-    return redirect(url_for("admin_advanced_results.new_dashboard"))
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    return redirect(url_for("admin_advanced_results.new_setup"))
 
 
 @admin_bp.route("/exams/<int:row_id>/delete", methods=["POST"])
 def delete_exam(row_id):
-    return delete_row(Exam, row_id, "admin_advanced_results.new_dashboard")
+    return delete_row(Exam, row_id, "admin_advanced_results.new_setup")
 
 
 @admin_bp.route("/exams/<int:row_id>/toggle", methods=["POST"])
@@ -530,7 +534,7 @@ def toggle_exam(row_id):
     Result.query.filter_by(exam_id=exam.id).update({"is_published": exam.is_published})
     db.session.commit()
     flash("Publish status updated.", "success")
-    return redirect(url_for("admin_advanced_results.new_dashboard"))
+    return redirect(url_for("admin_advanced_results.new_setup"))
 
 
 @admin_bp.route("/academic-years", methods=["GET", "POST"])
@@ -1043,12 +1047,12 @@ def delete_class(row_id):
 
 @admin_bp.route("/subjects/<int:row_id>/delete", methods=["POST"])
 def delete_subject(row_id):
-    return delete_row(Subject, row_id, "admin_advanced_results.new_dashboard")
+    return delete_row(Subject, row_id, "admin_advanced_results.new_setup")
 
 
 @admin_bp.route("/academic-years/<int:row_id>/delete", methods=["POST"])
 def delete_academic_year(row_id):
-    return delete_row(AcademicYear, row_id, "admin_advanced_results.new_dashboard")
+    return delete_row(AcademicYear, row_id, "admin_advanced_results.new_setup")
 
 
 def simple_crud(model, template, fields):

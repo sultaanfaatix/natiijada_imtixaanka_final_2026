@@ -162,9 +162,220 @@ def dashboard():
     )
 
 
+@advanced_results_bp.route("/new-setup")
+def new_setup():
+    """Setup wizard - Master Configuration for the entire Results system"""
+    level_id = int_or_none(request.args.get("level_id"))
+    
+    # Get selected year (current year by default)
+    selected_year = AcademicYear.query.filter_by(is_current=True).first()
+    selected_level = db.session.get(AcademicLevel, level_id) if level_id else None
+    
+    # Get all data for Setup wizard
+    years = AcademicYear.query.order_by(AcademicYear.name.desc()).all()
+    exams = Exam.query.filter_by(academic_year_id=selected_year.id).order_by(Exam.id.desc()).all() if selected_year else []
+    levels = AcademicLevel.query.filter_by(is_active=True).order_by(AcademicLevel.sort_order).all()
+    subjects = Subject.query.order_by(Subject.sort_order).all()
+    classes = AcademicClass.query.order_by(AcademicClass.name).all()
+    
+    # Calculate step completion states
+    step_states = {
+        'academic_year': len(years) > 0,
+        'exam_type': len(exams) > 0,
+        'levels_classes': False,  # Will check below
+        'subjects': False  # Will check below
+    }
+    
+    # Check if any level has at least one class
+    for level in levels:
+        if level.classes.count() > 0:
+            step_states['levels_classes'] = True
+            break
+    
+    # Check if subjects are configured
+    if subjects:
+        step_states['subjects'] = True
+    
+    # Determine current active step
+    if not step_states['academic_year']:
+        current_step = 'academic_year'
+    elif not step_states['exam_type']:
+        current_step = 'exam_type'
+    elif not step_states['levels_classes']:
+        current_step = 'levels_classes'
+    elif not step_states['subjects']:
+        current_step = 'subjects'
+    else:
+        current_step = 'subjects'  # All complete
+    
+    return render_template(
+        "admin/results_setup.html",
+        years=years,
+        exams=exams,
+        levels=levels,
+        selected_year=selected_year,
+        selected_level=selected_level,
+        subjects=subjects,
+        classes=classes,
+        settings=get_settings(),
+        step_states=step_states,
+        current_step=current_step,
+    )
+
+
+# Level CRUD Routes for Setup Page
+@advanced_results_bp.route("/setup/levels/add", methods=["POST"])
+def setup_add_level():
+    """Add a new academic level from Setup page"""
+    name = request.form.get("name", "").strip()
+    
+    if not name:
+        flash("Level name is required.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    # Get max sort_order
+    from sqlalchemy import func
+    max_order = db.session.query(func.max(AcademicLevel.sort_order)).scalar() or 0
+    
+    level = AcademicLevel(
+        name=name,
+        sort_order=max_order + 1,
+        is_active=True
+    )
+    
+    db.session.add(level)
+    audit("System Setup", f"Added academic level: {level.name}")
+    db.session.commit()
+    flash("Level added successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+@advanced_results_bp.route("/setup/levels/<int:level_id>/edit", methods=["POST"])
+def setup_edit_level(level_id):
+    """Edit an academic level from Setup page"""
+    level = db.session.get(AcademicLevel, level_id)
+    if not level:
+        flash("Level not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Level name is required.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    level.name = name
+    audit("System Setup", f"Edited academic level: {level.name}")
+    db.session.commit()
+    flash("Level updated successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+@advanced_results_bp.route("/setup/levels/<int:level_id>/delete", methods=["POST"])
+def setup_delete_level(level_id):
+    """Delete an academic level from Setup page"""
+    level = db.session.get(AcademicLevel, level_id)
+    if not level:
+        flash("Level not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    # Check if level has classes
+    if level.classes.count() > 0:
+        flash("Cannot delete level with existing classes.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    db.session.delete(level)
+    audit("System Setup", f"Deleted academic level: {level.name}")
+    db.session.commit()
+    flash("Level deleted successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+# Class CRUD Routes for Setup Page
+@advanced_results_bp.route("/setup/classes/add", methods=["POST"])
+def setup_add_class():
+    """Add a new academic class from Setup page"""
+    academic_level_id = int(request.form.get("academic_level_id"))
+    name = request.form.get("name", "").strip()
+    
+    if not name:
+        flash("Class name is required.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    level = db.session.get(AcademicLevel, academic_level_id)
+    if not level:
+        flash("Academic level not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    # Get max sort_order for this level
+    from sqlalchemy import func
+    max_order = db.session.query(func.max(AcademicClass.sort_order)).filter_by(
+        academic_level_id=academic_level_id
+    ).scalar() or 0
+    
+    cls = AcademicClass(
+        academic_level_id=academic_level_id,
+        name=name,
+        sort_order=max_order + 1,
+        is_active=True
+    )
+    
+    db.session.add(cls)
+    audit("System Setup", f"Added academic class: {cls.name}")
+    db.session.commit()
+    flash("Class added successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+@advanced_results_bp.route("/setup/classes/<int:class_id>/edit", methods=["POST"])
+def setup_edit_class(class_id):
+    """Edit an academic class from Setup page"""
+    cls = db.session.get(AcademicClass, class_id)
+    if not cls:
+        flash("Class not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Class name is required.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    cls.name = name
+    audit("System Setup", f"Edited academic class: {cls.name}")
+    db.session.commit()
+    flash("Class updated successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+@advanced_results_bp.route("/setup/classes/<int:class_id>/delete", methods=["POST"])
+def setup_delete_class(class_id):
+    """Delete an academic class from Setup page"""
+    cls = db.session.get(AcademicClass, class_id)
+    if not cls:
+        flash("Class not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    # Check if class has sections
+    if cls.sections.count() > 0:
+        flash("Cannot delete class with existing sections.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    db.session.delete(cls)
+    audit("System Setup", f"Deleted academic class: {cls.name}")
+    db.session.commit()
+    flash("Class deleted successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
 @advanced_results_bp.route("/new-dashboard")
 def new_dashboard():
     """New results dashboard with two-step Level → Class selection"""
+    # Check if setup is complete
+    from .services import is_setup_complete
+    is_complete, missing = is_setup_complete()
+    if not is_complete:
+        flash(f"Setup incomplete. Please configure: {', '.join(missing)}", "warning")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
     year_id = int_or_none(request.args.get("year_id"))
     exam_id = int_or_none(request.args.get("exam_id"))
     level_id = int_or_none(request.args.get("level_id"))

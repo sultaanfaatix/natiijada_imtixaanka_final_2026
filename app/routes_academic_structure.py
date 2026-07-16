@@ -5,6 +5,7 @@ from . import db
 from .audit import audit
 from .models import AcademicLevel, AcademicClass, AcademicSection
 from .permissions import can
+from sqlalchemy import func
 
 academic_bp = Blueprint("academic_structure", __name__)
 
@@ -13,7 +14,7 @@ academic_bp = Blueprint("academic_structure", __name__)
 @login_required
 def require_login():
     if not can("manage_academic_structure"):
-        flash("You don't have permission to manage academic structure.", "danger")
+        flash("You don't have permission to manage system setup.", "danger")
         return redirect(url_for("admin.dashboard"))
 
 
@@ -44,7 +45,7 @@ def academic_level_form(level_id=None):
         level.is_active = bool(request.form.get("is_active"))
         
         db.session.add(level)
-        audit("Academic Structure", f"Saved academic level: {level.name}")
+        audit("System Setup", f"Saved academic level: {level.name}")
         db.session.commit()
         flash("Academic level saved successfully.", "success")
         return redirect(url_for("academic_structure.academic_levels"))
@@ -66,7 +67,7 @@ def delete_academic_level(level_id):
         return redirect(url_for("academic_structure.academic_levels"))
     
     db.session.delete(level)
-    audit("Academic Structure", f"Deleted academic level: {level.name}")
+    audit("System Setup", f"Deleted academic level: {level.name}")
     db.session.commit()
     flash("Academic level deleted.", "success")
     return redirect(url_for("academic_structure.academic_levels"))
@@ -95,7 +96,7 @@ def academic_class_form(class_id=None):
         cls.is_active = bool(request.form.get("is_active"))
         
         db.session.add(cls)
-        audit("Academic Structure", f"Saved academic class: {cls.name}")
+        audit("System Setup", f"Saved academic class: {cls.name}")
         db.session.commit()
         flash("Academic class saved successfully.", "success")
         return redirect(url_for("academic_structure.academic_classes"))
@@ -110,18 +111,52 @@ def delete_academic_class(class_id):
     cls = db.session.get(AcademicClass, class_id)
     if not cls:
         flash("Academic class not found.", "danger")
-        return redirect(url_for("academic_structure.academic_classes"))
+        return redirect(url_for("admin_advanced_results.new_setup"))
     
     # Check if class has sections
     if cls.sections.count() > 0:
         flash("Cannot delete academic class with existing sections.", "danger")
-        return redirect(url_for("academic_structure.academic_classes"))
+        return redirect(url_for("admin_advanced_results.new_setup"))
     
     db.session.delete(cls)
-    audit("Academic Structure", f"Deleted academic class: {cls.name}")
+    audit("System Setup", f"Deleted academic class: {cls.name}")
     db.session.commit()
     flash("Academic class deleted.", "success")
-    return redirect(url_for("academic_structure.academic_classes"))
+    return redirect(url_for("admin_advanced_results.new_setup"))
+
+
+@academic_bp.route("/academic-classes/add", methods=["POST"])
+def add_class():
+    """Quick add class from Setup page"""
+    academic_level_id = int(request.form.get("academic_level_id"))
+    name = request.form.get("name", "").strip()
+    
+    if not name:
+        flash("Class name is required.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    level = db.session.get(AcademicLevel, academic_level_id)
+    if not level:
+        flash("Academic level not found.", "danger")
+        return redirect(url_for("admin_advanced_results.new_setup"))
+    
+    # Get max sort_order for this level
+    max_order = db.session.query(db.func.max(AcademicClass.sort_order)).filter_by(
+        academic_level_id=academic_level_id
+    ).scalar() or 0
+    
+    cls = AcademicClass(
+        academic_level_id=academic_level_id,
+        name=name,
+        sort_order=max_order + 1,
+        is_active=True
+    )
+    
+    db.session.add(cls)
+    audit("System Setup", f"Added academic class: {cls.name}")
+    db.session.commit()
+    flash("Class added successfully.", "success")
+    return redirect(url_for("admin_advanced_results.new_setup"))
 
 
 # Academic Section Management
@@ -147,7 +182,7 @@ def academic_section_form(section_id=None):
         section.is_active = bool(request.form.get("is_active"))
         
         db.session.add(section)
-        audit("Academic Structure", f"Saved academic section: {section.name}")
+        audit("System Setup", f"Saved academic section: {section.name}")
         db.session.commit()
         flash("Academic section saved successfully.", "success")
         return redirect(url_for("academic_structure.academic_sections"))
@@ -173,7 +208,7 @@ def delete_academic_section(section_id):
         return redirect(url_for("academic_structure.academic_sections"))
     
     db.session.delete(section)
-    audit("Academic Structure", f"Deleted academic section: {section.name}")
+    audit("System Setup", f"Deleted academic section: {section.name}")
     db.session.commit()
     flash("Academic section deleted.", "success")
     return redirect(url_for("academic_structure.academic_sections"))

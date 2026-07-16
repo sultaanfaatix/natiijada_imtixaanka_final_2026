@@ -130,7 +130,13 @@ class Exam(TimestampMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
+    short_code = db.Column(db.String(20), nullable=True)  # e.g., "MT1", "MT2", "FIN"
     academic_year_id = db.Column(db.Integer, db.ForeignKey("academic_years.id"), nullable=False)
+    
+    # Exam type configuration
+    weight_percentage = db.Column(db.Float, default=0.0)  # Weight in final grade calculation
+    sort_order = db.Column(db.Integer, default=0)  # Order in which exams appear
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     
     # New academic hierarchy fields
     academic_level_id = db.Column(db.Integer, db.ForeignKey("academic_levels.id"), nullable=True)

@@ -17,6 +17,8 @@
 </div>
 
 <div class="rh-context">
+  <a href="{{ url_for('admin_advanced_results.new_setup') }}" style="color:inherit; text-decoration:none;">Results</a>
+  <span>/</span>
   <span class="active">{{ rh_year }}</span>
   {% if rh_exam %}<span>/</span><span>{{ rh_exam }}</span>{% endif %}
   {% if rh_level %}<span>/</span><span>{{ rh_level }}</span>{% endif %}
@@ -26,7 +28,7 @@
 </div>
 
 <nav class="rh-tabs">
-  <button class="rh-tab {{ 'active' if active_tab == 'setup' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.new_dashboard') }}#setup'">
+  <button class="rh-tab {{ 'active' if active_tab == 'setup' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.new_setup') }}'">
     <span>00</span>{{ rh_label("hub.tab.setup", default="Setup") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'dashboard' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.new_dashboard') }}?{{ rh_query }}'">

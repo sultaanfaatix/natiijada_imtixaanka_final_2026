@@ -1,7 +1,17 @@
 from decimal import Decimal
 from flask import current_app, g
 
-from .models import GradeScale, Result, Setting, LabelTranslation
+from .models import (
+    AcademicYear,
+    AcademicLevel,
+    AcademicClass,
+    Subject,
+    Exam,
+    GradeScale,
+    Result,
+    Setting,
+    LabelTranslation,
+)
 
 
 DEFAULT_SETTINGS = {
@@ -636,3 +646,47 @@ def get_all_labels(language_code=None):
     
     labels = LabelTranslation.query.filter_by(language_code=language_code).all()
     return {label.label_key: label.text_value for label in labels}
+
+
+def is_setup_complete():
+    """
+    Check if the basic Setup configuration is complete.
+    Returns a tuple: (is_complete, missing_items)
+    """
+    missing = []
+    
+    # Check for active academic year
+    if not AcademicYear.query.filter_by(is_current=True).first():
+        missing.append("Academic Year")
+    
+    # Check for at least one exam
+    if not Exam.query.filter_by(is_active=True).first():
+        missing.append("Exam Type")
+    
+    # Check for at least one level
+    if not AcademicLevel.query.filter_by(is_active=True).first():
+        missing.append("Academic Level")
+    
+    # Check for at least one class
+    if not AcademicClass.query.first():
+        missing.append("Class")
+    
+    # Check for at least one subject
+    if not Subject.query.first():
+        missing.append("Subject")
+    
+    return (len(missing) == 0, missing)
+
+
+def require_setup_complete():
+    """
+    Helper to redirect to Setup if configuration is incomplete.
+    Returns True if setup is complete, False otherwise.
+    """
+    from flask import redirect, url_for, flash
+    
+    is_complete, missing = is_setup_complete()
+    if not is_complete:
+        flash(f"Setup incomplete. Please configure: {', '.join(missing)}", "warning")
+        return False
+    return True

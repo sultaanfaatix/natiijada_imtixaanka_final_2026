@@ -1,45 +1,11 @@
 {% extends "admin/base.html" %}
-{% block title %}Academic Structure{% endblock %}
+{% block title %}System Setup{% endblock %}
 {% block content %}
+<script>
+window.location.href = "{{ url_for('admin_advanced_results.new_setup') }}";
+</script>
 <div class="admin-header">
-    <h1><i class="fa-solid fa-sitemap"></i> Academic Structure</h1>
-    <p>Manage the hierarchical academic structure of the school</p>
-</div>
-
-<div class="admin-cards">
-    <a href="{{ url_for('academic_structure.academic_levels') }}" class="admin-card">
-        <div class="card-icon"><i class="fa-solid fa-layer-group"></i></div>
-        <h3>Academic Levels</h3>
-        <p>Manage Kindergarten, Primary, Secondary levels</p>
-    </a>
-    
-    <a href="{{ url_for('academic_structure.academic_classes') }}" class="admin-card">
-        <div class="card-icon"><i class="fa-solid fa-graduation-cap"></i></div>
-        <h3>Academic Classes</h3>
-        <p>Manage grades and forms within levels</p>
-    </a>
-    
-    <a href="{{ url_for('academic_structure.academic_sections') }}" class="admin-card">
-        <div class="card-icon"><i class="fa-solid fa-users"></i></div>
-        <h3>Academic Sections</h3>
-        <p>Manage sections within classes (A, B, C, etc.)</p>
-    </a>
-</div>
-
-<div class="panel">
-    <h2>Current Structure</h2>
-    {% for level in levels %}
-    <div class="structure-level">
-        <h3>{{ level.name }}</h3>
-        <div class="structure-classes">
-            {% for cls in level.classes %}
-            <div class="structure-class">
-                <strong>{{ cls.name }}</strong>
-                <span class="sections-count">{{ cls.sections.count() }} sections</span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endfor %}
+    <h1><i class="fa-solid fa-gear"></i> Redirecting to System Setup...</h1>
+    <p>All academic configuration has been moved to the System Setup page.</p>
 </div>
 {% endblock %}

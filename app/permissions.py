@@ -29,7 +29,7 @@ PERMISSIONS = [
     ("system_settings", "System Settings"),
     ("backup", "Backup"),
     ("restore", "Restore"),
-    ("manage_academic_structure", "Manage Academic Structure"),
+    ("manage_academic_structure", "System Setup"),
 ]
 
 ENDPOINT_PERMISSIONS = {

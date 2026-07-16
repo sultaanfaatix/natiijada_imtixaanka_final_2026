@@ -26,8 +26,7 @@
     <!-- Academic & Results Group -->
     <div class="nav-group">
       <div class="nav-group-header">Academic & Results</div>
-      {% if can('results') %}<a href="{{ url_for('admin_advanced_results.new_dashboard') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>{{ _('Results') }}</span></a>{% endif %}
-      <a href="{{ url_for('academic_structure.academic_levels') }}"><i class="fa-solid fa-layer-group"></i><span>Academic Structure</span></a>
+      {% if can('results') %}<a href="{{ url_for('admin_advanced_results.new_setup') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>{{ _('Results') }}</span></a>{% endif %}
     </div>
     
     <!-- Student Management -->
