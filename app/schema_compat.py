@@ -53,6 +53,80 @@ def ensure_schema_compatibility():
     # Update teacher_classes foreign key to reference academic_classes instead of school_classes
     # This requires manual migration for existing data
 
+    # Catch-all: reconcile every remaining model column against the live schema.
+    # This covers any column not hand-listed above (e.g. exams.short_code) so a
+    # legacy production DB self-heals instead of raising "Unknown column ...".
+    sync_all_model_columns()
+
+
+def sync_all_model_columns():
+    """Add any mapped model column that is missing from an already-existing table.
+
+    ``db.create_all()`` only creates missing *tables*; it never alters existing
+    ones. This walks every mapped table/column and issues idempotent, best-effort
+    ``ALTER TABLE ... ADD COLUMN`` statements so new model columns appear on old
+    databases automatically. Each statement is isolated so one failure can never
+    brick startup.
+    """
+    inspector = inspect(db.engine)
+    dialect = db.engine.dialect
+    for table in db.metadata.sorted_tables:
+        if not inspector.has_table(table.name):
+            continue  # brand-new table; db.create_all() already handled it
+        existing = {row["name"] for row in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing:
+                continue
+            add_model_column(table, column, dialect)
+
+
+def add_model_column(table, column, dialect):
+    prep = dialect.identifier_preparer
+    tbl = prep.format_table(table)
+    col = prep.quote(column.name)
+    try:
+        type_sql = column.type.compile(dialect=dialect)
+    except Exception:
+        return  # unsupported/unknown type: skip rather than crash startup
+    default_sql = _model_column_default_sql(column)
+
+    # Prefer honoring NOT NULL + default; degrade to a nullable column so the
+    # ALTER can't fail on a table that already holds rows.
+    candidates = []
+    if not column.nullable and default_sql is not None:
+        candidates.append(f"{col} {type_sql} NOT NULL DEFAULT {default_sql}")
+    if default_sql is not None:
+        candidates.append(f"{col} {type_sql} NULL DEFAULT {default_sql}")
+    candidates.append(f"{col} {type_sql} NULL")
+
+    for body in candidates:
+        try:
+            db.session.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {body}"))
+            db.session.commit()
+            return
+        except Exception:
+            db.session.rollback()
+
+
+def _model_column_default_sql(column):
+    """Best-effort SQL literal for a column's default, or None if not expressible."""
+    server_default = column.server_default
+    if server_default is not None:
+        arg = getattr(server_default, "arg", None)
+        text_val = getattr(arg, "text", None)
+        if text_val:
+            return text_val
+    default = column.default
+    if default is not None and getattr(default, "is_scalar", False):
+        value = default.arg
+        if isinstance(value, bool):
+            return "1" if value else "0"
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, str):
+            return "'" + value.replace("'", "''") + "'"
+    return None
+
 
 def add_column_if_missing(table, column, ddl):
     inspector = inspect(db.engine)
@@ -72,8 +146,13 @@ def add_index_if_missing(table, index_name, columns):
     if index_name in names or tuple(columns) in covered:
         return
     cols = ", ".join(columns)
-    db.session.execute(text(f"CREATE INDEX {index_name} ON {table} ({cols})"))
-    db.session.commit()
+    # An index is a performance optimization, not required for correctness.
+    # Never let it brick startup (e.g. storage-engine quirks on legacy DBs).
+    try:
+        db.session.execute(text(f"CREATE INDEX {index_name} ON {table} ({cols})"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def add_foreign_key_if_missing(table, constraint_name, columns, ref_table, ref_columns, ondelete=None):
@@ -95,8 +174,14 @@ def add_foreign_key_if_missing(table, constraint_name, columns, ref_table, ref_c
     )
     if ondelete:
         ddl += f" ON DELETE {ondelete}"
-    db.session.execute(text(ddl))
-    db.session.commit()
+    # The referential constraint is a safety net, not required for the column
+    # to be queryable. Never let it brick startup (e.g. MyISAM/engine or
+    # orphaned-data quirks on legacy production DBs).
+    try:
+        db.session.execute(text(ddl))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def column_sql(dialect, name, type_sql):
