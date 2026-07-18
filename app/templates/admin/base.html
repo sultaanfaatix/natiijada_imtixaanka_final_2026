@@ -26,7 +26,7 @@
     <!-- Academic & Results Group -->
     <div class="nav-group">
       <div class="nav-group-header">Academic & Results</div>
-      {% if can('results') %}<a href="{{ url_for('admin_advanced_results.new_setup') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>{{ _('Results') }}</span></a>{% endif %}
+      {% if can('results') %}<a href="{{ url_for('admin_advanced_results.new_dashboard') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>{{ _('Results') }}</span></a>{% endif %}
     </div>
     
     {% if can('teachers') %}<a href="{{ url_for('admin_teachers.dashboard') }}"><i class="fa-solid fa-chalkboard-user"></i><span>Teacher Department</span></a>{% endif %}

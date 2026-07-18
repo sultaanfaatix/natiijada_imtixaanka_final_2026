@@ -134,35 +134,87 @@ def ensure_results_label_seeds():
     current_app.config["_results_label_seeds_checked"] = True
 
 
+def get_default_academic_year(year_id=None):
+    """Return the requested year, otherwise the latest active academic year."""
+    if year_id:
+        return db.session.get(AcademicYear, year_id)
+    return (
+        AcademicYear.query.filter_by(is_current=True)
+        .order_by(AcademicYear.name.desc(), AcademicYear.id.desc())
+        .first()
+        or AcademicYear.query.order_by(AcademicYear.name.desc(), AcademicYear.id.desc()).first()
+    )
+
+
+def get_latest_exam_for_year(academic_year):
+    """Return the latest exam for the selected academic year."""
+    if not academic_year:
+        return None
+    return (
+        Exam.query.filter_by(academic_year_id=academic_year.id)
+        .order_by(Exam.id.desc())
+        .first()
+    )
+
+
+def subjects_for_scope(exam, level_id=None, class_id=None):
+    """Return subjects for the effective academic level of the current scope."""
+    effective_level_id = exam.academic_level_id if exam else None
+    if not effective_level_id:
+        effective_level_id = level_id
+    if not effective_level_id and class_id:
+        academic_class = db.session.get(AcademicClass, class_id)
+        effective_level_id = academic_class.academic_level_id if academic_class else None
+
+    query = Subject.query
+    if effective_level_id:
+        query = query.filter_by(academic_level_id=effective_level_id)
+    return sorted(query.all(), key=lambda subject: (subject.sort_order, subject.name))
+
+
+def students_for_scope_query(academic_year_id, level_id=None, class_id=None, section_id=None, exam=None):
+    """Return students using the unified Results Hub academic hierarchy, with legacy compatibility."""
+    query = Student.query.filter_by(academic_year_id=academic_year_id)
+
+    effective_level_id = level_id or (exam.academic_level_id if exam else None)
+    effective_class_id = class_id or (exam.academic_class_id if exam else None)
+    effective_section_id = section_id or (exam.academic_section_id if exam else None)
+
+    section = db.session.get(AcademicSection, effective_section_id) if effective_section_id else None
+    if section and not effective_class_id:
+        effective_class_id = section.academic_class_id
+
+    academic_class = db.session.get(AcademicClass, effective_class_id) if effective_class_id else None
+    if academic_class and not effective_level_id:
+        effective_level_id = academic_class.academic_level_id
+
+    if effective_class_id:
+        class_filters = [Student.academic_class_id == effective_class_id]
+        if academic_class:
+            legacy_class = SchoolClass.query.filter_by(name=academic_class.name).first()
+            if legacy_class:
+                class_filters.append(Student.class_id == legacy_class.id)
+        query = query.filter(db_or(*class_filters))
+    elif effective_level_id:
+        level_filters = [Student.academic_level_id == effective_level_id]
+        academic_level = db.session.get(AcademicLevel, effective_level_id)
+        if academic_level:
+            level_filters.append(Student.level == academic_level.name)
+        query = query.filter(db_or(*level_filters))
+
+    if effective_section_id:
+        section_filters = [Student.academic_section_id == effective_section_id]
+        if section:
+            section_filters.append(Student.section == section.name)
+        query = query.filter(db_or(*section_filters))
+
+    return query
+
+
 @advanced_results_bp.route("/")
 def dashboard():
-    """Original advanced results dashboard - kept for backward compatibility"""
-    filters = result_filters()
-    rows = result_query(filters).order_by(Result.updated_at.desc()).limit(1000).all()
-    student_ids = sorted({row.student_id for row in rows})
-    exams = Exam.query.order_by(Exam.id.desc()).all()
-    payloads = []
-    for student_id in student_ids:
-        student = db.session.get(Student, student_id)
-        exam = db.session.get(Exam, filters["exam_id"]) if filters["exam_id"] else (rows[0].exam if rows else None)
-        if student and exam:
-            payloads.append(result_payload(student, exam=exam, public_only=False))
-    stats = build_stats(payloads, rows)
-    grouped = group_results(rows)
-    return render_template(
-        "admin/advanced_results.html",
-        rows=rows,
-        grouped=grouped,
-        filters=filters,
-        stats=stats,
-        years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
-        exams=exams,
-        classes=SchoolClass.query.order_by(SchoolClass.name).all(),
-        subjects=Subject.query.order_by(Subject.sort_order, Subject.name).all(),
-        levels=distinct_values(Student.level),
-        sections=distinct_values(Student.section),
-        settings=get_settings(),
-    )
+    """Results Hub landing page - kept as a compatibility route."""
+    return redirect(url_for("admin_advanced_results.new_dashboard"))
 
 
 @advanced_results_bp.route("/new-setup")
@@ -376,11 +428,10 @@ def new_dashboard():
     exam_id = int_or_none(request.args.get("exam_id"))
     level_id = int_or_none(request.args.get("level_id"))
     
-    # Auto-select active year if no year_id provided
-    selected_year = db.session.get(AcademicYear, year_id) if year_id else AcademicYear.query.filter_by(is_current=True).first()
-    
-    # Get selected exam
-    selected_exam = db.session.get(Exam, exam_id) if exam_id else None
+    selected_year = get_default_academic_year(year_id)
+    selected_exam = db.session.get(Exam, exam_id) if exam_id else get_latest_exam_for_year(selected_year)
+    if selected_exam and selected_year and selected_exam.academic_year_id != selected_year.id:
+        selected_exam = get_latest_exam_for_year(selected_year)
     selected_level = db.session.get(AcademicLevel, level_id) if level_id else None
     
     # Get all years and exams for selectors
@@ -390,21 +441,12 @@ def new_dashboard():
     # Get all levels for level selector
     levels = AcademicLevel.query.filter_by(is_active=True).order_by(AcademicLevel.sort_order).all()
     
-    # Build dashboard stats - always compute for the active year
     stats = {}
     class_cards = []
     
     if selected_exam:
         stats = build_dashboard_stats(selected_exam)
-        # Build class cards filtered by selected level
         class_cards = build_class_cards(selected_exam, level_filter=selected_level)
-    elif selected_year:
-        # If no exam selected, compute stats for the year (all exams combined)
-        year_exams = Exam.query.filter_by(academic_year_id=selected_year.id).all()
-        if year_exams:
-            # Use the first exam for stats calculation
-            stats = build_dashboard_stats(year_exams[0])
-            class_cards = build_class_cards(year_exams[0], level_filter=selected_level)
     
     return render_template(
         "admin/results_dashboard.html",
@@ -431,8 +473,7 @@ def class_roster():
     student_id = int_or_none(request.args.get("student_id"))
     search_query = request.args.get("q", "").strip()
     
-    # Get selected year and exam
-    selected_year = db.session.get(AcademicYear, year_id) if year_id else AcademicYear.query.filter_by(is_current=True).first()
+    selected_year = get_default_academic_year(year_id)
     selected_exam = db.session.get(Exam, exam_id) if exam_id else None
     
     if not selected_year:
@@ -454,15 +495,12 @@ def class_roster():
             settings=get_settings(),
         )
     
-    # Build student query based on scope
-    student_query = Student.query.filter_by(academic_year_id=selected_year.id)
-    
-    if level_id:
-        student_query = student_query.filter_by(academic_level_id=level_id)
-    if class_id:
-        student_query = student_query.filter_by(academic_class_id=class_id)
-    if section_id:
-        student_query = student_query.filter_by(academic_section_id=section_id)
+    student_query = students_for_scope_query(
+        selected_year.id,
+        level_id=level_id,
+        class_id=class_id,
+        section_id=section_id,
+    )
     
     # Apply search filter
     if search_query:
@@ -476,9 +514,7 @@ def class_roster():
     
     students = student_query.order_by(Student.full_name).all()
     
-    # Get subjects for this exam
-    subjects = Subject.query.filter_by(academic_level_id=selected_exam.academic_level_id).all() if selected_exam.academic_level_id else Subject.query.all()
-    subjects = sorted(subjects, key=lambda s: (s.sort_order, s.name))
+    subjects = subjects_for_scope(selected_exam, level_id=level_id, class_id=class_id)
     
     # Build results data for each student
     roster_data = []
@@ -789,21 +825,17 @@ def export_class_pdf():
     if not selected_year or not selected_exam:
         abort(404)
     
-    # Build student query
-    student_query = Student.query.filter_by(academic_year_id=year_id)
-    
-    if level_id:
-        student_query = student_query.filter_by(academic_level_id=level_id)
-    if class_id:
-        student_query = student_query.filter_by(academic_class_id=class_id)
-    if section_id:
-        student_query = student_query.filter_by(academic_section_id=section_id)
-    
-    students = student_query.order_by(Student.full_name).all()
-    
-    # Get subjects
-    subjects = Subject.query.filter_by(academic_level_id=selected_exam.academic_level_id).all() if selected_exam.academic_level_id else Subject.query.all()
-    subjects = sorted(subjects, key=lambda s: (s.sort_order, s.name))
+    students = (
+        students_for_scope_query(
+            year_id,
+            level_id=level_id,
+            class_id=class_id,
+            section_id=section_id,
+        )
+        .order_by(Student.full_name)
+        .all()
+    )
+    subjects = subjects_for_scope(selected_exam, level_id=level_id, class_id=class_id)
     
     # Build roster data
     roster_data = []
@@ -898,21 +930,17 @@ def export_class_excel():
     if not selected_year or not selected_exam:
         abort(404)
     
-    # Build student query reusing same logic as PDF
-    student_query = Student.query.filter_by(academic_year_id=year_id)
-    
-    if level_id:
-        student_query = student_query.filter_by(academic_level_id=level_id)
-    if class_id:
-        student_query = student_query.filter_by(academic_class_id=class_id)
-    if section_id:
-        student_query = student_query.filter_by(academic_section_id=section_id)
-    
-    students = student_query.order_by(Student.full_name).all()
-    
-    # Get subjects
-    subjects = Subject.query.filter_by(academic_level_id=selected_exam.academic_level_id).all() if selected_exam.academic_level_id else Subject.query.all()
-    subjects = sorted(subjects, key=lambda s: (s.sort_order, s.name))
+    students = (
+        students_for_scope_query(
+            year_id,
+            level_id=level_id,
+            class_id=class_id,
+            section_id=section_id,
+        )
+        .order_by(Student.full_name)
+        .all()
+    )
+    subjects = subjects_for_scope(selected_exam, level_id=level_id, class_id=class_id)
     
     # Create workbook
     wb = Workbook()
@@ -1010,8 +1038,7 @@ def result_entry():
     class_id = int_or_none(request.args.get("class_id"))
     section_id = int_or_none(request.args.get("section_id"))
     
-    # Get selected year and exam
-    selected_year = db.session.get(AcademicYear, year_id) if year_id else AcademicYear.query.filter_by(is_current=True).first()
+    selected_year = get_default_academic_year(year_id)
     selected_exam = db.session.get(Exam, exam_id) if exam_id else None
     
     if not selected_year:
@@ -1041,20 +1068,17 @@ def result_entry():
         "section": db.session.get(AcademicSection, section_id) if section_id else None,
     }
     
-    # Get subjects for this exam
-    subjects = Subject.query.filter_by(academic_level_id=selected_exam.academic_level_id).all() if selected_exam.academic_level_id else Subject.query.all()
-    subjects = sorted(subjects, key=lambda s: (s.sort_order, s.name))
-    
-    # Get students in scope
-    student_query = Student.query.filter_by(academic_year_id=selected_year.id)
-    if scope_info["level"]:
-        student_query = student_query.filter_by(academic_level_id=scope_info["level"].id)
-    if scope_info["class"]:
-        student_query = student_query.filter_by(academic_class_id=scope_info["class"].id)
-    if scope_info["section"]:
-        student_query = student_query.filter_by(academic_section_id=scope_info["section"].id)
-    
-    students = student_query.order_by(Student.full_name).all()
+    subjects = subjects_for_scope(selected_exam, level_id=level_id, class_id=class_id)
+    students = (
+        students_for_scope_query(
+            selected_year.id,
+            level_id=level_id,
+            class_id=class_id,
+            section_id=section_id,
+        )
+        .order_by(Student.full_name)
+        .all()
+    )
     
     # Get existing results for these students and this exam
     student_ids = [s.id for s in students]
@@ -1110,19 +1134,13 @@ def save_result_entry():
         flash("Invalid selection.", "danger")
         return redirect(url_for("admin_advanced_results.new_dashboard"))
     
-    # Get subjects for this exam
-    subjects = Subject.query.filter_by(academic_level_id=selected_exam.academic_level_id).all() if selected_exam.academic_level_id else Subject.query.all()
-    
-    # Get students in scope
-    student_query = Student.query.filter_by(academic_year_id=selected_year.id)
-    if level_id:
-        student_query = student_query.filter_by(academic_level_id=level_id)
-    if class_id:
-        student_query = student_query.filter_by(academic_class_id=class_id)
-    if section_id:
-        student_query = student_query.filter_by(academic_section_id=section_id)
-    
-    students = student_query.all()
+    subjects = subjects_for_scope(selected_exam, level_id=level_id, class_id=class_id)
+    students = students_for_scope_query(
+        selected_year.id,
+        level_id=level_id,
+        class_id=class_id,
+        section_id=section_id,
+    ).all()
     student_ids = [s.id for s in students]
     
     # Get existing results
@@ -1266,16 +1284,16 @@ def analytics():
         "subject": db.session.get(Subject, subject_id) if subject_id else None,
     }
     
-    # Get students in scope
-    student_query = Student.query.filter_by(academic_year_id=selected_year.id)
-    if scope_info["level"]:
-        student_query = student_query.filter_by(academic_level_id=scope_info["level"].id)
-    if scope_info["class"]:
-        student_query = student_query.filter_by(academic_class_id=scope_info["class"].id)
-    if scope_info["section"]:
-        student_query = student_query.filter_by(academic_section_id=scope_info["section"].id)
-    
-    students = student_query.order_by(Student.full_name).all()
+    students = (
+        students_for_scope_query(
+            selected_year.id,
+            level_id=level_id,
+            class_id=class_id,
+            section_id=section_id,
+        )
+        .order_by(Student.full_name)
+        .all()
+    )
     student_ids = [s.id for s in students]
     
     # Get results for this exam
@@ -1954,26 +1972,21 @@ def workbook_response(workbook, filename):
 
 def build_dashboard_stats(exam):
     """Build statistics for the dashboard"""
-    # Get students registered for this exam
-    students_query = Student.query.filter_by(academic_year_id=exam.academic_year_id)
-    
-    # Apply exam scoping if set
-    if exam.academic_level_id:
-        students_query = students_query.filter_by(academic_level_id=exam.academic_level_id)
-    if exam.academic_class_id:
-        students_query = students_query.filter_by(academic_class_id=exam.academic_class_id)
-    if exam.academic_section_id:
-        students_query = students_query.filter_by(academic_section_id=exam.academic_section_id)
-    
-    total_students = students_query.count()
-    
-    # Get subjects configured for this exam's level
-    subjects = Subject.query.filter_by(academic_level_id=exam.academic_level_id).all() if exam.academic_level_id else Subject.query.all()
+    students_query = students_for_scope_query(exam.academic_year_id, exam=exam)
+    student_ids = [student.id for student in students_query.all()]
+    total_students = len(student_ids)
+
+    subjects = subjects_for_scope(exam)
     total_subjects = len(subjects)
     
-    # Calculate completion percentage (only published results)
     expected_results = total_students * total_subjects if total_subjects > 0 else 0
-    actual_results = Result.query.filter_by(exam_id=exam.id, is_published=True).count()
+    actual_results = 0
+    if student_ids:
+        actual_results = Result.query.filter(
+            Result.exam_id == exam.id,
+            Result.student_id.in_(student_ids),
+            Result.is_published.is_(True),
+        ).count()
     completion_percentage = round((actual_results / expected_results * 100), 2) if expected_results > 0 else 0
     
     # Get active classes
@@ -2033,35 +2046,40 @@ def build_single_class_card(exam, academic_level=None, academic_class=None, sect
     """Build a single class/level/section card"""
     # Determine label based on what's provided
     if section:
+        if not academic_class:
+            academic_class = section.academic_class
         label = f"{academic_class.name} - {section.name}" if academic_class else section.name
-        student_query = Student.query.filter_by(
+        student_query = students_for_scope_query(
             academic_year_id=exam.academic_year_id,
-            academic_class_id=academic_class.id if academic_class else None,
-            academic_section_id=section.id
+            class_id=academic_class.id if academic_class else None,
+            section_id=section.id,
         )
     elif academic_class:
         label = academic_class.name
-        student_query = Student.query.filter_by(
+        student_query = students_for_scope_query(
             academic_year_id=exam.academic_year_id,
-            academic_class_id=academic_class.id
+            class_id=academic_class.id,
         )
     elif academic_level:
         label = academic_level.name
-        student_query = Student.query.filter_by(
+        student_query = students_for_scope_query(
             academic_year_id=exam.academic_year_id,
-            academic_level_id=academic_level.id
+            level_id=academic_level.id,
         )
     else:
         label = "All Students"
-        student_query = Student.query.filter_by(academic_year_id=exam.academic_year_id)
+        student_query = students_for_scope_query(exam.academic_year_id)
     
     student_count = student_query.count()
     
     # Calculate completion for this scope (only published results)
     student_ids = [s.id for s in student_query.all()]
     if student_ids:
-        # Get subjects for this exam
-        subjects = Subject.query.filter_by(academic_level_id=exam.academic_level_id).all() if exam.academic_level_id else Subject.query.all()
+        subjects = subjects_for_scope(
+            exam,
+            level_id=academic_level.id if academic_level else None,
+            class_id=academic_class.id if academic_class else None,
+        )
         expected = len(student_ids) * len(subjects)
         actual = Result.query.filter(Result.exam_id == exam.id, Result.student_id.in_(student_ids), Result.is_published.is_(True)).count()
         completion = round((actual / expected * 100), 2) if expected > 0 else 0
