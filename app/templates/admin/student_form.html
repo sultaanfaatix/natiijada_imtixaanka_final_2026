@@ -22,10 +22,10 @@
     <option value="{{ level.id }}" {% if student.academic_level_id==level.id %}selected{% endif %}>{{ level.name }}</option>
     {% endfor %}
   </select></label>
-  <label><i class="fa-solid fa-graduation-cap"></i> Class<select name="academic_class_id" id="academic_class_id">
+  <label><i class="fa-solid fa-graduation-cap"></i> Class<select name="academic_class_id" id="academic_class_id" data-selected="{{ student.academic_class_id or '' }}">
     <option value="">Select Class</option>
   </select></label>
-  <label><i class="fa-solid fa-table-cells"></i> Section<select name="academic_section_id" id="academic_section_id">
+  <label><i class="fa-solid fa-table-cells"></i> Section<select name="academic_section_id" id="academic_section_id" data-selected="{{ student.academic_section_id or '' }}">
     <option value="">Select Section</option>
   </select></label>
   
@@ -178,8 +178,14 @@ classSelect.addEventListener('change', function() {
 // Initialize on page load
 if (levelSelect.value) {
   levelSelect.dispatchEvent(new Event('change'));
+  if (classSelect.dataset.selected) {
+    classSelect.value = classSelect.dataset.selected;
+  }
   if (classSelect.value) {
     classSelect.dispatchEvent(new Event('change'));
+    if (sectionSelect.dataset.selected) {
+      sectionSelect.value = sectionSelect.dataset.selected;
+    }
   }
 }
 </script>

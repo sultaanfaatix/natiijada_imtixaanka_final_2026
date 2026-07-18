@@ -215,6 +215,10 @@ def student_form(student_id=None):
         student.academic_level_id = int(request.form.get("academic_level_id")) if request.form.get("academic_level_id") else None
         student.academic_class_id = int(request.form.get("academic_class_id")) if request.form.get("academic_class_id") else None
         student.academic_section_id = int(request.form.get("academic_section_id")) if request.form.get("academic_section_id") else None
+        if not student.academic_class_id and not student.class_id:
+            flash("Please select a class for this student.", "danger")
+            return redirect(request.url)
+        sync_student_legacy_class(student)
         
         student.note = request.form.get("note", "").strip()
         student.is_result_locked = bool(request.form.get("is_result_locked"))
@@ -251,6 +255,27 @@ def student_form(student_id=None):
         academic_levels=academic_levels,
         incident_reports=incident_reports,
     )
+
+
+def sync_student_legacy_class(student):
+    if not student.academic_class_id:
+        return
+
+    academic_class = db.session.get(AcademicClass, student.academic_class_id)
+    if not academic_class:
+        return
+
+    school_class = SchoolClass.query.filter_by(name=academic_class.name).first()
+    if not school_class:
+        school_class = SchoolClass(name=academic_class.name)
+        db.session.add(school_class)
+        db.session.flush()
+
+    student.school_class = school_class
+    student.level = academic_class.academic_level.name if academic_class.academic_level else student.level
+    if student.academic_section_id:
+        section = db.session.get(AcademicSection, student.academic_section_id)
+        student.section = section.name if section else student.section
 
 
 @admin_bp.route("/students/<int:student_id>/delete", methods=["POST"])
