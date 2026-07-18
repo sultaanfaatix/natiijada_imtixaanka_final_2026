@@ -2,7 +2,7 @@ from collections import Counter
 
 from openpyxl import Workbook, load_workbook
 
-from .models import AcademicYear, Exam, SchoolClass, Student, Subject
+from .models import AcademicClass, AcademicYear, Exam, SchoolClass, Student, Subject
 
 
 STUDENT_HEADERS = ["student_id", "full_name", "mother_name", "phone", "class", "academic_year"]
@@ -108,7 +108,7 @@ def validate_student_row(data, errors):
     row = data["row"]
     if not data["full_name"]:
         errors.append(f"Row {row}: full_name is required.")
-    if not SchoolClass.query.filter_by(name=data["class"]).first():
+    if not SchoolClass.query.filter_by(name=data["class"]).first() and not AcademicClass.query.filter_by(name=data["class"]).first():
         errors.append(f"Row {row}: class does not exist: {data['class']}")
     if not AcademicYear.query.filter_by(name=data["academic_year"]).first():
         errors.append(f"Row {row}: academic year does not exist: {data['academic_year']}")

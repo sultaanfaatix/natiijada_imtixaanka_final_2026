@@ -10,7 +10,7 @@
     <div><span>Status</span><strong>{{ payload.status }}</strong></div>
   </div>
   <div class="toolbar result-editor-links">
-    <a class="btn ghost" href="{{ url_for('admin.student_form', student_id=student.id) }}"><i class="fa-solid fa-user-pen"></i> Edit Student Info</a>
+    <a class="btn ghost" href="{{ url_for('admin_advanced_results.student_form', student_id=student.id) }}"><i class="fa-solid fa-user-pen"></i> Edit Student Info</a>
     <a class="btn ghost" href="{{ url_for('admin.exams') }}"><i class="fa-solid fa-file-pen"></i> Edit Exam Info</a>
     <a class="btn ghost" href="{{ url_for('admin.subjects') }}"><i class="fa-solid fa-book-open"></i> Edit Subjects</a>
     <a class="btn ghost" href="{{ url_for('admin.settings') }}"><i class="fa-solid fa-sliders"></i> Report Display Settings</a>

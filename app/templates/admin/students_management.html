@@ -48,16 +48,16 @@
         <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{{ rh_label("students.status_active", default="Active") }}</option>
         <option value="locked" {% if status_filter == 'locked' %}selected{% endif %}>{{ rh_label("students.status_locked", default="Locked") }}</option>
       </select>
-      <a href="{{ url_for('admin.student_form') }}?return_to=results_hub" class="btn btn-gold">+ {{ rh_label("students.add_student", default="Cali Arday Cusub") }}</a>
-      <a href="{{ url_for('admin.student_import_template') }}" class="btn btn-outline">{{ rh_label("students.template", default="Template") }}</a>
-      <form method="post" action="{{ url_for('admin.import_students') }}" enctype="multipart/form-data" style="display: inline;">
+      <a href="{{ url_for('admin_advanced_results.student_form') }}" class="btn btn-gold">+ {{ rh_label("students.add_student", default="Cali Arday Cusub") }}</a>
+      <a href="{{ url_for('admin_advanced_results.student_import_template') }}" class="btn btn-outline">{{ rh_label("students.template", default="Template") }}</a>
+      <form method="post" action="{{ url_for('admin_advanced_results.import_students') }}" enctype="multipart/form-data" style="display: inline;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label class="btn btn-outline" style="cursor: pointer;">
           {{ rh_label("students.import_excel", default="Excel Import") }}
           <input type="file" name="file" accept=".xlsx" required style="display: none;">
         </label>
       </form>
-      <a href="{{ url_for('admin.export_students') }}" class="btn btn-outline">{{ rh_label("students.export_excel", default="Excel Export") }}</a>
+      <a href="{{ url_for('admin_advanced_results.export_students') }}" class="btn btn-outline">{{ rh_label("students.export_excel", default="Excel Export") }}</a>
     </div>
 
     <div class="sm-grid">
@@ -77,16 +77,16 @@
               </span>
             </div>
             <div class="sm-actions">
-              <a class="icon-btn small" href="{{ url_for('admin.student_form', student_id=student.id) }}?return_to=results_hub" title="Edit">
+              <a class="icon-btn small" href="{{ url_for('admin_advanced_results.student_form', student_id=student.id) }}" title="Edit">
                 <i class="fa-solid fa-pen"></i>
               </a>
-              <form method="post" action="{{ url_for('admin.toggle_student_lock', student_id=student.id) }}" class="inline">
+              <form method="post" action="{{ url_for('admin_advanced_results.toggle_student_lock', student_id=student.id) }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="icon-btn small" title="Lock or unlock">
                   <i class="fa-solid {{ 'fa-unlock' if student.is_result_locked else 'fa-lock' }}"></i>
                 </button>
               </form>
-              <form method="post" action="{{ url_for('admin.delete_student', student_id=student.id) }}" class="inline">
+              <form method="post" action="{{ url_for('admin_advanced_results.delete_student', student_id=student.id) }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="icon-btn small danger" title="Delete">
                   <i class="fa-solid fa-trash"></i>

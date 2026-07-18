@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% block page_title %}{{ "Edit" if student.id else "Add" }} Student{% endblock %}
 {% block admin_content %}
-<form method="post" enctype="multipart/form-data" class="panel form-grid premium-form">
+<form method="post" action="{{ student_form_action or request.path }}" enctype="multipart/form-data" class="panel form-grid premium-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <div class="section-heading wide"><span><i class="fa-solid fa-user-graduate"></i></span><div><h2>Student Profile</h2><p>Core identity, academic placement, photo, and result lock status.</p></div></div>
   <label><i class="fa-solid fa-id-card"></i> Student ID<input name="student_code" value="{{ student.student_code or '' }}" required></label>

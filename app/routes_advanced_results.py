@@ -3,7 +3,7 @@ from decimal import Decimal
 from tempfile import NamedTemporaryFile
 from datetime import date
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, session, url_for
 from flask_login import login_required
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
@@ -11,8 +11,11 @@ from sqlalchemy import or_ as db_or
 
 from . import db
 from .audit import audit
-from .models import AcademicYear, AcademicClass, AcademicLevel, AcademicSection, Exam, GradeScale, Result, SchoolClass, Setting, Student, Subject, LabelTranslation
-from .permissions import enforce_endpoint_permission
+from .cloudinary_service import upload_image
+from .import_wizard import preview_students, student_template
+from .models import AcademicYear, AcademicClass, AcademicLevel, AcademicSection, Exam, GradeScale, IncidentReport, Result, SchoolClass, Setting, Student, Subject, LabelTranslation
+from .permissions import can, enforce_endpoint_permission
+from .security import ALLOWED_PHOTOS, ALLOWED_SHEETS, allowed_file
 from .services import get_label, get_settings, grade_for, result_payload
 
 advanced_results_bp = Blueprint("admin_advanced_results", __name__)
@@ -1645,6 +1648,179 @@ def students_management():
     )
 
 
+@advanced_results_bp.route("/students/new", methods=["GET", "POST"])
+@advanced_results_bp.route("/students/<int:student_id>/edit", methods=["GET", "POST"])
+def student_form(student_id=None):
+    """Unified Results Hub student create/edit form."""
+    student = db.session.get(Student, student_id) if student_id else Student()
+    if request.method == "POST":
+        try:
+            save_student_from_form(student)
+        except ValueError as exc:
+            flash(str(exc), "danger")
+            return redirect(request.url)
+        db.session.add(student)
+        audit("Student Updates", f"Saved student {student.student_code}")
+        db.session.commit()
+        flash("Student saved successfully.", "success")
+        return redirect(url_for("admin_advanced_results.students_management", year_id=student.academic_year_id, level_id=student.academic_level_id, class_id=student.academic_class_id))
+
+    academic_levels = AcademicLevel.query.filter_by(is_active=True).order_by(AcademicLevel.sort_order).all()
+    incident_reports = IncidentReport.query.filter_by(student_id=student.id).order_by(IncidentReport.created_at.desc()).limit(10).all() if student.id else []
+    return render_template(
+        "admin/student_form.html",
+        student=student,
+        years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
+        academic_levels=academic_levels,
+        incident_reports=incident_reports,
+        student_form_action=url_for("admin_advanced_results.student_form", student_id=student.id) if student.id else url_for("admin_advanced_results.student_form"),
+    )
+
+
+@advanced_results_bp.route("/students/<int:student_id>/delete", methods=["POST"])
+def delete_student(student_id):
+    student = db.session.get(Student, student_id) or abort(404)
+    db.session.delete(student)
+    audit("Student Updates", f"Deleted student {student.student_code}")
+    db.session.commit()
+    flash("Student deleted.", "success")
+    return redirect(url_for("admin_advanced_results.students_management"))
+
+
+@advanced_results_bp.route("/students/<int:student_id>/toggle-lock", methods=["POST"])
+def toggle_student_lock(student_id):
+    student = db.session.get(Student, student_id) or abort(404)
+    if student.is_result_locked and not can("unlock_results"):
+        abort(403)
+    if not student.is_result_locked and not can("lock_results"):
+        abort(403)
+    student.is_result_locked = not student.is_result_locked
+    if student.is_result_locked:
+        student.lock_reason = request.form.get("lock_reason", "").strip() or "Outstanding clearance required."
+        audit("Result Locking", f"Locked result for {student.student_code}")
+    else:
+        student.lock_reason = ""
+        audit("Result Locking", f"Unlocked result for {student.student_code}")
+    db.session.commit()
+    flash("Result lock status updated.", "success")
+    return redirect(url_for("admin_advanced_results.students_management", year_id=student.academic_year_id, level_id=student.academic_level_id, class_id=student.academic_class_id))
+
+
+@advanced_results_bp.route("/students/import", methods=["POST"])
+def import_students():
+    file = request.files.get("file")
+    if not file or not allowed_file(file.filename, ALLOWED_SHEETS):
+        flash("Upload an .xlsx file.", "danger")
+        return redirect(url_for("admin_advanced_results.students_management"))
+    rows, errors = preview_students(file)
+    if not errors:
+        session["student_import_rows"] = rows
+    audit("Import Operations", f"Previewed student import: {len(rows)} rows, {len(errors)} errors")
+    db.session.commit()
+    return render_template("admin/import_wizard.html", kind="students", rows=rows, errors=errors, confirm_url=url_for("admin_advanced_results.confirm_student_import"))
+
+
+@advanced_results_bp.route("/students/import/confirm", methods=["POST"])
+def confirm_student_import():
+    rows = session.pop("student_import_rows", [])
+    if not rows:
+        flash("No validated student import is waiting for confirmation.", "warning")
+        return redirect(url_for("admin_advanced_results.students_management"))
+    try:
+        for data in rows:
+            year = AcademicYear.query.filter_by(name=data["academic_year"]).one()
+            student = Student.query.filter_by(student_code=data["student_id"]).first() or Student(student_code=data["student_id"])
+            student.full_name = data["full_name"]
+            student.mother_name = data.get("mother_name", "")
+            student.phone = data.get("phone", "")
+            student.academic_year = year
+            map_imported_student_class(student, data["class"])
+            student.is_active = True
+            db.session.add(student)
+        audit("Import Operations", f"Confirmed student import: {len(rows)} rows")
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash("Import failed. No records were saved.", "danger")
+        return redirect(url_for("admin_advanced_results.students_management"))
+    flash(f"Imported {len(rows)} students.", "success")
+    return redirect(url_for("admin_advanced_results.students_management"))
+
+
+@advanced_results_bp.route("/students/import/template")
+def student_import_template():
+    return workbook_response(student_template(), "student_import_template.xlsx")
+
+
+@advanced_results_bp.route("/students/export")
+def export_students():
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Students"
+    ws.append(["student_id", "full_name", "mother_name", "phone", "class", "academic_year", "active"])
+    for student in Student.query.order_by(Student.full_name).all():
+        class_name = student.academic_class.name if student.academic_class else (student.school_class.name if student.school_class else "")
+        year_name = student.academic_year.name if student.academic_year else ""
+        ws.append([student.student_code, student.full_name, student.mother_name, student.phone, class_name, year_name, student.is_active])
+    return workbook_response(wb, "students.xlsx")
+
+
+def save_student_from_form(student):
+    student.student_code = request.form["student_code"].strip()
+    student.full_name = request.form["full_name"].strip()
+    student.mother_name = request.form.get("mother_name", "").strip()
+    student.phone = request.form.get("phone", "").strip()
+    student.academic_year_id = int_or_none(request.form.get("academic_year_id"))
+    student.academic_level_id = int_or_none(request.form.get("academic_level_id"))
+    student.academic_class_id = int_or_none(request.form.get("academic_class_id"))
+    student.academic_section_id = int_or_none(request.form.get("academic_section_id"))
+    if not student.academic_class_id and not student.class_id:
+        raise ValueError("Please select a class for this student.")
+    sync_student_legacy_class(student)
+    student.note = request.form.get("note", "").strip()
+    student.is_result_locked = bool(request.form.get("is_result_locked"))
+    student.lock_reason = request.form.get("lock_reason", "").strip()
+    student.is_active = bool(request.form.get("is_active"))
+    photo = request.files.get("photo")
+    if photo and photo.filename:
+        if not allowed_file(photo.filename, ALLOWED_PHOTOS):
+            raise ValueError("Photo must be JPG, PNG, or WEBP.")
+        student.photo_path = upload_image(photo, "school/students")
+
+
+def sync_student_legacy_class(student):
+    if not student.academic_class_id:
+        return
+    academic_class = db.session.get(AcademicClass, student.academic_class_id)
+    if not academic_class:
+        return
+    school_class = SchoolClass.query.filter_by(name=academic_class.name).first()
+    if not school_class:
+        school_class = SchoolClass(name=academic_class.name)
+        db.session.add(school_class)
+        db.session.flush()
+    student.school_class = school_class
+    student.level = academic_class.academic_level.name if academic_class.academic_level else student.level
+    if student.academic_section_id:
+        section = db.session.get(AcademicSection, student.academic_section_id)
+        student.section = section.name if section else student.section
+
+
+def map_imported_student_class(student, class_name):
+    school_class = SchoolClass.query.filter_by(name=class_name).first()
+    if not school_class:
+        school_class = SchoolClass(name=class_name)
+        db.session.add(school_class)
+        db.session.flush()
+    student.school_class = school_class
+
+    academic_class = AcademicClass.query.filter_by(name=class_name).first()
+    if academic_class:
+        student.academic_class = academic_class
+        student.academic_level = academic_class.academic_level
+        student.level = academic_class.academic_level.name if academic_class.academic_level else student.level
+
+
 @advanced_results_bp.route("/settings/save-labels", methods=["POST"])
 def save_label_translations():
     """Save label translations"""
@@ -1762,6 +1938,18 @@ def distinct_values(column):
 
 def int_or_none(value):
     return int(value) if value and str(value).isdigit() else None
+
+
+def workbook_response(workbook, filename):
+    tmp = NamedTemporaryFile(delete=False, suffix=".xlsx")
+    workbook.save(tmp.name)
+    tmp.close()
+    return send_file(
+        tmp.name,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 
 def build_dashboard_stats(exam):

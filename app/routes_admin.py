@@ -176,193 +176,45 @@ def incident_delete(report_id):
 
 @admin_bp.route("/students")
 def students():
-    # Redirect to Results Hub Students Management (consolidated student operations)
-    q = request.args.get("q", "").strip()
-    year_id = request.args.get("year_id")
-    level_id = request.args.get("level_id")
-    class_id = request.args.get("class_id")
-    
-    # Build redirect URL with preserved query parameters
-    redirect_url = url_for("admin_advanced_results.students_management")
-    params = []
-    if q:
-        params.append(f"q={q}")
-    if year_id:
-        params.append(f"year_id={year_id}")
-    if level_id:
-        params.append(f"level_id={level_id}")
-    if class_id:
-        params.append(f"class_id={class_id}")
-    
-    if params:
-        redirect_url += "?" + "&".join(params)
-    
-    return redirect(redirect_url)
+    return redirect(url_for("admin_advanced_results.students_management", **request.args.to_dict(flat=True)))
 
 
 @admin_bp.route("/students/new", methods=["GET", "POST"])
 @admin_bp.route("/students/<int:student_id>/edit", methods=["GET", "POST"])
 def student_form(student_id=None):
-    student = db.session.get(Student, student_id) if student_id else Student()
-    if request.method == "POST":
-        student.student_code = request.form["student_code"].strip()
-        student.full_name = request.form["full_name"].strip()
-        student.mother_name = request.form.get("mother_name", "").strip()
-        student.phone = request.form.get("phone", "").strip()
-        
-        # Academic hierarchy from Setup
-        student.academic_year_id = int(request.form.get("academic_year_id")) if request.form.get("academic_year_id") else None
-        student.academic_level_id = int(request.form.get("academic_level_id")) if request.form.get("academic_level_id") else None
-        student.academic_class_id = int(request.form.get("academic_class_id")) if request.form.get("academic_class_id") else None
-        student.academic_section_id = int(request.form.get("academic_section_id")) if request.form.get("academic_section_id") else None
-        if not student.academic_class_id and not student.class_id:
-            flash("Please select a class for this student.", "danger")
-            return redirect(request.url)
-        sync_student_legacy_class(student)
-        
-        student.note = request.form.get("note", "").strip()
-        student.is_result_locked = bool(request.form.get("is_result_locked"))
-        student.lock_reason = request.form.get("lock_reason", "").strip()
-        student.is_active = bool(request.form.get("is_active"))
-        photo = request.files.get("photo")
-        if photo and photo.filename:
-            if not allowed_file(photo.filename, ALLOWED_PHOTOS):
-                flash("Photo must be JPG, PNG, or WEBP.", "danger")
-                return redirect(request.url)
-            photo_url = upload_image(photo, "school/students")
-            student.photo_path = photo_url
-        db.session.add(student)
-        audit("Student Updates", f"Saved student {student.student_code}")
-        db.session.commit()
-        flash("Student saved successfully.", "success")
-        
-        # Check if should return to Results Hub
-        return_to = request.args.get("return_to")
-        if return_to == "results_hub":
-            return redirect(url_for("admin_advanced_results.students_management"))
-        
-        return redirect(url_for("admin.students"))
-    
-    academic_levels = AcademicLevel.query.filter_by(is_active=True).order_by(AcademicLevel.sort_order).all()
-    
-    # Get incident reports for this student
-    incident_reports = IncidentReport.query.filter_by(student_id=student.id).order_by(IncidentReport.created_at.desc()).limit(10).all() if student.id else []
-    
-    return render_template(
-        "admin/student_form.html",
-        student=student,
-        years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
-        academic_levels=academic_levels,
-        incident_reports=incident_reports,
-    )
-
-
-def sync_student_legacy_class(student):
-    if not student.academic_class_id:
-        return
-
-    academic_class = db.session.get(AcademicClass, student.academic_class_id)
-    if not academic_class:
-        return
-
-    school_class = SchoolClass.query.filter_by(name=academic_class.name).first()
-    if not school_class:
-        school_class = SchoolClass(name=academic_class.name)
-        db.session.add(school_class)
-        db.session.flush()
-
-    student.school_class = school_class
-    student.level = academic_class.academic_level.name if academic_class.academic_level else student.level
-    if student.academic_section_id:
-        section = db.session.get(AcademicSection, student.academic_section_id)
-        student.section = section.name if section else student.section
+    endpoint = "admin_advanced_results.student_form"
+    target = url_for(endpoint, student_id=student_id) if student_id else url_for(endpoint)
+    return redirect(target, code=307 if request.method == "POST" else 302)
 
 
 @admin_bp.route("/students/<int:student_id>/delete", methods=["POST"])
 def delete_student(student_id):
-    student = db.session.get(Student, student_id) or abort_404()
-    db.session.delete(student)
-    audit("Student Updates", f"Deleted student {student.student_code}")
-    db.session.commit()
-    flash("Student deleted.", "success")
-    return redirect(url_for("admin.students"))
+    return redirect(url_for("admin_advanced_results.delete_student", student_id=student_id), code=307)
 
 
 @admin_bp.route("/students/<int:student_id>/toggle-lock", methods=["POST"])
 def toggle_student_lock(student_id):
-    student = db.session.get(Student, student_id) or abort_404()
-    if student.is_result_locked and not can("unlock_results"):
-        abort(403)
-    if not student.is_result_locked and not can("lock_results"):
-        abort(403)
-    student.is_result_locked = not student.is_result_locked
-    if student.is_result_locked:
-        student.lock_reason = request.form.get("lock_reason", "").strip() or "Outstanding clearance required."
-        audit("Result Locking", f"Locked result for {student.student_code}")
-    else:
-        student.lock_reason = ""
-        audit("Result Locking", f"Unlocked result for {student.student_code}")
-    db.session.commit()
-    flash("Result lock status updated.", "success")
-    return redirect(url_for("admin.students"))
+    return redirect(url_for("admin_advanced_results.toggle_student_lock", student_id=student_id), code=307)
 
 
 @admin_bp.route("/students/import", methods=["POST"])
 def import_students():
-    file = request.files.get("file")
-    if not file or not allowed_file(file.filename, ALLOWED_SHEETS):
-        flash("Upload an .xlsx file.", "danger")
-        return redirect(url_for("admin.students"))
-    rows, errors = preview_students(file)
-    if not errors:
-        session["student_import_rows"] = rows
-    audit("Import Operations", f"Previewed student import: {len(rows)} rows, {len(errors)} errors")
-    db.session.commit()
-    return render_template("admin/import_wizard.html", kind="students", rows=rows, errors=errors, confirm_url=url_for("admin.confirm_student_import"))
+    return redirect(url_for("admin_advanced_results.import_students"), code=307)
 
 
 @admin_bp.route("/students/import/confirm", methods=["POST"])
 def confirm_student_import():
-    rows = session.pop("student_import_rows", [])
-    if not rows:
-        flash("No validated student import is waiting for confirmation.", "warning")
-        return redirect(url_for("admin.students"))
-    try:
-        for data in rows:
-            school_class = SchoolClass.query.filter_by(name=data["class"]).one()
-            year = AcademicYear.query.filter_by(name=data["academic_year"]).one()
-            student = Student.query.filter_by(student_code=data["student_id"]).first() or Student(student_code=data["student_id"])
-            student.full_name = data["full_name"]
-            student.mother_name = data.get("mother_name", "")
-            student.phone = data.get("phone", "")
-            student.school_class = school_class
-            student.academic_year = year
-            student.is_active = True
-            db.session.add(student)
-        audit("Import Operations", f"Confirmed student import: {len(rows)} rows")
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        flash("Import failed. No records were saved.", "danger")
-        return redirect(url_for("admin.students"))
-    flash(f"Imported {len(rows)} students.", "success")
-    return redirect(url_for("admin.students"))
+    return redirect(url_for("admin_advanced_results.confirm_student_import"), code=307)
 
 
 @admin_bp.route("/students/import/template")
 def student_import_template():
-    return workbook_response(student_template(), "student_import_template.xlsx")
+    return redirect(url_for("admin_advanced_results.student_import_template"))
 
 
 @admin_bp.route("/students/export")
 def export_students():
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Students"
-    ws.append(["student_id", "full_name", "mother_name", "phone", "class", "academic_year", "active"])
-    for s in Student.query.order_by(Student.full_name).all():
-        ws.append([s.student_code, s.full_name, s.mother_name, s.phone, s.school_class.name, s.academic_year.name, s.is_active])
-    return workbook_response(wb, "students.xlsx")
+    return redirect(url_for("admin_advanced_results.export_students"))
 
 
 @admin_bp.route("/results")

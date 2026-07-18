@@ -29,8 +29,6 @@
       {% if can('results') %}<a href="{{ url_for('admin_advanced_results.new_setup') }}"><i class="fa-solid fa-square-poll-vertical"></i><span>{{ _('Results') }}</span></a>{% endif %}
     </div>
     
-    <!-- Student Management - Redirected to Results Hub -->
-    {% if can('students') %}<a href="{{ url_for('admin_advanced_results.students_management') }}"><i class="fa-solid fa-user-graduate"></i><span>{{ _('Students') }}</span></a>{% endif %}
     {% if can('teachers') %}<a href="{{ url_for('admin_teachers.dashboard') }}"><i class="fa-solid fa-chalkboard-user"></i><span>Teacher Department</span></a>{% endif %}
     
     <!-- Operations -->
