@@ -23,6 +23,7 @@
     </div>
 
     <form method="POST" action="{{ url_for('admin_advanced_results.save_result_entry') }}" id="entryForm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="year_id" value="{{ selected_year.id }}">
       <input type="hidden" name="exam_id" value="{{ selected_exam.id }}">
       <input type="hidden" name="level_id" value="{{ scope_info.level.id if scope_info.level else '' }}">
