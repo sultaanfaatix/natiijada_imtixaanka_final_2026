@@ -22,11 +22,18 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_pre_ping": True,
-        "pool_recycle": 1800,
+        "pool_recycle": 900,
+        "pool_use_lifo": True,
         "pool_size": 5,
         "max_overflow": 10,
         "pool_timeout": 30,
-        "connect_args": {"connect_timeout": 10},
+        "pool_reset_on_return": "rollback",
+        "connect_args": {
+            "connect_timeout": 10,
+            "read_timeout": 30,
+            "write_timeout": 30,
+            "charset": "utf8mb4",
+        },
     }
 
     if SQLALCHEMY_DATABASE_URI.startswith("sqlite"):

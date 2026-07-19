@@ -22,9 +22,13 @@ def create_app(config_class=Config):
 
     @app.teardown_appcontext
     def cleanup_database_session(exception=None):
-        if exception is not None:
-            db.session.rollback()
-        db.session.remove()
+        try:
+            if exception is not None:
+                db.session.rollback()
+        except Exception:
+            pass
+        finally:
+            db.session.remove()
 
     from .models import User, Setting
     from .permissions import can
