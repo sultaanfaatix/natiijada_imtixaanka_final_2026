@@ -1990,16 +1990,27 @@ def student_data_json(student_id):
     """API endpoint to fetch student data as JSON for AJAX preview"""
     student = db.session.get(Student, student_id) or abort(404)
     
+    # Construct photo URL from photo_path if it exists
+    photo_url = None
+    if student.photo_path:
+        # If photo_path already starts with /static/, use it as-is
+        if student.photo_path.startswith('/static/'):
+            photo_url = student.photo_path
+        # If photo_path is relative to uploads folder, prepend /static/
+        elif student.photo_path.startswith('uploads/'):
+            photo_url = f"/static/{student.photo_path}"
+        # Otherwise, assume it's a relative path and prepend /static/uploads/
+        else:
+            photo_url = f"/static/uploads/{student.photo_path}"
+    
     return jsonify({
         "id": student.id,
         "student_code": student.student_code,
         "full_name": student.full_name,
         "mother_name": student.mother_name,
         "phone": student.phone,
-        "date_of_birth": student.date_of_birth.isoformat() if student.date_of_birth else None,
-        "gender": student.gender,
-        "address": student.address,
-        "photo_url": student.photo_url,
+        "photo_path": student.photo_path,
+        "photo_url": photo_url,
         "academic_level_id": student.academic_level_id,
         "academic_level_name": student.academic_level.name if student.academic_level else None,
         "academic_class_id": student.academic_class_id,
@@ -2009,7 +2020,7 @@ def student_data_json(student_id):
         "academic_year_id": student.academic_year_id,
         "academic_year_name": student.academic_year.name if student.academic_year else None,
         "is_result_locked": student.is_result_locked,
-        "enrollment_status": student.enrollment_status,
+        "is_active": student.is_active,
     })
 
 

@@ -178,8 +178,14 @@
         {% for student in students %}
           <div class="sm-row" onclick="selectStudent('{{ student.id }}')">
             <div class="sm-avatar">
-              {% if student.photo_url %}
-                <img src="{{ student.photo_url }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+              {% if student.photo_path %}
+                {% if student.photo_path.startswith('/static/') %}
+                  <img src="{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                {% elif student.photo_path.startswith('uploads/') %}
+                  <img src="/static/{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                {% else %}
+                  <img src="/static/uploads/{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                {% endif %}
               {% else %}
                 {{ student.student_code[:2] }}
               {% endif %}
@@ -370,19 +376,43 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function selectStudent(studentId) {
+  console.log('selectStudent called with ID:', studentId);
+  
   // Load student details into profile panel via AJAX
-  fetch(`{{ url_for('admin_advanced_results.student_data_json', student_id=0) }}`.replace('0', studentId))
-    .then(response => response.json())
+  fetch(`{{ url_for('admin_advanced_results.student_data_json', student_id=0) }}`.replace('0', studentId), {
+    credentials: 'same-origin',  // Include cookies for authentication
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  })
+    .then(response => {
+      console.log('API response status:', response.status);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
     .then(data => {
+      console.log('Student data received:', data);
+      
       // Update profile panel with student data
       const profileHead = document.querySelector('.profile-head');
       const avatarLg = profileHead.querySelector('.avatar-lg');
       const pname = profileHead.querySelector('.pname');
       const pid = profileHead.querySelector('.pid');
       
+      if (!profileHead || !avatarLg || !pname || !pid) {
+        console.error('Preview panel elements not found');
+        return;
+      }
+      
       // Update avatar with photo or initials
+      console.log('Photo path from DB:', data.photo_path);
+      console.log('Photo URL constructed:', data.photo_url);
+      
       if (data.photo_url) {
-        avatarLg.innerHTML = `<img src="${data.photo_url}" alt="${data.full_name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        avatarLg.innerHTML = `<img src="${data.photo_url}" alt="${data.full_name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.parentElement.textContent='${data.student_code ? data.student_code.substring(0, 2).toUpperCase() : 'AD'}';">`;
       } else {
         avatarLg.textContent = data.student_code ? data.student_code.substring(0, 2).toUpperCase() : 'AD';
       }
@@ -392,29 +422,35 @@ function selectStudent(studentId) {
       
       // Update form fields
       const fieldGrid = document.querySelector('.field-grid');
-      const inputs = fieldGrid.querySelectorAll('input, select');
-      
-      inputs[0].value = data.student_code || '';
-      inputs[1].value = data.full_name || '';
-      inputs[2].value = data.mother_name || '';
-      inputs[3].value = data.phone || '';
-      
-      // Update academic info
-      const academicGrid = fieldGrid.nextElementSibling.nextElementSibling.querySelectorAll('select');
-      if (academicGrid.length >= 2) {
-        academicGrid[0].value = data.academic_level_name || '';
-        academicGrid[1].value = data.academic_class_name || '';
-      }
-      
-      // Update status
-      const statusSelect = fieldGrid.nextElementSibling.nextElementSibling.nextElementSibling.querySelector('select');
-      if (statusSelect) {
-        statusSelect.value = data.enrollment_status || 'active';
+      if (fieldGrid) {
+        const inputs = fieldGrid.querySelectorAll('input, select');
+        
+        if (inputs[0]) inputs[0].value = data.student_code || '';
+        if (inputs[1]) inputs[1].value = data.full_name || '';
+        if (inputs[2]) inputs[2].value = data.mother_name || '';
+        if (inputs[3]) inputs[3].value = data.phone || '';
+        
+        // Update academic info
+        const academicGrid = fieldGrid.nextElementSibling?.nextElementSibling?.querySelectorAll('select');
+        if (academicGrid && academicGrid.length >= 2) {
+          academicGrid[0].value = data.academic_level_name || '';
+          academicGrid[1].value = data.academic_class_name || '';
+        }
+        
+        // Update status
+        const statusSelect = fieldGrid.nextElementSibling?.nextElementSibling?.nextElementSibling?.querySelector('select');
+        if (statusSelect) {
+          statusSelect.value = data.is_active ? 'active' : 'inactive';
+        }
       }
       
       // Highlight selected row
       document.querySelectorAll('.sm-row').forEach(row => row.classList.remove('selected'));
-      event.currentTarget.classList.add('selected');
+      if (event && event.currentTarget) {
+        event.currentTarget.classList.add('selected');
+      }
+      
+      console.log('Preview panel updated successfully');
     })
     .catch(error => {
       console.error('Error loading student data:', error);
