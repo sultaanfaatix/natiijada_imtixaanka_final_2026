@@ -265,7 +265,7 @@
             {% if settings.verify_id_show_exam_type != 'off' %}
             <div class="info-item">
               <span class="info-label"><i class="fa-solid fa-file-circle-check"></i> Exam Type</span>
-              <span class="info-value">{{ settings.verify_exam_type or 'Final Exam' }}</span>
+              <span class="info-value">{{ exam.name if exam else 'No active exam found for this student' }}</span>
             </div>
             {% endif %}
 

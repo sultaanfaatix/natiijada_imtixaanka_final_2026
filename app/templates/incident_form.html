@@ -74,7 +74,7 @@
           <span class="icon"><i class="fa-solid fa-file-alt"></i></span>
           <div class="content">
             <span class="label">Exam Type</span>
-            <span class="value">{{ issue.exam.name if issue and issue.exam else 'N/A' }}</span>
+            <span class="value">{{ exam.name if exam else 'No active exam found for this student' }}</span>
           </div>
         </div>
         <div class="identity-item">

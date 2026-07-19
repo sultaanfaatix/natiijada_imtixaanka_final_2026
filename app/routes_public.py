@@ -180,7 +180,14 @@ def verify_id_card(token):
     if not issue:
         return render_template("verify_id.html", settings=settings, verified=False), 404
     status = "Expired" if issue.expiry_date and issue.expiry_date < date.today() else issue.status
-    return render_template("verify_id.html", settings=settings, verified=True, issue=issue, display_status=status)
+    
+    # Get active exam for the student's academic year
+    exam = Exam.query.filter_by(
+        academic_year_id=issue.student.academic_year_id,
+        is_published=True
+    ).order_by(Exam.id.desc()).first()
+    
+    return render_template("verify_id.html", settings=settings, verified=True, issue=issue, display_status=status, exam=exam)
 
 
 @public_bp.route("/qr/<token>")
@@ -205,6 +212,12 @@ def incident_report_form(token):
         return render_template("qr_landing.html", settings=settings, token=token, student=None), 404
     
     student = issue.student
+    
+    # Get active exam for the student's academic year (same logic as verify_id_card)
+    exam = Exam.query.filter_by(
+        academic_year_id=student.academic_year_id,
+        is_published=True
+    ).order_by(Exam.id.desc()).first()
     
     # Check if invigilator is logged in
     invigilator = current_invigilator()
@@ -312,5 +325,6 @@ def incident_report_form(token):
         current_date=current_date,
         current_time=current_time,
         preview_report_num=preview_report_num,
-        current_user=current_user
+        current_user=current_user,
+        exam=exam  # Pass the active exam to the template
     )
