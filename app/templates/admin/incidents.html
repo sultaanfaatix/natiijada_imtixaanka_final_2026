@@ -27,74 +27,6 @@
     </div>
   </div>
 
-  <!-- Exam Session Tabs -->
-  <div class="exam-sessions-tabs">
-    <button class="session-tab active" data-session="all">
-      <i class="fa-solid fa-layer-group"></i>
-      <span>All Exams</span>
-    </button>
-    {% for session in exam_sessions %}
-    <button class="session-tab {% if session_filter == session.id|string %}active{% endif %}" data-session="{{ session.id }}">
-      <i class="fa-solid fa-graduation-cap"></i>
-      <span>{{ session.name }}</span>
-    </button>
-    {% endfor %}
-  </div>
-
-  <!-- Statistics Cards -->
-  <div class="stats-grid">
-    <div class="stat-card total">
-      <div class="stat-icon">
-        <i class="fa-solid fa-file-lines"></i>
-      </div>
-      <div class="stat-info">
-        <span class="stat-value">{{ stats.total }}</span>
-        <span class="stat-label">Total Reports</span>
-        <span class="stat-desc">All incident reports</span>
-      </div>
-    </div>
-    <div class="stat-card critical">
-      <div class="stat-icon">
-        <i class="fa-solid fa-radiation"></i>
-      </div>
-      <div class="stat-info">
-        <span class="stat-value">{{ stats.critical }}</span>
-        <span class="stat-label">Critical</span>
-        <span class="stat-desc">High priority incidents</span>
-      </div>
-    </div>
-    <div class="stat-card serious">
-      <div class="stat-icon">
-        <i class="fa-solid fa-circle-exclamation"></i>
-      </div>
-      <div class="stat-info">
-        <span class="stat-value">{{ stats.serious }}</span>
-        <span class="stat-label">Serious</span>
-        <span class="stat-desc">Requires attention</span>
-      </div>
-    </div>
-    <div class="stat-card moderate">
-      <div class="stat-icon">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-      </div>
-      <div class="stat-info">
-        <span class="stat-value">{{ stats.moderate }}</span>
-        <span class="stat-label">Moderate</span>
-        <span class="stat-desc">Monitor closely</span>
-      </div>
-    </div>
-    <div class="stat-card resolved">
-      <div class="stat-icon">
-        <i class="fa-solid fa-check-circle"></i>
-      </div>
-      <div class="stat-info">
-        <span class="stat-value">{{ stats.resolved }}</span>
-        <span class="stat-label">Resolved</span>
-        <span class="stat-desc">Completed cases</span>
-      </div>
-    </div>
-  </div>
-
   <!-- Horizontal Filter Toolbar -->
   <div class="filter-toolbar-container">
     <div class="filter-toolbar-header">
@@ -229,6 +161,60 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-icon">
+        <i class="fa-solid fa-file-lines"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.total }}</span>
+        <span class="stat-label">Total Reports</span>
+        <span class="stat-desc">All incident reports</span>
+      </div>
+    </div>
+    <div class="stat-card critical">
+      <div class="stat-icon">
+        <i class="fa-solid fa-radiation"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.critical }}</span>
+        <span class="stat-label">Critical</span>
+        <span class="stat-desc">High priority incidents</span>
+      </div>
+    </div>
+    <div class="stat-card serious">
+      <div class="stat-icon">
+        <i class="fa-solid fa-circle-exclamation"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.serious }}</span>
+        <span class="stat-label">Serious</span>
+        <span class="stat-desc">Requires attention</span>
+      </div>
+    </div>
+    <div class="stat-card moderate">
+      <div class="stat-icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.moderate }}</span>
+        <span class="stat-label">Moderate</span>
+        <span class="stat-desc">Monitor closely</span>
+      </div>
+    </div>
+    <div class="stat-card resolved">
+      <div class="stat-icon">
+        <i class="fa-solid fa-check-circle"></i>
+      </div>
+      <div class="stat-info">
+        <span class="stat-value">{{ stats.resolved }}</span>
+        <span class="stat-label">Resolved</span>
+        <span class="stat-desc">Completed cases</span>
+      </div>
     </div>
   </div>
 
@@ -822,50 +808,6 @@
   background: #f8fafc;
   border-color: #cbd5e1;
   color: #475569;
-}
-
-/* Exam Session Tabs */
-.exam-sessions-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  padding: 0.5rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
-  overflow-x: auto;
-}
-
-.session-tab {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: transparent;
-  border: none;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.session-tab i {
-  font-size: 1rem;
-}
-
-.session-tab:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-
-.session-tab.active {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 /* Statistics Grid */
@@ -1496,11 +1438,6 @@
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .exam-sessions-tabs {
-    overflow-x: auto;
-    padding-bottom: 0.75rem;
-  }
-
   .incident-academic-filters {
     grid-template-columns: 1fr;
   }
@@ -2046,22 +1983,6 @@ input:checked + .toggle-slider:before {
 </style>
 
 <script>
-// Exam Session Tab Navigation
-document.querySelectorAll('.session-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    const sessionId = this.getAttribute('data-session');
-    const url = new URL(window.location.href);
-    
-    if (sessionId === 'all') {
-      url.searchParams.delete('exam_session');
-    } else {
-      url.searchParams.set('exam_session', sessionId);
-    }
-    
-    window.location.href = url.toString();
-  });
-});
-
 // Reset Filters
 function resetFilters() {
   window.location.href = '{{ url_for("admin.incidents") }}';

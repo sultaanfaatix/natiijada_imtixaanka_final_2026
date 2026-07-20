@@ -4,6 +4,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 from flask_login import current_user, login_required
 from openpyxl import Workbook
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
 from .audit import audit
@@ -155,18 +156,16 @@ def incidents():
     if date_to:
         query = query.filter(IncidentReport.incident_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
     
-    # Statistics - Updated to match new UI
-    all_reports = IncidentReport.query.all()
-    stats = {
-        "total": len(all_reports),
-        "critical": sum(1 for r in all_reports if r.severity and r.severity.name.lower() == "critical"),
-        "serious": sum(1 for r in all_reports if r.severity and r.severity.name.lower() == "serious"),
-        "moderate": sum(1 for r in all_reports if r.severity and r.severity.name.lower() == "moderate"),
-        "minor": sum(1 for r in all_reports if r.severity and r.severity.name.lower() == "minor"),
-        "resolved": IncidentReport.query.filter_by(status="Resolved").count(),
-    }
-    
     reports = query.order_by(IncidentReport.created_at.desc()).all()
+    # Statistics reflect the currently filtered report set.
+    stats = {
+        "total": len(reports),
+        "critical": sum(1 for r in reports if r.severity and r.severity.name.lower() == "critical"),
+        "serious": sum(1 for r in reports if r.severity and r.severity.name.lower() == "serious"),
+        "moderate": sum(1 for r in reports if r.severity and r.severity.name.lower() == "moderate"),
+        "minor": sum(1 for r in reports if r.severity and r.severity.name.lower() == "minor"),
+        "resolved": sum(1 for r in reports if r.status == "Resolved"),
+    }
     categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
     severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
     academic_years = AcademicYear.query.order_by(AcademicYear.name.desc()).all()
@@ -1315,6 +1314,9 @@ def incident_settings():
     """Manage Incident Report Settings"""
     ensure_incident_setting_defaults()
     settings = IncidentReportSettings.query.order_by(IncidentReportSettings.category, IncidentReportSettings.setting_key).all()
+    categories = IncidentCategory.query.order_by(IncidentCategory.sort_order, IncidentCategory.name).all()
+    severities = SeverityLevel.query.order_by(SeverityLevel.sort_order, SeverityLevel.name).all()
+    actions = IncidentAction.query.order_by(IncidentAction.sort_order, IncidentAction.name).all()
     
     # Group settings by category
     grouped_settings = {}
@@ -1323,7 +1325,13 @@ def incident_settings():
             grouped_settings[setting.category] = []
         grouped_settings[setting.category].append(setting)
     
-    return render_template("admin/incident_settings.html", grouped_settings=grouped_settings)
+    return render_template(
+        "admin/incident_settings.html",
+        grouped_settings=grouped_settings,
+        categories=categories,
+        severities=severities,
+        actions=actions,
+    )
 
 
 @admin_bp.route("/incident-settings/update", methods=["POST"])
@@ -1351,4 +1359,96 @@ def incident_settings_update():
     
     audit("Incident Settings Updated", "Updated incident report form settings")
     flash("Incident report settings updated successfully!", "success")
+    return redirect(url_for("admin.incident_settings"))
+
+
+def incident_lookup_model(kind):
+    models = {
+        "category": IncidentCategory,
+        "severity": SeverityLevel,
+        "action": IncidentAction,
+    }
+    return models.get(kind)
+
+
+@admin_bp.route("/incident-settings/<kind>/create", methods=["POST"])
+def incident_lookup_create(kind):
+    model = incident_lookup_model(kind)
+    if not model:
+        abort(404)
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Name is required.", "danger")
+        return redirect(url_for("admin.incident_settings"))
+    row = model(name=name)
+    if hasattr(row, "description"):
+        row.description = request.form.get("description", "").strip()
+    if hasattr(row, "color") and request.form.get("color"):
+        row.color = request.form.get("color")
+    row.sort_order = int(request.form.get("sort_order") or 0)
+    row.is_active = request.form.get("is_active", "on") == "on"
+    db.session.add(row)
+    try:
+        db.session.commit()
+        audit("Incident Settings Updated", f"Created incident {kind}: {name}")
+        flash(f"{kind.title()} created successfully.", "success")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash(f"Could not create {kind}. The name may already exist.", "danger")
+    return redirect(url_for("admin.incident_settings"))
+
+
+@admin_bp.route("/incident-settings/<kind>/<int:row_id>/update", methods=["POST"])
+def incident_lookup_update(kind, row_id):
+    model = incident_lookup_model(kind)
+    if not model:
+        abort(404)
+    row = model.query.get_or_404(row_id)
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Name is required.", "danger")
+        return redirect(url_for("admin.incident_settings"))
+    row.name = name
+    if hasattr(row, "description"):
+        row.description = request.form.get("description", "").strip()
+    if hasattr(row, "color") and request.form.get("color"):
+        row.color = request.form.get("color")
+    row.sort_order = int(request.form.get("sort_order") or 0)
+    row.is_active = request.form.get("is_active", "on") == "on"
+    try:
+        db.session.commit()
+        audit("Incident Settings Updated", f"Updated incident {kind}: {name}")
+        flash(f"{kind.title()} updated successfully.", "success")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash(f"Could not update {kind}. The name may already exist.", "danger")
+    return redirect(url_for("admin.incident_settings"))
+
+
+@admin_bp.route("/incident-settings/<kind>/<int:row_id>/delete", methods=["POST"])
+def incident_lookup_delete(kind, row_id):
+    model = incident_lookup_model(kind)
+    if not model:
+        abort(404)
+    row = model.query.get_or_404(row_id)
+    name = row.name
+    referenced = False
+    if kind == "category":
+        referenced = IncidentReport.query.filter_by(category_id=row.id).first() is not None
+    elif kind == "severity":
+        referenced = IncidentReport.query.filter_by(severity_id=row.id).first() is not None
+
+    try:
+        if referenced:
+            row.is_active = False
+            message = f"{kind.title()} is used by existing reports, so it was deactivated safely."
+        else:
+            db.session.delete(row)
+            message = f"{kind.title()} deleted successfully."
+        db.session.commit()
+        audit("Incident Settings Updated", f"Deleted/deactivated incident {kind}: {name}")
+        flash(message, "success")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash(f"Could not delete {kind}. It was not changed.", "danger")
     return redirect(url_for("admin.incident_settings"))

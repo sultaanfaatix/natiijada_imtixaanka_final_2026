@@ -431,67 +431,58 @@
           </div>
         </div>
 
-        <!-- Category Management Card -->
+      </form>
+
+        {% macro lookup_card(kind, title, rows, icon, color_field=False) %}
         <div class="settings-card category-card">
           <div class="card-header">
-            <i class="fa-solid fa-folder-tree"></i>
+            <i class="fa-solid fa-{{ icon }}"></i>
             <div class="header-text">
-              <h3>Category Management</h3>
-              <p>Add, edit, or delete incident categories</p>
+              <h3>{{ title }}</h3>
+              <p>Add, edit, or delete {{ title|lower }}</p>
             </div>
-            <button type="button" class="btn-add-category" onclick="addCategory()">
-              <i class="fa-solid fa-plus"></i> Add Category
-            </button>
           </div>
           <div class="card-body">
-            <div class="categories-list" id="categoriesList">
-              <!-- Categories will be loaded dynamically -->
+            <form method="POST" action="{{ url_for('admin.incident_lookup_create', kind=kind) }}" class="lookup-add-row">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="text" name="name" placeholder="New {{ kind }} name" required>
+              <input type="text" name="description" placeholder="Description">
+              {% if color_field %}<input type="color" name="color" value="#64748b" title="Color">{% endif %}
+              <input type="number" name="sort_order" value="0" min="0" title="Sort order">
+              <label class="lookup-active"><input type="checkbox" name="is_active" checked> Active</label>
+              <button type="submit" class="btn-add-category"><i class="fa-solid fa-plus"></i> Add</button>
+            </form>
+            <div class="categories-list">
+              {% for row in rows %}
               <div class="category-item">
-                <div class="category-info">
-                  <i class="fa-solid fa-tag category-icon"></i>
-                  <span class="category-name">Academic Misconduct</span>
-                </div>
-                <div class="category-actions">
-                  <button type="button" class="btn-edit" onclick="editCategory(this)">
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                  <button type="button" class="btn-delete" onclick="deleteCategory(this)">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
+                <form method="POST" action="{{ url_for('admin.incident_lookup_update', kind=kind, row_id=row.id) }}" class="lookup-edit-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="category-info">
+                    <i class="fa-solid fa-{{ icon }} category-icon"></i>
+                    <input class="category-name-input" name="name" value="{{ row.name }}" required>
+                    <input class="category-desc-input" name="description" value="{{ row.description or '' }}" placeholder="Description">
+                    {% if color_field %}<input type="color" name="color" value="{{ row.color }}" title="Color">{% endif %}
+                    <input class="category-sort-input" type="number" name="sort_order" value="{{ row.sort_order }}" min="0" title="Sort order">
+                    <label class="lookup-active"><input type="checkbox" name="is_active" {% if row.is_active %}checked{% endif %}> Active</label>
+                  </div>
+                  <div class="category-actions">
+                    <button type="submit" class="btn-edit" title="Save changes"><i class="fa-solid fa-pen"></i></button>
+                  </div>
+                </form>
+                <form method="POST" action="{{ url_for('admin.incident_lookup_delete', kind=kind, row_id=row.id) }}" onsubmit="return confirm('Delete this {{ kind }}? Existing reports will be protected.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                </form>
               </div>
-              <div class="category-item">
-                <div class="category-info">
-                  <i class="fa-solid fa-tag category-icon"></i>
-                  <span class="category-name">Behavioral Issue</span>
-                </div>
-                <div class="category-actions">
-                  <button type="button" class="btn-edit" onclick="editCategory(this)">
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                  <button type="button" class="btn-delete" onclick="deleteCategory(this)">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-              <div class="category-item">
-                <div class="category-info">
-                  <i class="fa-solid fa-tag category-icon"></i>
-                  <span class="category-name">Equipment Malfunction</span>
-                </div>
-                <div class="category-actions">
-                  <button type="button" class="btn-edit" onclick="editCategory(this)">
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                  <button type="button" class="btn-delete" onclick="deleteCategory(this)">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
-              </div>
+              {% endfor %}
             </div>
           </div>
         </div>
-      </form>
+        {% endmacro %}
+
+        {{ lookup_card('category', 'Category Management', categories, 'tag') }}
+        {{ lookup_card('severity', 'Severity Levels', severities, 'circle-exclamation', True) }}
+        {{ lookup_card('action', 'Incident Actions', actions, 'list-check') }}
     </div>
 
     <!-- Right Column - Live Preview -->
@@ -1307,6 +1298,63 @@
   gap: 0.5rem;
 }
 
+.lookup-add-row,
+.lookup-edit-form,
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  flex-wrap: wrap;
+}
+
+.lookup-add-row {
+  padding: .85rem;
+  margin-bottom: 1rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f8fafc, #ffffff);
+}
+
+.lookup-add-row input[type="text"],
+.lookup-add-row input[type="number"],
+.category-name-input,
+.category-desc-input,
+.category-sort-input {
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+  padding: .55rem .7rem;
+  color: #0f172a;
+  font-weight: 700;
+  background: #fff;
+}
+
+.category-name-input {
+  min-width: 170px;
+}
+
+.category-desc-input {
+  min-width: 220px;
+  flex: 1;
+}
+
+.category-sort-input,
+.lookup-add-row input[type="number"] {
+  width: 86px;
+}
+
+.lookup-active {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: #475569;
+  font-weight: 800;
+  font-size: .86rem;
+}
+
+.lookup-active input {
+  accent-color: #10b981;
+}
+
 .btn-edit,
 .btn-delete {
   width: 36px;
@@ -1620,46 +1668,6 @@ function updateFontSize(settingKey, value) {
   document.getElementById('setting_' + settingKey).value = value;
   document.getElementById('value_' + settingKey).textContent = value + 'px';
   updatePreview();
-}
-
-// Category Management
-function addCategory() {
-  const name = prompt('Enter category name:');
-  if (name) {
-    const categoriesList = document.getElementById('categoriesList');
-    const newCategory = document.createElement('div');
-    newCategory.className = 'category-item';
-    newCategory.innerHTML = `
-      <div class="category-info">
-        <i class="fa-solid fa-tag category-icon"></i>
-        <span class="category-name">${name}</span>
-      </div>
-      <div class="category-actions">
-        <button type="button" class="btn-edit" onclick="editCategory(this)">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button type="button" class="btn-delete" onclick="deleteCategory(this)">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-    `;
-    categoriesList.appendChild(newCategory);
-  }
-}
-
-function editCategory(btn) {
-  const categoryItem = btn.closest('.category-item');
-  const categoryName = categoryItem.querySelector('.category-name');
-  const newName = prompt('Edit category name:', categoryName.textContent);
-  if (newName) {
-    categoryName.textContent = newName;
-  }
-}
-
-function deleteCategory(btn) {
-  if (confirm('Are you sure you want to delete this category?')) {
-    btn.closest('.category-item').remove();
-  }
 }
 
 // Reset to Defaults

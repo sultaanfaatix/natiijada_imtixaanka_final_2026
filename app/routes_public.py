@@ -337,8 +337,11 @@ def incident_report_form(token):
     subjects = Subject.query.order_by(Subject.name).all()
     
     # Pre-compute current date/time for form defaults
-    current_date = datetime.now().strftime('%B %d, %Y')
-    current_time = datetime.now().strftime('%I:%M %p')
+    now = datetime.now()
+    current_date = now.strftime('%B %d, %Y')
+    current_time = now.strftime('%I:%M %p')
+    current_date_iso = now.strftime('%Y-%m-%d')
+    current_time_24 = now.strftime('%H:%M')
     
     # Generate preview report number
     import random
@@ -358,6 +361,8 @@ def incident_report_form(token):
         subjects=subjects,
         current_date=current_date,
         current_time=current_time,
+        current_date_iso=current_date_iso,
+        current_time_24=current_time_24,
         preview_report_num=preview_report_num,
         current_user=current_user,
         invigilator=invigilator,
