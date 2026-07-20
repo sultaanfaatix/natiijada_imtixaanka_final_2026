@@ -4,12 +4,31 @@ from werkzeug.security import check_password_hash
 import functools
 
 from . import db
-from .models import ExamInvigilator, InvigilatorLoginHistory
+from .models import ExamInvigilator, IncidentReportSettings, InvigilatorLoginHistory
 
 invigilator_bp = Blueprint("invigilator", __name__)
 
 # Session timeout in minutes
 INVIGILATOR_SESSION_TIMEOUT = 30
+
+
+def incident_setting_value(key, default=None):
+    row = IncidentReportSettings.query.filter_by(setting_key=key).first()
+    return row.setting_value if row else default
+
+
+def validate_invigilator_password(password):
+    policy_type = incident_setting_value("invigilator_password_type", "letters_numbers")
+    min_length = int(incident_setting_value("invigilator_password_min_length", "6") or 6)
+    if len(password or "") < min_length:
+        return False, f"Password must be at least {min_length} characters."
+    if policy_type == "numbers" and not password.isdigit():
+        return False, "Password must contain numbers only."
+    if policy_type == "letters" and not password.isalpha():
+        return False, "Password must contain letters only."
+    if policy_type == "letters_numbers" and not password.isalnum():
+        return False, "Password must contain letters and numbers only."
+    return True, ""
 
 
 def login_invigilator(invigilator):
@@ -239,11 +258,13 @@ def change_password():
             flash("New passwords do not match.", "danger")
             return render_template("invigilator/change_password.html")
         
-        if len(new_password) < 8:
-            flash("Password must be at least 8 characters long.", "danger")
+        is_valid_password, password_error = validate_invigilator_password(new_password)
+        if not is_valid_password:
+            flash(password_error, "danger")
             return render_template("invigilator/change_password.html")
         
         invigilator.set_password(new_password)
+        invigilator.visible_password = new_password
         invigilator.force_password_change = False
         db.session.commit()
         

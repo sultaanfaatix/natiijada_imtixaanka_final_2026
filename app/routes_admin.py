@@ -18,6 +18,62 @@ from .services import slug
 admin_bp = Blueprint("admin", __name__)
 
 
+INCIDENT_SETTING_DEFAULTS = [
+    ("invigilator_password_type", "letters_numbers", "string", "security", "Invigilator password character type"),
+    ("invigilator_password_min_length", "6", "integer", "security", "Invigilator password minimum length"),
+    ("allow_signature_reuse", "true", "boolean", "security", "Allow invigilators to reuse saved digital signatures"),
+]
+
+
+def ensure_incident_setting_defaults():
+    changed = False
+    for key, value, setting_type, category, description in INCIDENT_SETTING_DEFAULTS:
+        if not IncidentReportSettings.query.filter_by(setting_key=key).first():
+            db.session.add(IncidentReportSettings(
+                setting_key=key,
+                setting_value=value,
+                setting_type=setting_type,
+                category=category,
+                description=description,
+            ))
+            changed = True
+    if changed:
+        db.session.commit()
+
+
+def incident_setting_value(key, default=None):
+    row = IncidentReportSettings.query.filter_by(setting_key=key).first()
+    return row.setting_value if row else default
+
+
+def validate_invigilator_password(password):
+    policy_type = incident_setting_value("invigilator_password_type", "letters_numbers")
+    min_length = int(incident_setting_value("invigilator_password_min_length", "6") or 6)
+    if len(password or "") < min_length:
+        return False, f"Password must be at least {min_length} characters."
+    if policy_type == "numbers" and not password.isdigit():
+        return False, "Password must contain numbers only."
+    if policy_type == "letters" and not password.isalpha():
+        return False, "Password must contain letters only."
+    if policy_type == "letters_numbers" and not password.isalnum():
+        return False, "Password must contain letters and numbers only."
+    return True, ""
+
+
+def generate_invigilator_password():
+    import random
+    import string
+
+    policy_type = incident_setting_value("invigilator_password_type", "letters_numbers")
+    min_length = int(incident_setting_value("invigilator_password_min_length", "6") or 6)
+    alphabet = string.ascii_letters + string.digits
+    if policy_type == "numbers":
+        alphabet = string.digits
+    elif policy_type == "letters":
+        alphabet = string.ascii_letters
+    return "".join(random.choice(alphabet) for _ in range(max(4, min_length)))
+
+
 @admin_bp.before_request
 @login_required
 def require_login():
@@ -1089,6 +1145,10 @@ def invigilator_add():
         if not all([invigilator_id, username, password, full_name]):
             flash("Invigilator ID, username, password, and full name are required.", "danger")
             return render_template("admin/invigilator_form.html", invigilator=None)
+        is_valid_password, password_error = validate_invigilator_password(password)
+        if not is_valid_password:
+            flash(password_error, "danger")
+            return render_template("admin/invigilator_form.html", invigilator=None)
         
         # Check if invigilator_id or username already exists
         if ExamInvigilator.query.filter_by(invigilator_id=invigilator_id).first():
@@ -1112,6 +1172,7 @@ def invigilator_add():
             active_until=datetime.strptime(active_until, "%Y-%m-%d").date() if active_until else None
         )
         invigilator.set_password(password)
+        invigilator.visible_password = password
         
         db.session.add(invigilator)
         db.session.commit()
@@ -1143,7 +1204,12 @@ def invigilator_edit(invigilator_id):
         # Update password if provided
         new_password = request.form.get("new_password", "")
         if new_password:
+            is_valid_password, password_error = validate_invigilator_password(new_password)
+            if not is_valid_password:
+                flash(password_error, "danger")
+                return render_template("admin/invigilator_form.html", invigilator=invigilator)
             invigilator.set_password(new_password)
+            invigilator.visible_password = new_password
         
         # Handle photo upload
         if request.files.get("photo") and request.files["photo"].filename:
@@ -1201,10 +1267,9 @@ def invigilator_reset_password(invigilator_id):
     """Reset invigilator password and force change"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
     
-    # Generate temporary password
-    import secrets
-    temp_password = secrets.token_urlsafe(12)
+    temp_password = generate_invigilator_password()
     invigilator.set_password(temp_password)
+    invigilator.visible_password = temp_password
     invigilator.force_password_change = True
     db.session.commit()
     
@@ -1229,6 +1294,7 @@ def invigilator_history(invigilator_id):
 @admin_bp.route("/incident-settings")
 def incident_settings():
     """Manage Incident Report Settings"""
+    ensure_incident_setting_defaults()
     settings = IncidentReportSettings.query.order_by(IncidentReportSettings.category, IncidentReportSettings.setting_key).all()
     
     # Group settings by category
@@ -1244,6 +1310,7 @@ def incident_settings():
 @admin_bp.route("/incident-settings/update", methods=["POST"])
 def incident_settings_update():
     """Update incident report settings"""
+    ensure_incident_setting_defaults()
     # Get all settings first to handle unchecked checkboxes
     all_settings = IncidentReportSettings.query.all()
     

@@ -15,6 +15,9 @@ def ensure_schema_compatibility():
     add_column_if_missing("students", "section", column_sql(dialect, "section", "VARCHAR(80)"))
     add_column_if_missing("results", "grade_override", column_sql(dialect, "grade_override", "VARCHAR(10)"))
     add_column_if_missing("results", "comment", column_sql(dialect, "comment", "VARCHAR(255)"))
+    add_column_if_missing("incident_reports", "signature_data", column_sql(dialect, "signature_data", "TEXT"))
+    add_column_if_missing("exam_invigilators", "visible_password", column_sql(dialect, "visible_password", "VARCHAR(255)"))
+    add_column_if_missing("exam_invigilators", "signature_data", column_sql(dialect, "signature_data", "TEXT"))
     widen_varchar_if_needed("results", "grade_override", 20)
     widen_varchar_if_needed("grade_scales", "grade", 20, nullable=False)
     add_column_if_missing("grade_scales", "grade_point", column_sql(dialect, "grade_point", "DECIMAL(4,2) NOT NULL DEFAULT 0"))
@@ -29,6 +32,9 @@ def ensure_schema_compatibility():
     # Per-exam grade scales (exam_id IS NULL is the global fallback)
     add_column_if_missing("grade_scales", "exam_id", column_sql(dialect, "exam_id", "INTEGER"))
     add_index_if_missing("grade_scales", "idx_grade_scales_exam_id", ["exam_id"])
+    add_index_if_missing("grade_scales", "idx_grade_scales_min_score", ["min_score"])
+    add_index_if_missing("grade_scales", "idx_grade_scales_max_score", ["max_score"])
+    add_index_if_missing("grade_scales", "idx_grade_scales_exam_range", ["exam_id", "min_score", "max_score"])
     add_foreign_key_if_missing(
         "grade_scales",
         "fk_grade_scales_exam_id",

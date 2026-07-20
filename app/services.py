@@ -1,6 +1,7 @@
 from decimal import Decimal
 from flask import current_app, g
 
+from . import db
 from .models import (
     AcademicYear,
     AcademicLevel,
@@ -479,6 +480,66 @@ def grade_for(score, exam_id=None):
     return {"grade": "-", "comment": "", "grade_point": 0.0, "is_pass": False, "badge_color": "#64748b", "text_color": "#ffffff", "background_color": "#f1f5f9", "border_color": "#cbd5e1"}
 
 
+def load_grade_scale_cache(exam_id=None):
+    """Load active grade scales once for in-memory grade lookup."""
+    exam_scales = []
+    if exam_id:
+        exam_scales = (
+            GradeScale.query.filter(
+                GradeScale.is_active.is_(True),
+                GradeScale.exam_id == exam_id,
+            )
+            .order_by(GradeScale.sort_order.asc(), GradeScale.min_score.desc())
+            .all()
+        )
+
+    global_scales = (
+        GradeScale.query.filter(
+            GradeScale.is_active.is_(True),
+            GradeScale.exam_id.is_(None),
+        )
+        .order_by(GradeScale.sort_order.asc(), GradeScale.min_score.desc())
+        .all()
+    )
+
+    fallback_scales = []
+    if not exam_scales and not global_scales:
+        fallback_scales = (
+            GradeScale.query.filter_by(is_active=True)
+            .order_by(GradeScale.sort_order.asc(), GradeScale.min_score.asc())
+            .all()
+        )
+
+    return {
+        "exam": [grade_scale_cache_row(scale) for scale in exam_scales],
+        "global": [grade_scale_cache_row(scale) for scale in global_scales],
+        "fallback": [grade_scale_cache_row(scale) for scale in fallback_scales],
+    }
+
+
+def grade_for_from_cache(score, scale_cache):
+    """Resolve a grade using preloaded scale rows without database access."""
+    try:
+        score_value = float(score or 0)
+    except (TypeError, ValueError):
+        score_value = 0.0
+
+    for bucket in ("exam", "global", "fallback"):
+        for row in scale_cache.get(bucket, []):
+            if row["min_score"] <= score_value <= row["max_score"]:
+                return row["payload"]
+
+    return {"grade": "-", "comment": "", "grade_point": 0.0, "is_pass": False, "badge_color": "#64748b", "text_color": "#ffffff", "background_color": "#f1f5f9", "border_color": "#cbd5e1"}
+
+
+def grade_scale_cache_row(scale):
+    return {
+        "min_score": float(scale.min_score or 0),
+        "max_score": float(scale.max_score or 0),
+        "payload": grade_scale_payload(scale),
+    }
+
+
 def grade_scale_payload(scale):
     return {
         "id": scale.id,
@@ -491,6 +552,37 @@ def grade_scale_payload(scale):
         "background_color": scale.background_color,
         "border_color": scale.border_color,
     }
+
+
+def active_exam_for_student(student):
+    """Return the generated active exam that best matches a student's academic scope."""
+    if not student or not student.academic_year_id:
+        return None
+
+    candidates = (
+        Exam.query.filter(
+            Exam.academic_year_id == student.academic_year_id,
+            db.or_(Exam.is_published.is_(True), Exam.is_active.is_(True)),
+        )
+        .order_by(Exam.id.desc())
+        .all()
+    )
+    if not candidates:
+        return None
+
+    def score(exam):
+        value = 0
+        if exam.academic_section_id and exam.academic_section_id == student.academic_section_id:
+            value += 8
+        if exam.academic_class_id and exam.academic_class_id == student.academic_class_id:
+            value += 4
+        if exam.academic_level_id and exam.academic_level_id == student.academic_level_id:
+            value += 2
+        if not exam.academic_section_id and not exam.academic_class_id and not exam.academic_level_id:
+            value += 1
+        return value
+
+    return max(candidates, key=lambda exam: (score(exam), exam.id))
 
 
 def seed_grade_scales():

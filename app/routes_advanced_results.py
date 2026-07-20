@@ -9,6 +9,7 @@ from flask_login import current_user, login_required
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 from sqlalchemy import or_ as db_or
+from sqlalchemy.orm import selectinload
 
 from . import db
 from .audit import audit
@@ -17,7 +18,7 @@ from .import_wizard import preview_students, student_template
 from .models import AcademicYear, AcademicClass, AcademicLevel, AcademicSection, Exam, GradeScale, IncidentReport, Result, SchoolClass, Setting, Student, Subject, LabelTranslation
 from .permissions import can, enforce_endpoint_permission
 from .security import ALLOWED_PHOTOS, ALLOWED_SHEETS, allowed_file
-from .services import get_label, get_settings, grade_for, result_payload
+from .services import get_label, get_settings, grade_for, grade_for_from_cache, load_grade_scale_cache, result_payload
 
 advanced_results_bp = Blueprint("admin_advanced_results", __name__)
 
@@ -27,6 +28,18 @@ def ordinal(value):
     if value % 100 not in (11, 12, 13):
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
     return f"{value}{suffix}"
+
+
+def stored_asset_url(path):
+    """Return a browser-safe URL for Cloudinary, data, /static, or uploads paths."""
+    if not path:
+        return None
+    value = str(path)
+    if value.startswith(("http://", "https://", "data:", "/static/")):
+        return value
+    if value.startswith("uploads/"):
+        return url_for("static", filename=value)
+    return url_for("static", filename=f"uploads/{value}")
 
 
 @advanced_results_bp.before_request
@@ -1743,13 +1756,24 @@ def analytics():
             class_id=class_id,
             section_id=section_id,
         )
+        .options(
+            selectinload(Student.academic_class),
+            selectinload(Student.academic_section),
+        )
         .order_by(Student.full_name)
         .all()
     )
     student_ids = [s.id for s in students]
     
     # Get results for this exam
-    results_query = Result.query.filter(Result.student_id.in_(student_ids), Result.exam_id == selected_exam.id, Result.is_published.is_(True))
+    results_query = (
+        Result.query.options(selectinload(Result.subject))
+        .filter(
+            Result.student_id.in_(student_ids),
+            Result.exam_id == selected_exam.id,
+            Result.is_published.is_(True),
+        )
+    )
     if scope_info["subject"]:
         results_query = results_query.filter_by(subject_id=scope_info["subject"].id)
     results = results_query.all()
@@ -1795,49 +1819,11 @@ def build_analytics_data(results, students, exam, top_limit=5, bottom_limit=5):
             "lowest_score": 0,
         }
     
-    # Load grade scales once to avoid N+1 queries
-    from .models import GradeScale
-    exam_scales = GradeScale.query.filter(
-        GradeScale.is_active.is_(True),
-        GradeScale.exam_id == exam.id
-    ).order_by(GradeScale.sort_order.asc(), GradeScale.min_score.desc()).all()
-    
-    global_scales = GradeScale.query.filter(
-        GradeScale.is_active.is_(True),
-        GradeScale.exam_id.is_(None)
-    ).order_by(GradeScale.sort_order.asc(), GradeScale.min_score.desc()).all()
-    
-    # Create in-memory lookup function
+    grade_cache = load_grade_scale_cache(exam.id)
+    students_by_id = {student.id: student for student in students}
+
     def cached_grade_for(score):
-        """Get grade for a score using cached grade scales"""
-        # Try exam-specific scales first
-        for scale in exam_scales:
-            if scale.min_score <= score <= scale.max_score:
-                return {
-                    "grade": scale.grade,
-                    "comment": scale.comment,
-                    "grade_point": float(scale.grade_point or 0),
-                    "is_pass": bool(scale.is_pass),
-                    "badge_color": scale.badge_color,
-                    "text_color": scale.text_color,
-                    "background_color": scale.background_color,
-                    "border_color": scale.border_color,
-                }
-        # Fall back to global scales
-        for scale in global_scales:
-            if scale.min_score <= score <= scale.max_score:
-                return {
-                    "grade": scale.grade,
-                    "comment": scale.comment,
-                    "grade_point": float(scale.grade_point or 0),
-                    "is_pass": bool(scale.is_pass),
-                    "badge_color": scale.badge_color,
-                    "text_color": scale.text_color,
-                    "background_color": scale.background_color,
-                    "border_color": scale.border_color,
-                }
-        # Final fallback
-        return {"grade": "-", "comment": "", "grade_point": 0.0, "is_pass": False, "badge_color": "#64748b", "text_color": "#ffffff", "background_color": "#f1f5f9", "border_color": "#cbd5e1"}
+        return grade_for_from_cache(score, grade_cache)
     
     # Calculate percentages for each result
     percentages = []
@@ -1882,14 +1868,24 @@ def build_analytics_data(results, students, exam, top_limit=5, bottom_limit=5):
     # Exam trend (compare with other exams in same year)
     year_exams = Exam.query.filter_by(academic_year_id=exam.academic_year_id).order_by(Exam.created_at).all()
     exam_trend_labels = [e.name for e in year_exams]
-    exam_trend_values = []
-    for year_exam in year_exams:
-        year_results = Result.query.filter(Result.exam_id == year_exam.id, Result.is_published.is_(True)).all()
-        if year_results:
-            year_pcts = [float(r.score) / float(r.subject.max_score) * 100 for r in year_results if r.subject.max_score]
-            exam_trend_values.append(round(sum(year_pcts) / len(year_pcts), 1) if year_pcts else 0)
-        else:
-            exam_trend_values.append(0)
+    year_exam_ids = [year_exam.id for year_exam in year_exams]
+    trend_results = (
+        Result.query.options(selectinload(Result.subject))
+        .filter(Result.exam_id.in_(year_exam_ids), Result.is_published.is_(True))
+        .all()
+        if year_exam_ids else []
+    )
+    trend_percentages = {}
+    for result in trend_results:
+        if result.subject.max_score:
+            trend_percentages.setdefault(result.exam_id, []).append(
+                float(result.score) / float(result.subject.max_score) * 100
+            )
+    exam_trend_values = [
+        round(sum(trend_percentages.get(year_exam.id, [])) / len(trend_percentages[year_exam.id]), 1)
+        if trend_percentages.get(year_exam.id) else 0
+        for year_exam in year_exams
+    ]
     
     # Pass/fail ratio
     pass_count = sum(1 for pct in percentages if cached_grade_for(pct).get("is_pass"))
@@ -1911,7 +1907,7 @@ def build_analytics_data(results, students, exam, top_limit=5, bottom_limit=5):
     bottom_performers = []
     
     for student_id, avg in student_avg_list[:top_limit]:
-        student = next((s for s in students if s.id == student_id), None)
+        student = students_by_id.get(student_id)
         if student:
             top_performers.append({
                 "name": student.full_name,
@@ -1924,7 +1920,7 @@ def build_analytics_data(results, students, exam, top_limit=5, bottom_limit=5):
             })
     
     for student_id, avg in student_avg_list[-bottom_limit:]:
-        student = next((s for s in students if s.id == student_id), None)
+        student = students_by_id.get(student_id)
         if student:
             bottom_performers.append({
                 "name": student.full_name,
@@ -2259,19 +2255,6 @@ def student_data_json(student_id):
     """API endpoint to fetch student data as JSON for AJAX preview"""
     student = db.session.get(Student, student_id) or abort(404)
     
-    # Construct photo URL from photo_path if it exists
-    photo_url = None
-    if student.photo_path:
-        # If photo_path already starts with /static/, use it as-is
-        if student.photo_path.startswith('/static/'):
-            photo_url = student.photo_path
-        # If photo_path is relative to uploads folder, prepend /static/
-        elif student.photo_path.startswith('uploads/'):
-            photo_url = f"/static/{student.photo_path}"
-        # Otherwise, assume it's a relative path and prepend /static/uploads/
-        else:
-            photo_url = f"/static/uploads/{student.photo_path}"
-    
     return jsonify({
         "id": student.id,
         "student_code": student.student_code,
@@ -2279,7 +2262,7 @@ def student_data_json(student_id):
         "mother_name": student.mother_name,
         "phone": student.phone,
         "photo_path": student.photo_path,
-        "photo_url": photo_url,
+        "photo_url": stored_asset_url(student.photo_path),
         "academic_level_id": student.academic_level_id,
         "academic_level_name": student.academic_level.name if student.academic_level else None,
         "academic_class_id": student.academic_class_id,

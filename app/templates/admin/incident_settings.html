@@ -43,6 +43,10 @@
       <i class="fa-solid fa-check-circle"></i>
       <span>Requirements</span>
     </button>
+    <button class="tab-btn" data-tab="security">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>Security</span>
+    </button>
     <button class="tab-btn" data-tab="header">
       <i class="fa-solid fa-heading"></i>
       <span>Header</span>
@@ -129,6 +133,50 @@
                     <input type="checkbox" name="setting_{{ setting.setting_key }}" {% if setting.setting_value == 'true' %}checked{% endif %}>
                     <span class="toggle-slider"></span>
                   </label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div class="tab-content" id="tab-security">
+          <div class="settings-card">
+            <div class="card-header">
+              <i class="fa-solid fa-shield-halved"></i>
+              <div class="header-text">
+                <h3>Invigilator Security</h3>
+                <p>Configure invigilator password policy and signature reuse.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              {% for setting in grouped_settings.get('security', []) %}
+              <div class="setting-row">
+                <div class="setting-left">
+                  <div class="setting-icon">
+                    <i class="fa-solid fa-{% if 'password' in setting.setting_key %}key{% elif 'signature' in setting.setting_key %}signature{% else %}shield{% endif %}"></i>
+                  </div>
+                  <div class="setting-info">
+                    <label class="setting-title">{{ setting.description }}</label>
+                    <span class="setting-desc">Applied to invigilator account creation and password changes.</span>
+                  </div>
+                </div>
+                <div class="setting-right">
+                  {% if setting.setting_key == 'invigilator_password_type' %}
+                    <select name="setting_{{ setting.setting_key }}" class="modern-select">
+                      <option value="numbers" {% if setting.setting_value == 'numbers' %}selected{% endif %}>Numbers Only</option>
+                      <option value="letters" {% if setting.setting_value == 'letters' %}selected{% endif %}>Letters Only</option>
+                      <option value="letters_numbers" {% if setting.setting_value == 'letters_numbers' %}selected{% endif %}>Letters + Numbers</option>
+                    </select>
+                  {% elif setting.setting_type == 'boolean' %}
+                    <label class="modern-toggle">
+                      <input type="checkbox" name="setting_{{ setting.setting_key }}" {% if setting.setting_value == 'true' %}checked{% endif %}>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  {% else %}
+                    <input type="number" name="setting_{{ setting.setting_key }}" value="{{ setting.setting_value }}" min="4" max="32" class="modern-input">
+                  {% endif %}
                 </div>
               </div>
               {% endfor %}
@@ -1504,6 +1552,17 @@
   .preview-body {
     padding: 1rem;
   }
+}
+.modern-select,
+.modern-input {
+  min-width: 190px;
+  padding: .72rem .9rem;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .06);
 }
 </style>
 

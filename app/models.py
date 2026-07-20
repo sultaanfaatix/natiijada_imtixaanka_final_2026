@@ -480,6 +480,7 @@ class IncidentReport(TimestampMixin, db.Model):
     
     description = db.Column(db.Text, nullable=False)
     actions_taken = db.Column(db.Text)
+    signature_data = db.Column(db.Text)
     
     status = db.Column(
         db.Enum("Pending Review", "Under Investigation", "Resolved", "Rejected"),
@@ -524,9 +525,11 @@ class ExamInvigilator(TimestampMixin, db.Model):
     invigilator_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    visible_password = db.Column(db.String(255))
     full_name = db.Column(db.String(180), nullable=False)
     photo_path = db.Column(db.String(255))
     mobile_number = db.Column(db.String(40))
+    signature_data = db.Column(db.Text)
     role = db.Column(
         db.Enum("Invigilator", "Supervisor", "Chief Invigilator", "Administrator"),
         default="Invigilator",

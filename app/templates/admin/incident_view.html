@@ -145,6 +145,22 @@
       <p class="description-text">{{ report.actions_taken or 'No actions recorded' }}</p>
     </div>
 
+    <!-- Digital Signature -->
+    <div class="detail-card full-width">
+      <h3><i class="fa-solid fa-signature"></i> Digital Signature</h3>
+      {% if report.signature_data %}
+      <div class="admin-signature-card">
+        <img src="{{ report.signature_data }}" alt="Submitted digital signature">
+        <div>
+          <strong>{{ report.invigilator.full_name if report.invigilator else 'Invigilator' }}</strong>
+          <span>{{ report.incident_date.strftime('%B %d, %Y') }} at {{ report.incident_time.strftime('%I:%M %p') }}</span>
+        </div>
+      </div>
+      {% else %}
+      <p class="description-text">No digital signature submitted.</p>
+      {% endif %}
+    </div>
+
     <!-- Evidence Attachments -->
     {% if report.attachments %}
     <div class="detail-card full-width">
@@ -599,6 +615,37 @@
   line-height: 1.7;
   font-size: 0.95rem;
   white-space: pre-wrap;
+}
+
+.admin-signature-card {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  padding: 1.25rem;
+  border: 1px solid #dbeafe;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, .08);
+}
+
+.admin-signature-card img {
+  width: 240px;
+  max-width: 45%;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-signature-card strong,
+.admin-signature-card span {
+  display: block;
+}
+
+.admin-signature-card span {
+  margin-top: .25rem;
+  color: #64748b;
 }
 
 .review-notes {

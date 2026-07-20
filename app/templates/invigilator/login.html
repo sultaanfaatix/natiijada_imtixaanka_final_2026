@@ -76,6 +76,26 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
+        .password-wrap {
+            position: relative;
+        }
+
+        .password-wrap input {
+            padding-right: 5.5rem;
+        }
+
+        .show-password {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #667eea;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
         .btn-login {
             width: 100%;
             padding: 0.9rem;
@@ -170,7 +190,10 @@
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+                <div class="password-wrap">
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                    <button type="button" class="show-password" data-target="password"><i class="fa-solid fa-eye"></i> Show</button>
+                </div>
             </div>
 
             <button type="submit" class="btn-login">
@@ -182,5 +205,15 @@
             <p>Authorized personnel only. Contact administrator if you need access.</p>
         </div>
     </div>
+    <script>
+      document.querySelectorAll('.show-password').forEach((button) => {
+        button.addEventListener('click', () => {
+          const input = document.getElementById(button.dataset.target);
+          const showing = input.type === 'text';
+          input.type = showing ? 'password' : 'text';
+          button.innerHTML = showing ? '<i class="fa-solid fa-eye"></i> Show' : '<i class="fa-solid fa-eye-slash"></i> Hide';
+        });
+      });
+    </script>
 </body>
 </html>

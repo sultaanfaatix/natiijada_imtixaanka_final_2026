@@ -1,13 +1,13 @@
 from datetime import date, datetime
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from . import db
 from .i18n import language_redirect
 from .models import AcademicYear, Exam, IdCardIssue, IncidentAction, IncidentCategory, IncidentReport, ReportVerification, SeverityLevel, Student, Subject
-from .services import get_settings, result_payload
+from .services import active_exam_for_student, get_settings, result_payload
 from .verification import verification_payload
 
 public_bp = Blueprint("public", __name__)
@@ -181,11 +181,7 @@ def verify_id_card(token):
         return render_template("verify_id.html", settings=settings, verified=False), 404
     status = "Expired" if issue.expiry_date and issue.expiry_date < date.today() else issue.status
     
-    # Get active exam for the student's academic year
-    exam = Exam.query.filter_by(
-        academic_year_id=issue.student.academic_year_id,
-        is_published=True
-    ).order_by(Exam.id.desc()).first()
+    exam = active_exam_for_student(issue.student)
     
     return render_template("verify_id.html", settings=settings, verified=True, issue=issue, display_status=status, exam=exam)
 
@@ -213,11 +209,7 @@ def incident_report_form(token):
     
     student = issue.student
     
-    # Get active exam for the student's academic year (same logic as verify_id_card)
-    exam = Exam.query.filter_by(
-        academic_year_id=student.academic_year_id,
-        is_published=True
-    ).order_by(Exam.id.desc()).first()
+    exam = active_exam_for_student(student)
     
     # Check if invigilator is logged in
     invigilator = current_invigilator()
@@ -226,6 +218,13 @@ def incident_report_form(token):
         from flask import session
         session["invigilator_next"] = request.url
         return redirect(url_for("invigilator.login"))
+
+    from .models import IncidentReportSettings
+    settings_dict = {
+        setting.setting_key: setting.setting_value
+        for setting in IncidentReportSettings.query.all()
+    }
+    allow_signature_reuse = settings_dict.get("allow_signature_reuse", "true") == "true"
     
     if request.method == "POST":
         # Generate report number
@@ -238,6 +237,9 @@ def incident_report_form(token):
         # Handle actions taken as comma-separated string from checkboxes
         actions_list = request.form.getlist("actions_taken")
         actions_taken = ", ".join(actions_list) if actions_list else ""
+        signature_data = request.form.get("signature_data", "").strip()
+        if not signature_data and allow_signature_reuse:
+            signature_data = invigilator.signature_data or ""
         
         # Create incident report
         report = IncidentReport(
@@ -248,17 +250,20 @@ def incident_report_form(token):
             user_id=None,
             category_id=int(request.form.get("category_id")),
             severity_id=int(request.form.get("severity_id")),
-            exam_id=int(request.form.get("exam_id")) if request.form.get("exam_id") else None,
+            exam_id=exam.id if exam else None,
             subject_id=int(request.form.get("subject_id")) if request.form.get("subject_id") else None,
             exam_room=request.form.get("exam_room", ""),
             incident_date=datetime.strptime(request.form.get("incident_date"), "%Y-%m-%d").date(),
             incident_time=datetime.strptime(request.form.get("incident_time"), "%H:%M").time(),
             description=request.form.get("description", ""),
             actions_taken=actions_taken,
+            signature_data=signature_data or None,
             status="Pending Review"
         )
         
         db.session.add(report)
+        if signature_data and allow_signature_reuse:
+            invigilator.signature_data = signature_data
         db.session.commit()
         
         # Handle file uploads if any (optional - report saves even if upload fails)
@@ -276,7 +281,7 @@ def incident_report_form(token):
                                 file_name=file.filename,
                                 file_type=file.content_type or "application/octet-stream",
                                 file_size=len(file.read()),
-                                uploaded_by_id=current_user.id
+                                uploaded_by_id=current_user.id if getattr(current_user, "is_authenticated", False) else None
                             )
                             db.session.add(attachment)
                         except Exception as upload_error:
@@ -295,12 +300,6 @@ def incident_report_form(token):
     actions = IncidentAction.query.filter_by(is_active=True).order_by(IncidentAction.sort_order).all()
     exams = Exam.query.filter_by(is_published=True).order_by(Exam.id.desc()).all()
     subjects = Subject.query.order_by(Subject.name).all()
-    
-    # Fetch incident report settings
-    from .models import IncidentReportSettings
-    settings_dict = {}
-    for setting in IncidentReportSettings.query.all():
-        settings_dict[setting.setting_key] = setting.setting_value
     
     # Pre-compute current date/time for form defaults
     current_date = datetime.now().strftime('%Y-%m-%d')
@@ -326,5 +325,7 @@ def incident_report_form(token):
         current_time=current_time,
         preview_report_num=preview_report_num,
         current_user=current_user,
+        invigilator=invigilator,
+        allow_signature_reuse=allow_signature_reuse,
         exam=exam  # Pass the active exam to the template
     )

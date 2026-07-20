@@ -30,7 +30,7 @@
     {% if incident_settings.get('show_student_photo') == 'true' %}
     <div class="student-photo-large">
       {% if student.photo_path %}
-      <img src="{{ student.photo_path }}" alt="{{ student.full_name }}">
+      <img src="{{ asset_url(student.photo_path) }}" alt="{{ student.full_name }}">
       {% else %}
       <div class="photo-placeholder-large">
         <i class="fa-solid fa-user"></i>
@@ -94,7 +94,7 @@
   <div class="invigilator-identity-card glass-card">
     <div class="invigilator-photo">
       {% if session.get('invigilator_photo_path') %}
-      <img src="{{ session.get('invigilator_photo_path') }}" alt="{{ session.get('invigilator_full_name') }}">
+      <img src="{{ asset_url(session.get('invigilator_photo_path')) }}" alt="{{ session.get('invigilator_full_name') }}">
       {% else %}
       <div class="photo-placeholder">
         <i class="fa-solid fa-user-shield"></i>
@@ -130,6 +130,13 @@
           <div class="content">
             <span class="label">Role</span>
             <span class="value">{{ session.get('invigilator_role', 'Invigilator') }}</span>
+          </div>
+        </div>
+        <div class="identity-item">
+          <span class="icon"><i class="fa-solid fa-file-circle-check"></i></span>
+          <div class="content">
+            <span class="label">Exam Type</span>
+            <span class="value">{{ exam.name if exam else 'No active exam found for this student' }}</span>
           </div>
         </div>
       </div>
@@ -171,13 +178,9 @@
       <div class="form-row">
         {% if incident_settings.get('show_exam') == 'true' %}
         <div class="form-group">
-          <label for="exam_id">Exam{% if incident_settings.get('require_exam') == 'true' %} *{% endif %}</label>
-          <select id="exam_id" name="exam_id" {% if incident_settings.get('require_exam') == 'true' %}required{% endif %}>
-            <option value="">Select exam (optional)</option>
-            {% for exam in exams %}
-            <option value="{{ exam.id }}">{{ exam.name }} - {{ exam.academic_year.name }}</option>
-            {% endfor %}
-          </select>
+          <label for="exam_id">Exam Type{% if incident_settings.get('require_exam') == 'true' %} *{% endif %}</label>
+          <input type="hidden" id="exam_id" name="exam_id" value="{{ exam.id if exam else '' }}">
+          <input type="text" value="{{ exam.name if exam else 'No active exam found for this student' }}" readonly>
         </div>
         {% endif %}
         
@@ -250,6 +253,26 @@
     </div>
     {% endif %}
 
+    <!-- Digital Signature -->
+    <div class="form-section glass-card signature-section">
+      <h3><i class="fa-solid fa-signature"></i> Digital Signature</h3>
+      <p class="help-text">Sign inside the box below. Your saved signature can be reused when allowed by policy.</p>
+      <input type="hidden" id="signature_data" name="signature_data" value="">
+      <div class="signature-toolbar">
+        <button type="button" class="pen-color active" data-color="#0f172a" style="--pen:#0f172a">Black</button>
+        <button type="button" class="pen-color" data-color="#1d4ed8" style="--pen:#1d4ed8">Blue</button>
+        <button type="button" class="pen-color" data-color="#047857" style="--pen:#047857">Green</button>
+        <button type="button" class="pen-color" data-color="#dc2626" style="--pen:#dc2626">Red</button>
+        <button type="button" class="signature-action" id="signatureUndo"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+        <button type="button" class="signature-action" id="signatureRedo"><i class="fa-solid fa-rotate-right"></i> Redo</button>
+        <button type="button" class="signature-action" id="signatureClear"><i class="fa-solid fa-eraser"></i> Clear</button>
+        <button type="button" class="signature-action primary" id="signatureSave"><i class="fa-solid fa-check"></i> Save Signature</button>
+      </div>
+      <div class="signature-pad-wrap">
+        <canvas id="signatureCanvas"></canvas>
+      </div>
+    </div>
+
     <!-- Report Preview -->
     <div class="form-section glass-card preview-section">
       <h3><i class="fa-solid fa-info-circle"></i> Report Information</h3>
@@ -286,10 +309,68 @@
   {% endif %}
 </div>
 
+<style>
+.signature-section .help-text { margin-bottom: 1rem; color: #64748b; }
+.signature-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+  align-items: center;
+  margin-bottom: .9rem;
+}
+.pen-color,
+.signature-action {
+  border: 1px solid rgba(15, 23, 42, .14);
+  background: #fff;
+  border-radius: 999px;
+  padding: .55rem .85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+}
+.pen-color::before {
+  content: "";
+  display: inline-block;
+  width: .7rem;
+  height: .7rem;
+  margin-right: .4rem;
+  border-radius: 50%;
+  background: var(--pen);
+  vertical-align: -1px;
+}
+.pen-color.active,
+.signature-action.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #0f3d91, #0ea5e9);
+  border-color: transparent;
+}
+.signature-pad-wrap {
+  background: linear-gradient(180deg, #fff, #f8fafc);
+  border: 1px solid rgba(15, 23, 42, .16);
+  border-radius: 18px;
+  padding: .75rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 16px 35px rgba(15,23,42,.08);
+}
+#signatureCanvas {
+  width: 100%;
+  min-height: 180px;
+  display: block;
+  border-radius: 14px;
+  background:
+    linear-gradient(#e2e8f0 1px, transparent 1px) 0 100% / 100% 36px no-repeat,
+    #fff;
+  touch-action: none;
+}
+@media (max-width: 768px) and (orientation: portrait) {
+  #signatureCanvas { min-height: 220px; }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const fileInput = document.getElementById('evidence');
   const uploadPreview = document.getElementById('upload-preview');
+  const existingSignature = {{ (invigilator.signature_data if allow_signature_reuse and invigilator and invigilator.signature_data else '')|tojson }};
   
   if (fileInput && uploadPreview) {
     fileInput.addEventListener('change', function(e) {
@@ -361,6 +442,119 @@ document.addEventListener('DOMContentLoaded', function() {
           successMessage.innerHTML = '<i class="fa-solid fa-check-circle"></i> ' + remainingCards.length + ' file(s) selected';
         }
       }
+    });
+  }
+
+  const canvas = document.getElementById('signatureCanvas');
+  const signatureInput = document.getElementById('signature_data');
+  if (canvas && signatureInput) {
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let penColor = '#0f172a';
+    let undoStack = [];
+    let redoStack = [];
+
+    const resizeCanvas = () => {
+      const saved = canvas.toDataURL();
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = Math.max(320, Math.floor(rect.width * window.devicePixelRatio));
+      canvas.height = Math.floor(180 * window.devicePixelRatio);
+      canvas.style.height = '180px';
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = penColor;
+      if (saved && saved.length > 100) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+        img.src = saved;
+      }
+    };
+
+    const point = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = event.touches ? event.touches[0] : event;
+      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+    };
+
+    const saveState = () => {
+      undoStack.push(canvas.toDataURL());
+      if (undoStack.length > 30) undoStack.shift();
+      redoStack = [];
+    };
+
+    const start = (event) => {
+      event.preventDefault();
+      saveState();
+      drawing = true;
+      const p = point(event);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    };
+
+    const move = (event) => {
+      if (!drawing) return;
+      event.preventDefault();
+      const p = point(event);
+      ctx.strokeStyle = penColor;
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    };
+
+    const end = () => {
+      if (!drawing) return;
+      drawing = false;
+      signatureInput.value = canvas.toDataURL('image/png');
+    };
+
+    const restore = (dataUrl) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
+        signatureInput.value = canvas.toDataURL('image/png');
+      };
+      img.src = dataUrl;
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    if (existingSignature) restore(existingSignature);
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+
+    document.querySelectorAll('.pen-color').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.pen-color').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        penColor = button.dataset.color;
+      });
+    });
+
+    document.getElementById('signatureClear')?.addEventListener('click', () => {
+      saveState();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      signatureInput.value = '';
+    });
+    document.getElementById('signatureUndo')?.addEventListener('click', () => {
+      if (!undoStack.length) return;
+      redoStack.push(canvas.toDataURL());
+      restore(undoStack.pop());
+    });
+    document.getElementById('signatureRedo')?.addEventListener('click', () => {
+      if (!redoStack.length) return;
+      undoStack.push(canvas.toDataURL());
+      restore(redoStack.pop());
+    });
+    document.getElementById('signatureSave')?.addEventListener('click', () => {
+      signatureInput.value = canvas.toDataURL('image/png');
     });
   }
 });

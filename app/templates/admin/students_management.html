@@ -179,13 +179,7 @@
           <div class="sm-row" onclick="selectStudent('{{ student.id }}')">
             <div class="sm-avatar">
               {% if student.photo_path %}
-                {% if student.photo_path.startswith('/static/') %}
-                  <img src="{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                {% elif student.photo_path.startswith('uploads/') %}
-                  <img src="/static/{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                {% else %}
-                  <img src="/static/uploads/{{ student.photo_path }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
-                {% endif %}
+                <img src="{{ asset_url(student.photo_path) }}" alt="{{ student.full_name }}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
               {% else %}
                 {{ student.student_code[:2] }}
               {% endif %}
