@@ -129,8 +129,8 @@
                 <div class="input-wrapper">
                   <i class="fa-solid fa-lock input-icon"></i>
                   <input type="password" id="password" name="{{ 'new_password' if invigilator else 'password' }}" {% if not invigilator %}required{% endif %} placeholder="Enter password">
-                  <button type="button" class="password-toggle" data-target="password"><i class="fa-solid fa-eye"></i> Show</button>
                 </div>
+                <label class="show-password-check"><input type="checkbox" data-target="password"> Show Password</label>
               </div>
               {% if invigilator and invigilator.visible_password %}
               <div class="form-group">
@@ -138,8 +138,8 @@
                 <div class="input-wrapper">
                   <i class="fa-solid fa-key input-icon"></i>
                   <input type="password" id="stored_password" value="{{ invigilator.visible_password }}" readonly>
-                  <button type="button" class="password-toggle" data-target="stored_password"><i class="fa-solid fa-eye"></i> Show</button>
                 </div>
+                <label class="show-password-check"><input type="checkbox" data-target="stored_password"> Show Password</label>
               </div>
               {% endif %}
               
@@ -624,23 +624,22 @@
   color: #94a3b8;
 }
 
-.password-toggle {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 0;
-  background: transparent;
-  color: #2563eb;
-  font-weight: 800;
+.show-password-check {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .55rem;
+  color: #475569;
+  font-size: .9rem;
+  font-weight: 700;
   cursor: pointer;
-  z-index: 2;
+  user-select: none;
 }
 
-.input-wrapper input[type="password"],
-.input-wrapper input[type="text"]#password,
-.input-wrapper input[type="text"]#stored_password {
-  padding-right: 5.9rem;
+.show-password-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
 }
 
 /* Textarea Wrapper */
@@ -1166,13 +1165,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const previewRole = document.getElementById('previewRole');
   const previewPeriod = document.getElementById('previewPeriod');
 
-  document.querySelectorAll('.password-toggle').forEach((button) => {
-    button.addEventListener('click', () => {
-      const input = document.getElementById(button.dataset.target);
-      if (!input) return;
-      const showing = input.type === 'text';
-      input.type = showing ? 'password' : 'text';
-      button.innerHTML = showing ? '<i class="fa-solid fa-eye"></i> Show' : '<i class="fa-solid fa-eye-slash"></i> Hide';
+  document.querySelectorAll('.show-password-check input').forEach((checkbox) => {
+    checkbox.addEventListener('change', () => {
+      const input = document.getElementById(checkbox.dataset.target);
+      if (input) input.type = checkbox.checked ? 'text' : 'password';
     });
   });
   

@@ -105,13 +105,17 @@ def incidents():
     room_filter = request.args.get("room", "").strip()
     subject_filter = request.args.get("subject", "").strip()
     session_filter = request.args.get("exam_session", "")
+    academic_year_filter = request.args.get("academic_year_id", "")
+    exam_filter = request.args.get("exam_id", "") or session_filter
+    level_filter = request.args.get("level_id", "")
+    class_filter = request.args.get("class_id", "")
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
     
-    query = IncidentReport.query
+    query = IncidentReport.query.outerjoin(IncidentReport.student).outerjoin(IncidentReport.exam)
     
     if q:
-        query = query.join(IncidentReport.student).filter(
+        query = query.filter(
             or_(
                 Student.student_code.like(f"%{q}%"),
                 Student.full_name.like(f"%{q}%")
@@ -131,7 +135,19 @@ def incidents():
         query = query.filter(IncidentReport.exam_room.like(f"%{room_filter}%"))
     
     if subject_filter:
-        query = query.filter(IncidentReport.subject.like(f"%{subject_filter}%"))
+        query = query.filter(IncidentReport.subject.has(Subject.name.like(f"%{subject_filter}%")))
+
+    if academic_year_filter:
+        query = query.filter(Exam.academic_year_id == int(academic_year_filter))
+
+    if exam_filter:
+        query = query.filter(IncidentReport.exam_id == int(exam_filter))
+
+    if level_filter:
+        query = query.filter(Student.academic_level_id == int(level_filter))
+
+    if class_filter:
+        query = query.filter(Student.academic_class_id == int(class_filter))
     
     if date_from:
         query = query.filter(IncidentReport.incident_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
@@ -153,16 +169,11 @@ def incidents():
     reports = query.order_by(IncidentReport.created_at.desc()).all()
     categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
     severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
-    
-    # Mock exam sessions - TODO: Replace with actual ExamSession model when implemented
-    exam_sessions = [
-        {"id": 1, "name": "1st Monthly Exam"},
-        {"id": 2, "name": "2nd Monthly Exam"},
-        {"id": 3, "name": "Mid-Term Exam"},
-        {"id": 4, "name": "3rd Monthly Exam"},
-        {"id": 5, "name": "4th Monthly Exam"},
-        {"id": 6, "name": "Final Exam"},
-    ]
+    academic_years = AcademicYear.query.order_by(AcademicYear.name.desc()).all()
+    exams = Exam.query.order_by(Exam.id.desc()).all()
+    levels = AcademicLevel.query.order_by(AcademicLevel.sort_order, AcademicLevel.name).all()
+    classes = AcademicClass.query.order_by(AcademicClass.sort_order, AcademicClass.name).all()
+    exam_sessions = exams
     
     return render_template(
         "admin/incidents.html",
@@ -170,8 +181,16 @@ def incidents():
         stats=stats,
         categories=categories,
         severities=severities,
+        academic_years=academic_years,
+        exams=exams,
+        levels=levels,
+        classes=classes,
         exam_sessions=exam_sessions,
         session_filter=session_filter,
+        academic_year_filter=academic_year_filter,
+        exam_filter=exam_filter,
+        level_filter=level_filter,
+        class_filter=class_filter,
         room_filter=room_filter,
         subject_filter=subject_filter,
         q=q,

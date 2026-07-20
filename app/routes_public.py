@@ -13,6 +13,26 @@ from .verification import verification_payload
 public_bp = Blueprint("public", __name__)
 
 
+def parse_incident_date(value):
+    value = (value or "").strip()
+    for fmt in ("%Y-%m-%d", "%B %d, %Y", "%d %B %Y", "%m/%d/%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError("Invalid incident date")
+
+
+def parse_incident_time(value):
+    value = (value or "").strip()
+    for fmt in ("%H:%M", "%I:%M %p", "%I:%M%p"):
+        try:
+            return datetime.strptime(value, fmt).time()
+        except ValueError:
+            continue
+    raise ValueError("Invalid incident time")
+
+
 @public_bp.route("/")
 def portal():
     return render_template("portal.html", settings=get_settings())
@@ -231,6 +251,21 @@ def incident_report_form(token):
         from .models import IncidentReport
         import random
         import string
+        category_id = request.form.get("category_id")
+        severity_id = request.form.get("severity_id")
+        description = request.form.get("description", "").strip()
+        if not category_id or not severity_id or not description:
+            flash("Please complete the required incident details before submitting.", "danger")
+            return redirect(request.url)
+        if settings_dict.get("require_exam") == "true" and not exam:
+            flash("No active exam found for this student.", "danger")
+            return redirect(request.url)
+        try:
+            incident_date = parse_incident_date(request.form.get("incident_date"))
+            incident_time = parse_incident_time(request.form.get("incident_time"))
+        except ValueError:
+            flash("Please enter a valid incident date and time.", "danger")
+            return redirect(request.url)
         
         report_num = f"INC-{datetime.now().strftime('%Y%m%d')}-{''.join(random.choices(string.digits, k=4))}"
         
@@ -248,14 +283,14 @@ def incident_report_form(token):
             invigilator_id=invigilator.id,
             teacher_id=None,
             user_id=None,
-            category_id=int(request.form.get("category_id")),
-            severity_id=int(request.form.get("severity_id")),
+            category_id=int(category_id),
+            severity_id=int(severity_id),
             exam_id=exam.id if exam else None,
             subject_id=int(request.form.get("subject_id")) if request.form.get("subject_id") else None,
             exam_room=request.form.get("exam_room", ""),
-            incident_date=datetime.strptime(request.form.get("incident_date"), "%Y-%m-%d").date(),
-            incident_time=datetime.strptime(request.form.get("incident_time"), "%H:%M").time(),
-            description=request.form.get("description", ""),
+            incident_date=incident_date,
+            incident_time=incident_time,
+            description=description,
             actions_taken=actions_taken,
             signature_data=signature_data or None,
             status="Pending Review"
@@ -302,8 +337,8 @@ def incident_report_form(token):
     subjects = Subject.query.order_by(Subject.name).all()
     
     # Pre-compute current date/time for form defaults
-    current_date = datetime.now().strftime('%Y-%m-%d')
-    current_time = datetime.now().strftime('%H:%M')
+    current_date = datetime.now().strftime('%B %d, %Y')
+    current_time = datetime.now().strftime('%I:%M %p')
     
     # Generate preview report number
     import random

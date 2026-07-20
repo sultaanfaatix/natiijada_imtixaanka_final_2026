@@ -105,6 +105,56 @@
     </div>
     <div class="filter-toolbar" id="filterToolbar">
       <form method="GET" action="{{ url_for('admin.incidents') }}" class="filter-toolbar-form">
+        <div class="incident-academic-filters">
+          <label class="incident-filter-card year">
+            <span class="filter-card-icon"><i class="fa-solid fa-calendar-days"></i></span>
+            <span class="filter-card-copy">
+              <span>Academic Year</span>
+              <select name="academic_year_id">
+                <option value="">All Academic Years</option>
+                {% for year in academic_years %}
+                <option value="{{ year.id }}" {% if academic_year_filter == year.id|string %}selected{% endif %}>{{ year.name }}</option>
+                {% endfor %}
+              </select>
+            </span>
+          </label>
+          <label class="incident-filter-card exam">
+            <span class="filter-card-icon"><i class="fa-solid fa-file-circle-check"></i></span>
+            <span class="filter-card-copy">
+              <span>Exam Type</span>
+              <select name="exam_id">
+                <option value="">All Exams</option>
+                {% for exam in exams %}
+                <option value="{{ exam.id }}" {% if exam_filter == exam.id|string %}selected{% endif %}>{{ exam.name }}</option>
+                {% endfor %}
+              </select>
+            </span>
+          </label>
+          <label class="incident-filter-card level">
+            <span class="filter-card-icon"><i class="fa-solid fa-layer-group"></i></span>
+            <span class="filter-card-copy">
+              <span>Level</span>
+              <select name="level_id">
+                <option value="">All Levels</option>
+                {% for level in levels %}
+                <option value="{{ level.id }}" {% if level_filter == level.id|string %}selected{% endif %}>{{ level.name }}</option>
+                {% endfor %}
+              </select>
+            </span>
+          </label>
+          <label class="incident-filter-card klass">
+            <span class="filter-card-icon"><i class="fa-solid fa-school-flag"></i></span>
+            <span class="filter-card-copy">
+              <span>Class</span>
+              <select name="class_id">
+                <option value="">All Classes</option>
+                {% for klass in classes %}
+                <option value="{{ klass.id }}" {% if class_filter == klass.id|string %}selected{% endif %}>{{ klass.name }}</option>
+                {% endfor %}
+              </select>
+            </span>
+          </label>
+        </div>
         <div class="filter-grid">
           <div class="filter-item">
             <div class="input-wrapper">
@@ -946,6 +996,73 @@
   padding: 1.25rem 1.5rem;
 }
 
+.incident-academic-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.incident-filter-card {
+  --card-accent: #2563eb;
+  --card-soft: #eff6ff;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-height: 82px;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(37, 99, 235, .16);
+  background: linear-gradient(135deg, #ffffff, var(--card-soft));
+  box-shadow: 0 18px 36px rgba(15, 23, 42, .08);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.incident-filter-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, .12);
+}
+
+.incident-filter-card.exam { --card-accent: #7c3aed; --card-soft: #f5f3ff; border-color: rgba(124, 58, 237, .16); }
+.incident-filter-card.level { --card-accent: #059669; --card-soft: #ecfdf5; border-color: rgba(5, 150, 105, .16); }
+.incident-filter-card.klass { --card-accent: #ea580c; --card-soft: #fff7ed; border-color: rgba(234, 88, 12, .16); }
+
+.incident-filter-card .filter-card-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--card-accent), #0f172a);
+  box-shadow: 0 12px 22px rgba(15, 23, 42, .14);
+}
+
+.filter-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: .35rem;
+}
+
+.filter-card-copy > span {
+  color: #64748b;
+  font-size: .75rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.filter-card-copy select {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 900;
+  outline: 0;
+}
+
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1347,6 +1464,10 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
+  .incident-academic-filters {
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+  }
+
   .filter-grid {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
@@ -1378,6 +1499,10 @@
   .exam-sessions-tabs {
     overflow-x: auto;
     padding-bottom: 0.75rem;
+  }
+
+  .incident-academic-filters {
+    grid-template-columns: 1fr;
   }
   
   .filter-grid {

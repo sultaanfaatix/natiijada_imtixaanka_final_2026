@@ -5,6 +5,7 @@ import functools
 
 from . import db
 from .models import ExamInvigilator, IncidentReportSettings, InvigilatorLoginHistory
+from .services import get_settings
 
 invigilator_bp = Blueprint("invigilator", __name__)
 
@@ -167,7 +168,7 @@ def login():
         
         if not username or not password:
             flash("Please provide both username and password.", "danger")
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
         
         invigilator = ExamInvigilator.query.filter_by(username=username).first()
         
@@ -178,31 +179,31 @@ def login():
                 status="Failed",
                 failure_reason="Invalid username"
             )
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
         
         # Check if account is locked
         if invigilator.status == "Locked":
             flash("Your account has been locked. Please contact an administrator.", "danger")
             record_login_history(invigilator, "Locked", failure_reason="Account locked")
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
         
         # Check if account is inactive
         if invigilator.status == "Inactive" or not invigilator.is_active:
             flash("Your account is inactive. Please contact an administrator.", "danger")
             record_login_history(invigilator, "Failed", failure_reason="Account inactive")
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
         
         # Check if account is within validity period
         if not invigilator.is_valid():
             flash("Your account is not within the valid examination period.", "danger")
             record_login_history(invigilator, "Expired", failure_reason="Account expired")
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
         
         # Check password
         if invigilator.check_password(password):
             # Check if password change is forced
             if invigilator.force_password_change:
-                session["invigilator_id"] = invigilator.id
+                login_invigilator(invigilator)
                 session["invigilator_requires_password_change"] = True
                 flash("You must change your password before continuing.", "warning")
                 return redirect(url_for("invigilator.change_password"))
@@ -220,9 +221,68 @@ def login():
         else:
             flash("Invalid username or password.", "danger")
             record_login_history(invigilator, "Failed", failure_reason="Invalid password")
-            return render_template("invigilator/login.html")
+            return render_template("invigilator/login.html", settings=get_settings())
     
-    return render_template("invigilator/login.html")
+    return render_template("invigilator/login.html", settings=get_settings())
+
+
+@invigilator_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    """Verify invigilator identity before allowing a password reset."""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        invigilator_code = request.form.get("invigilator_id", "").strip()
+        mobile_number = request.form.get("mobile_number", "").strip()
+
+        invigilator = ExamInvigilator.query.filter_by(username=username).first()
+        if not invigilator or invigilator.invigilator_id != invigilator_code:
+            flash("We could not verify those invigilator details.", "danger")
+            return render_template("invigilator/forgot_password.html", settings=get_settings())
+
+        if invigilator.mobile_number and mobile_number and invigilator.mobile_number.strip() != mobile_number:
+            flash("The mobile number does not match this invigilator account.", "danger")
+            return render_template("invigilator/forgot_password.html", settings=get_settings())
+
+        session["invigilator_reset_id"] = invigilator.id
+        flash("Identity verified. Please create a new password.", "success")
+        return redirect(url_for("invigilator.reset_password"))
+
+    return render_template("invigilator/forgot_password.html", settings=get_settings())
+
+
+@invigilator_bp.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    """Reset password after successful forgot-password identity verification."""
+    invigilator_id = session.get("invigilator_reset_id")
+    invigilator = db.session.get(ExamInvigilator, invigilator_id) if invigilator_id else None
+    if not invigilator:
+        flash("Please verify your invigilator identity first.", "warning")
+        return redirect(url_for("invigilator.forgot_password"))
+
+    if request.method == "POST":
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if not new_password or not confirm_password:
+            flash("Please enter and confirm your new password.", "danger")
+            return render_template("invigilator/reset_password.html", settings=get_settings())
+        if new_password != confirm_password:
+            flash("New passwords do not match.", "danger")
+            return render_template("invigilator/reset_password.html", settings=get_settings())
+
+        is_valid_password, password_error = validate_invigilator_password(new_password)
+        if not is_valid_password:
+            flash(password_error, "danger")
+            return render_template("invigilator/reset_password.html", settings=get_settings())
+
+        invigilator.set_password(new_password)
+        invigilator.visible_password = new_password
+        invigilator.force_password_change = False
+        db.session.commit()
+        session.pop("invigilator_reset_id", None)
+        flash("Password reset successfully. You can now log in.", "success")
+        return redirect(url_for("invigilator.login"))
+
+    return render_template("invigilator/reset_password.html", settings=get_settings())
 
 
 @invigilator_bp.route("/logout")
@@ -248,20 +308,20 @@ def change_password():
         
         if not current_password or not new_password or not confirm_password:
             flash("Please fill in all fields.", "danger")
-            return render_template("invigilator/change_password.html")
+            return render_template("invigilator/change_password.html", settings=get_settings())
         
         if not invigilator.check_password(current_password):
             flash("Current password is incorrect.", "danger")
-            return render_template("invigilator/change_password.html")
+            return render_template("invigilator/change_password.html", settings=get_settings())
         
         if new_password != confirm_password:
             flash("New passwords do not match.", "danger")
-            return render_template("invigilator/change_password.html")
+            return render_template("invigilator/change_password.html", settings=get_settings())
         
         is_valid_password, password_error = validate_invigilator_password(new_password)
         if not is_valid_password:
             flash(password_error, "danger")
-            return render_template("invigilator/change_password.html")
+            return render_template("invigilator/change_password.html", settings=get_settings())
         
         invigilator.set_password(new_password)
         invigilator.visible_password = new_password
@@ -277,7 +337,7 @@ def change_password():
             return redirect(next_url)
         return redirect(url_for("public.qr_landing"))
     
-    return render_template("invigilator/change_password.html")
+    return render_template("invigilator/change_password.html", settings=get_settings())
 
 
 @invigilator_bp.route("/profile")
