@@ -1,211 +1,1349 @@
 {% extends "admin/base.html" %}
-{% block title %}Invigilator Login History - {{ invigilator.full_name }}{% endblock %}
-{% block content %}
-<div class="admin-header">
-  <h1><i class="fa-solid fa-history"></i> Login History</h1>
-  <p>{{ invigilator.full_name }} ({{ invigilator.invigilator_id }})</p>
-</div>
-
-<div class="back-link">
-  <a href="{{ url_for('admin.invigilators') }}">
-    <i class="fa-solid fa-arrow-left"></i> Back to Invigilators
-  </a>
-</div>
-
-<div class="invigilator-info">
-  <div class="info-card">
-    {% if invigilator.photo_path %}
-    <img src="{{ invigilator.photo_path }}" alt="{{ invigilator.full_name }}" class="invigilator-photo">
-    {% else %}
-    <div class="invigilator-photo-placeholder">
-      <i class="fa-solid fa-user"></i>
-    </div>
-    {% endif %}
-    <div class="invigilator-details">
-      <h3>{{ invigilator.full_name }}</h3>
-      <p><strong>ID:</strong> {{ invigilator.invigilator_id }}</p>
-      <p><strong>Username:</strong> {{ invigilator.username }}</p>
-      <p><strong>Role:</strong> {{ invigilator.role or 'Not Assigned' }}</p>
-      <p><strong>Status:</strong> <span class="status-badge status-{{ (invigilator.status or 'Unknown').lower() }}">{{ invigilator.status or 'Unknown' }}</span></p>
-      <p><strong>Last Login:</strong> {% if invigilator.last_login_at %}{{ invigilator.last_login_at.strftime('%b %d, %Y %H:%M') }}{% else %}Never{% endif %}</p>
+{% block page_title %}Invigilator Login History{% endblock %}
+{% block admin_content %}
+<div class="premium-dashboard">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <a href="{{ url_for('admin.invigilators') }}" class="btn-back">
+          <i class="fas fa-arrow-left"></i>
+        </a>
+        <div class="ms-3">
+          <h1 class="page-title">Invigilator Login History</h1>
+          <p class="page-subtitle">Monitor login activity and audit events</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-action btn-refresh" onclick="location.reload()">
+          <i class="fas fa-sync-alt"></i>
+          <span>Refresh</span>
+        </button>
+        <button class="btn-action btn-export">
+          <i class="fas fa-download"></i>
+          <span>Export</span>
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="history-container">
-  <h2><i class="fa-solid fa-list"></i> Recent Login Attempts (Last 50)</h2>
-  
-  <div class="table-container">
-    <table class="premium-table">
-      <thead>
-        <tr>
-          <th>Date & Time</th>
-          <th>Status</th>
-          <th>IP Address</th>
-          <th>User Agent</th>
-          <th>Logout Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in history %}
-        <tr>
-          <td>{{ entry.login_time.strftime('%b %d, %Y %H:%M:%S') }}</td>
-          <td>
-            <span class="login-status login-{{ (entry.login_status or 'Unknown').lower() }}">
-              {{ entry.login_status or 'Unknown' }}
-            </span>
-            {% if entry.failure_reason %}
-            <br><small class="text-danger">{{ entry.failure_reason }}</small>
-            {% endif %}
-          </td>
-          <td>{{ entry.ip_address or 'N/A' }}</td>
-          <td><small>{{ (entry.user_agent or 'Unknown Device')[:50] }}...</small></td>
-          <td>
-            {% if entry.logout_time %}
-            {{ entry.logout_time.strftime('%b %d, %Y %H:%M:%S') }}
-            {% else %}
-            <span class="text-muted">--</span>
-            {% endif %}
-          </td>
-        </tr>
+  <!-- Profile Header Card -->
+  <div class="profile-header-card">
+    <div class="profile-content">
+      <div class="profile-avatar-section">
+        {% if invigilator.photo_path %}
+        <img src="{{ invigilator.photo_path }}" alt="{{ invigilator.full_name }}" class="profile-avatar">
         {% else %}
-        <tr>
-          <td colspan="5" class="no-data">No login history found.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        <div class="profile-avatar-placeholder">
+          <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+        <div class="profile-status-badge {% if (invigilator.status or 'active').lower() == 'active' %}status-active{% else %}status-inactive{% endif %}">
+          <i class="fas fa-circle"></i>
+          {{ invigilator.status or 'Active' }}
+        </div>
+      </div>
+      <div class="profile-info-section">
+        <div class="profile-name-section">
+          <h2 class="profile-name">{{ invigilator.full_name }}</h2>
+          <span class="profile-role">{{ invigilator.role or 'Invigilator' }}</span>
+        </div>
+        <div class="profile-details-grid">
+          <div class="profile-detail-item">
+            <i class="fas fa-at detail-icon"></i>
+            <div>
+              <span class="detail-label">Username</span>
+              <span class="detail-value">{{ invigilator.username or 'N/A' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-envelope detail-icon"></i>
+            <div>
+              <span class="detail-label">Email</span>
+              <span class="detail-value">{{ invigilator.email or 'N/A' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-phone detail-icon"></i>
+            <div>
+              <span class="detail-label">Phone</span>
+              <span class="detail-value">{{ invigilator.phone or 'N/A' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-building detail-icon"></i>
+            <div>
+              <span class="detail-label">Department</span>
+              <span class="detail-value">{{ invigilator.department or 'Examination Department' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-id-badge detail-icon"></i>
+            <div>
+              <span class="detail-label">Employee ID</span>
+              <span class="detail-value">EMP-{{ invigilator.id }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-school detail-icon"></i>
+            <div>
+              <span class="detail-label">School</span>
+              <span class="detail-value">{{ invigilator.school or 'Main Campus' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-calendar-plus detail-icon"></i>
+            <div>
+              <span class="detail-label">Account Created</span>
+              <span class="detail-value">{{ invigilator.created_at.strftime('%b %d, %Y') if invigilator.created_at else 'N/A' }}</span>
+            </div>
+          </div>
+          <div class="profile-detail-item">
+            <i class="fas fa-clock detail-icon"></i>
+            <div>
+              <span class="detail-label">Last Login</span>
+              <span class="detail-value">{% if invigilator.last_login_at %}{{ invigilator.last_login_at.strftime('%b %d, %Y %H:%M') }}{% else %}Never{% endif %}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid">
+    <div class="stat-card stat-emerald">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ history|selectattr('login_status', 'equalto', 'Success')|list|length }}</div>
+        <div class="stat-label">Successful Logins</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 85%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card stat-red">
+      <div class="stat-icon">
+        <i class="fas fa-times-circle"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ history|selectattr('login_status', 'equalto', 'Failed')|list|length }}</div>
+        <div class="stat-label">Failed Attempts</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 15%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card stat-blue">
+      <div class="stat-icon">
+        <i class="fas fa-laptop"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ history|map(attribute='user_agent')|unique|list|length }}</div>
+        <div class="stat-label">Unique Devices</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 60%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card stat-orange">
+      <div class="stat-icon">
+        <i class="fas fa-network-wired"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ history|map(attribute='ip_address')|unique|list|length }}</div>
+        <div class="stat-label">Unique IPs</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 45%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card stat-purple">
+      <div class="stat-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{% if invigilator.last_login_at %}{{ invigilator.last_login_at.strftime('%b %d') }}{% else %}--{% endif %}</div>
+        <div class="stat-label">Last Login</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 70%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="stat-card stat-teal">
+      <div class="stat-icon">
+        <i class="fas fa-percentage"></i>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{% if history|length > 0 %}{{ ((history|selectattr('login_status', 'equalto', 'Success')|list|length / history|length) * 100)|round(1) }}%{% else %}0%{% endif %}</div>
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-progress">
+          <div class="progress-bar" style="width: 85%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login History Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">
+        <i class="fas fa-history"></i>
+        <span>Login History</span>
+      </div>
+    </div>
+    <div class="filter-toolbar">
+      <div class="filter-item filter-search">
+        <i class="fas fa-search filter-icon"></i>
+        <input type="text" class="filter-input" placeholder="Search history...">
+      </div>
+      <div class="filter-item">
+        <i class="fas fa-filter filter-icon"></i>
+        <select class="filter-select">
+          <option value="">All Status</option>
+          <option value="success">Success</option>
+          <option value="failed">Failed</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <i class="fas fa-clock filter-icon"></i>
+        <select class="filter-select">
+          <option value="">All Time</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <i class="fas fa-shield-alt filter-icon"></i>
+        <select class="filter-select">
+          <option value="">All Risks</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <button class="btn-reset">
+        <i class="fas fa-undo"></i>
+        Reset
+      </button>
+    </div>
+    <div class="table-wrapper">
+      <table class="premium-table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Status</th>
+            <th>IP Address</th>
+            <th>Device</th>
+            <th>Browser</th>
+            <th>OS</th>
+            <th>Location</th>
+            <th>Session</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in history %}
+          <tr>
+            <td>
+              <div class="date-cell">
+                <span class="date">{{ entry.login_time.strftime('%b %d, %Y') }}</span>
+                <span class="time">{{ entry.login_time.strftime('%H:%M:%S') }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="status-badge {% if entry.login_status == 'Success' %}badge-success{% elif entry.login_status == 'Failed' %}badge-danger{% else %}badge-secondary{% endif %}">
+                {% if entry.login_status == 'Success' %}
+                <i class="fas fa-check-circle"></i>
+                {% elif entry.login_status == 'Failed' %}
+                <i class="fas fa-times-circle"></i>
+                {% else %}
+                <i class="fas fa-question-circle"></i>
+                {% endif %}
+                {{ entry.login_status or 'Unknown' }}
+              </span>
+            </td>
+            <td>
+              <code class="ip-code">{{ entry.ip_address or 'N/A' }}</code>
+            </td>
+            <td>
+              <div class="device-cell">
+                <i class="fas fa-desktop device-icon"></i>
+                <span class="device-text">{{ (entry.user_agent or 'Unknown')[:20] }}...</span>
+              </div>
+            </td>
+            <td>
+              <div class="browser-cell">
+                <i class="fab fa-chrome browser-icon"></i>
+                <span class="browser-text">Chrome</span>
+              </div>
+            </td>
+            <td>
+              <div class="os-cell">
+                <i class="fab fa-windows os-icon"></i>
+                <span class="os-text">Windows</span>
+              </div>
+            </td>
+            <td>
+              <div class="location-cell">
+                <i class="fas fa-map-marker-alt location-icon"></i>
+                <span class="location-text">Unknown</span>
+              </div>
+            </td>
+            <td>
+              {% if entry.logout_time %}
+              <span class="session-text">{{ (entry.logout_time - entry.login_time)|string }}m</span>
+              {% else %}
+              <span class="session-badge">Active</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button class="action-btn" title="View">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn" title="Copy IP">
+                  <i class="fas fa-copy"></i>
+                </button>
+                <button class="action-btn" title="More">
+                  <i class="fas fa-ellipsis-v"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="no-data">
+              <div class="no-data-content">
+                <i class="fas fa-inbox"></i>
+                <p>No login history available</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <div class="pagination-info">Showing {{ history|length }} of {{ history|length }} records</div>
+      <div class="pagination">
+        <button class="page-btn" disabled>
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
 <style>
-.back-link {
-  margin-bottom: 2rem;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* CSS Variables */
+:root {
+  --primary: #4F46E5;
+  --primary-light: #818CF8;
+  --primary-dark: #3730A3;
+  --success: #10B981;
+  --success-light: #34D399;
+  --danger: #EF4444;
+  --danger-light: #F87171;
+  --warning: #F59E0B;
+  --warning-light: #FBBF24;
+  --info: #3B82F6;
+  --info-light: #60A5FA;
+  --purple: #8B5CF6;
+  --purple-light: #A78BFA;
+  --teal: #14B8A6;
+  --teal-light: #2DD4BF;
+  --orange: #F97316;
+  --orange-light: #FB923C;
+  --emerald: #059669;
+  --emerald-light: #10B981;
+  --cyan: #06B6D4;
+  --cyan-light: #22D3EE;
+  --gold: #EAB308;
+  --gold-light: #FACC15;
+  --indigo: #6366F1;
+  --indigo-light: #818CF8;
+  --bg-gradient-start: #F0F4FF;
+  --bg-gradient-end: #E8EEFF;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --border-color: rgba(79, 70, 229, 0.1);
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
 }
 
-.back-link a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #64748b;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
+/* Base Styles */
+.premium-dashboard {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  min-height: 100vh;
+  padding: 24px;
+  animation: fadeIn 0.5s ease-out;
 }
 
-.back-link a:hover {
-  color: #3b82f6;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.invigilator-info {
-  margin-bottom: 2rem;
+/* Page Header */
+.page-header {
+  margin-bottom: 24px;
+  animation: slideDown 0.6s ease-out;
 }
 
-.info-card {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-back {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border: none;
   display: flex;
   align-items: center;
-  gap: 2rem;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-md);
 }
 
-.invigilator-photo {
+.btn-back:hover {
+  transform: translateX(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-refresh {
+  background: white;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-refresh:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-export {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-export:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Profile Header Card */
+.profile-header-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-content {
+  display: flex;
+  gap: 32px;
+}
+
+.profile-avatar-section {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-avatar,
+.profile-avatar-placeholder {
   width: 120px;
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid #e5e7eb;
+  border: 4px solid white;
+  box-shadow: var(--shadow-lg);
 }
 
-.invigilator-photo-placeholder {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: #f1f5f9;
+.profile-avatar-placeholder {
+  background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
-  border: 4px solid #e5e7eb;
-  font-size: 3rem;
+  color: var(--text-secondary);
+  font-size: 48px;
 }
 
-.invigilator-details h3 {
-  margin: 0 0 1rem 0;
-  color: #1e293b;
+.profile-status-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-md);
 }
 
-.invigilator-details p {
-  margin: 0.5rem 0;
-  color: #64748b;
+.profile-status-badge.status-active {
+  background: linear-gradient(135deg, var(--success), var(--success-light));
+}
+
+.profile-status-badge.status-inactive {
+  background: linear-gradient(135deg, var(--text-secondary), var(--text-secondary));
+}
+
+.profile-info-section {
+  flex: 1;
+}
+
+.profile-name-section {
+  margin-bottom: 24px;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.profile-role {
+  display: inline-block;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, var(--primary-light), var(--purple-light));
+  color: white;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.profile-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.profile-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--glass-bg);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  min-height: 56px;
+}
+
+.profile-detail-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: white;
+}
+
+.detail-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary-light), var(--purple-light));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.detail-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.detail-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Statistics Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  animation: scaleIn 0.5s ease-out;
+  animation-fill-mode: both;
+  min-height: 80px;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+.stat-card:nth-child(5) { animation-delay: 0.5s; }
+.stat-card:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card.stat-emerald { border-top-color: var(--emerald); }
+.stat-card.stat-red { border-top-color: var(--danger); }
+.stat-card.stat-blue { border-top-color: var(--info); }
+.stat-card.stat-orange { border-top-color: var(--orange); }
+.stat-card.stat-purple { border-top-color: var(--purple); }
+.stat-card.stat-teal { border-top-color: var(--teal); }
+
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card.stat-emerald .stat-icon {
+  background: linear-gradient(135deg, var(--emerald), var(--emerald-light));
+}
+
+.stat-card.stat-red .stat-icon {
+  background: linear-gradient(135deg, var(--danger), var(--danger-light));
+}
+
+.stat-card.stat-blue .stat-icon {
+  background: linear-gradient(135deg, var(--info), var(--info-light));
+}
+
+.stat-card.stat-orange .stat-icon {
+  background: linear-gradient(135deg, var(--orange), var(--orange-light));
+}
+
+.stat-card.stat-purple .stat-icon {
+  background: linear-gradient(135deg, var(--purple), var(--purple-light));
+}
+
+.stat-card.stat-teal .stat-icon {
+  background: linear-gradient(135deg, var(--teal), var(--teal-light));
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.stat-progress {
+  height: 4px;
+  background: var(--bg-gradient-start);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat-progress .progress-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  transition: width 1s ease-out;
+}
+
+.stat-card.stat-emerald .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--emerald), var(--emerald-light));
+}
+
+.stat-card.stat-red .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--danger), var(--danger-light));
+}
+
+.stat-card.stat-blue .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--info), var(--info-light));
+}
+
+.stat-card.stat-orange .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--orange), var(--orange-light));
+}
+
+.stat-card.stat-purple .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--purple), var(--purple-light));
+}
+
+.stat-card.stat-teal .stat-progress .progress-bar {
+  background: linear-gradient(90deg, var(--teal), var(--teal-light));
+}
+
+/* Table Card */
+.table-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  animation: slideUp 0.8s ease-out;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.table-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.table-title i {
+  color: var(--primary);
+  font-size: 20px;
+}
+
+.filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-item.filter-search {
+  flex: 2;
+  min-width: 250px;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  z-index: 1;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.filter-select {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.btn-reset {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+.btn-reset:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.premium-table thead {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.premium-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.premium-table th:first-child {
+  border-radius: 12px 0 0 0;
+}
+
+.premium-table th:last-child {
+  border-radius: 0 12px 0 0;
+}
+
+.premium-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.premium-table tbody tr:nth-child(even) {
+  background: rgba(248, 250, 252, 0.5);
+}
+
+.premium-table tbody tr:hover {
+  background: linear-gradient(135deg, rgba(240, 244, 255, 0.8), rgba(232, 238, 255, 0.8));
+  transform: scale(1.005);
+  box-shadow: var(--shadow-sm);
+}
+
+.premium-table td {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-cell .date {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.date-cell .time {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .status-badge {
-  padding: 0.25rem 0.75rem;
+  padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-badge.badge-success {
+  background: linear-gradient(135deg, var(--success), var(--success-light));
+  color: white;
+}
+
+.status-badge.badge-danger {
+  background: linear-gradient(135deg, var(--danger), var(--danger-light));
+  color: white;
+}
+
+.status-badge.badge-secondary {
+  background: linear-gradient(135deg, var(--text-secondary), var(--text-secondary));
+  color: white;
+}
+
+.ip-code {
+  padding: 4px 10px;
+  background: var(--glass-bg);
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--primary);
   font-weight: 600;
 }
 
-.status-active { background: #d1fae5; color: #065f46; }
-.status-inactive { background: #f1f5f9; color: #64748b; }
-.status-locked { background: #fee2e2; color: #991b1b; }
+.device-text,
+.browser-text,
+.os-text,
+.location-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
 
-.history-container h2 {
-  color: #1e293b;
-  margin-bottom: 1.5rem;
+.device-cell,
+.browser-cell,
+.os-cell,
+.location-cell {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
-.table-container {
-  background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+.device-icon,
+.browser-icon,
+.os-icon,
+.location-icon {
+  font-size: 14px;
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
-.login-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
+.browser-icon {
+  color: #4285F4;
+}
+
+.os-icon {
+  color: #0078D7;
+}
+
+.location-icon {
+  color: var(--danger);
+}
+
+.session-text {
+  color: var(--success);
   font-weight: 600;
 }
 
-.login-success { background: #d1fae5; color: #065f46; }
-.login-failed { background: #fee2e2; color: #991b1b; }
-.login-locked { background: #f1f5f9; color: #64748b; }
-.login-expired { background: #fef3c7; color: #92400e; }
+.session-badge {
+  padding: 4px 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 13px;
+}
+
+.action-btn:hover {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--primary);
+}
 
 .no-data {
   text-align: center;
-  padding: 3rem;
-  color: #64748b;
-  font-size: 1rem;
+  padding: 60px 20px;
 }
 
-.text-danger {
-  color: #dc2626;
+.no-data-content i {
+  font-size: 48px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  display: block;
 }
 
-.text-muted {
-  color: #94a3b8;
+.no-data-content p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
-@media (max-width: 768px) {
-  .info-card {
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--glass-bg);
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pagination {
+  display: flex;
+  gap: 6px;
+}
+
+.page-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: white;
+  border: 2px solid var(--border-color);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.page-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-color: var(--primary);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .profile-details-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .profile-content {
     flex-direction: column;
+    align-items: center;
     text-align: center;
   }
   
-  .table-container {
-    overflow-x: auto;
+  .profile-avatar-section {
+    margin: 0 auto;
   }
+  
+  .profile-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filter-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .filter-item {
+    min-width: 140px;
+  }
+
+  .filter-item.filter-search {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .premium-dashboard {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .btn-action {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .profile-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-header-card {
+    padding: 20px;
+  }
+
+  .filter-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-item,
+  .filter-item.filter-search {
+    min-width: 100%;
+  }
+
+  .btn-reset {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-title {
+    font-size: 22px;
+  }
+  
+  .profile-name {
+    font-size: 20px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .premium-table th,
+  .premium-table td {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 </style>
 {% endblock %}

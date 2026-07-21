@@ -106,10 +106,14 @@
   object-fit: contain;
   background: white;
   border-radius: 50%;
-  padding: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(255, 255, 255, 0.2);
+  padding: 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 3px rgba(255, 255, 255, 0.3);
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .school-logo.fallback {
@@ -145,17 +149,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 20px 48px;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+  gap: 20px;
+  padding: 24px 56px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%);
   border: 2px solid var(--verification-secondary);
-  border-radius: var(--verify-badge-radius);
+  border-radius: 24px;
   color: var(--verification-secondary-dark);
   font-weight: 800;
-  font-size: 20px;
-  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2), 0 0 0 1px rgba(16, 185, 129, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  font-size: 18px;
+  box-shadow: 0 12px 40px rgba(16, 185, 129, 0.25), 0 0 0 1px rgba(16, 185, 129, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
   animation: badgeGlow 3s ease-in-out infinite;
@@ -163,10 +167,10 @@
 
 @keyframes badgeGlow {
   0%, 100% {
-    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2), 0 0 0 1px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 12px 40px rgba(16, 185, 129, 0.25), 0 0 0 1px rgba(16, 185, 129, 0.15);
   }
   50% {
-    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.4), 0 0 0 2px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 16px 56px rgba(16, 185, 129, 0.35), 0 0 0 2px rgba(16, 185, 129, 0.25);
   }
 }
 
@@ -177,7 +181,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
   animation: badgeShine 3s ease-in-out infinite;
 }
 
@@ -191,10 +195,14 @@
 }
 
 .badge-icon {
-  font-size: 32px;
+  font-size: 36px;
   position: relative;
   z-index: 2;
   animation: iconPulse 2s ease-in-out infinite;
+  background: linear-gradient(135deg, var(--verification-secondary) 0%, var(--verification-secondary-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 @keyframes iconPulse {
@@ -202,19 +210,20 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
 }
 
 .badge-text {
   position: relative;
   z-index: 2;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   background: linear-gradient(135deg, var(--verification-secondary) 0%, var(--verification-secondary-dark) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-weight: 900;
 }
 
 /* Glass Card Base */
@@ -304,33 +313,103 @@
 .info-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px;
-  background: rgba(249, 250, 251, 0.8);
-  border-radius: 12px;
-  border: 1px solid var(--verification-border);
+  gap: 6px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.info-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Gradient backgrounds for different info items */
+.info-item:nth-child(1) {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.info-item:nth-child(2) {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(168, 85, 247, 0.03) 100%);
+  border-color: rgba(168, 85, 247, 0.2);
+}
+
+.info-item:nth-child(3) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.03) 100%);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.info-item:nth-child(4) {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(249, 115, 22, 0.03) 100%);
+  border-color: rgba(249, 115, 22, 0.2);
+}
+
+.info-item:nth-child(5) {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.info-item:nth-child(6) {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0.03) 100%);
+  border-color: rgba(236, 72, 153, 0.2);
+}
+
+.info-item:nth-child(n+7) {
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.08) 0%, rgba(107, 114, 128, 0.03) 100%);
+  border-color: rgba(107, 114, 128, 0.2);
 }
 
 .info-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--verification-text-light);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .info-label i {
-  color: var(--verification-primary);
   font-size: 14px;
 }
 
+.info-item:nth-child(1) .info-label i {
+  color: #2563eb;
+}
+
+.info-item:nth-child(2) .info-label i {
+  color: #a855f7;
+}
+
+.info-item:nth-child(3) .info-label i {
+  color: #10b981;
+}
+
+.info-item:nth-child(4) .info-label i {
+  color: #f97316;
+}
+
+.info-item:nth-child(5) .info-label i {
+  color: #6366f1;
+}
+
+.info-item:nth-child(6) .info-label i {
+  color: #ec4899;
+}
+
+.info-item:nth-child(n+7) .info-label i {
+  color: #6b7280;
+}
+
 .info-value {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--verification-text);
+  line-height: 1.3;
 }
 
 /* Status Card */

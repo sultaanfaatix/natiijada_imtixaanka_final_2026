@@ -49,6 +49,32 @@
   </section>
 
   <section class="panel form-grid premium-form">
+    <div class="section-heading wide"><span><i class="fa-solid fa-paintbrush"></i></span><div><h2>UI Customization</h2><p>Global UI appearance settings for the entire application. These changes affect the visual presentation only.</p></div></div>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-palette"></i></span><div><h3>Color Theme</h3><p>Primary, secondary, and accent colors for the entire interface.</p></div></div>
+    <label><i class="fa-solid fa-palette"></i> Primary Color<input name="ui_primary_color" type="color" value="{{ settings.ui_primary_color or '#2563eb' }}"></label>
+    <label><i class="fa-solid fa-fill-drip"></i> Secondary Color<input name="ui_secondary_color" type="color" value="{{ settings.ui_secondary_color or '#10b981' }}"></label>
+    <label><i class="fa-solid fa-wand-magic-sparkles"></i> Accent Color<input name="ui_accent_color" type="color" value="{{ settings.ui_accent_color or '#f59e0b' }}"></label>
+    <label><i class="fa-solid fa-fill"></i> Gradient Style<select name="ui_gradient_style"><option value="subtle" {% if settings.ui_gradient_style == 'subtle' %}selected{% endif %}>Subtle</option><option value="vibrant" {% if settings.ui_gradient_style == 'vibrant' %}selected{% endif %}>Vibrant</option><option value="none" {% if settings.ui_gradient_style == 'none' %}selected{% endif %}>None</option></select></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-font"></i></span><div><h3>Typography</h3><p>Font family, weight, and size settings.</p></div></div>
+    <label><i class="fa-solid fa-text-height"></i> Font Family<select name="ui_font_family"><option value="Segoe UI" {% if settings.ui_font_family == 'Segoe UI' %}selected{% endif %}>Segoe UI</option><option value="Inter" {% if settings.ui_font_family == 'Inter' %}selected{% endif %}>Inter</option><option value="Roboto" {% if settings.ui_font_family == 'Roboto' %}selected{% endif %}>Roboto</option><option value="Arial" {% if settings.ui_font_family == 'Arial' %}selected{% endif %}>Arial</option><option value="system-ui" {% if settings.ui_font_family == 'system-ui' %}selected{% endif %}>System UI</option></select></label>
+    <label><i class="fa-solid fa-bold"></i> Font Weight<select name="ui_font_weight"><option value="400" {% if settings.ui_font_weight == '400' %}selected{% endif %}>Normal (400)</option><option value="500" {% if settings.ui_font_weight == '500' %}selected{% endif %}>Medium (500)</option><option value="600" {% if settings.ui_font_weight == '600' %}selected{% endif %}>Semi-Bold (600)</option><option value="700" {% if settings.ui_font_weight == '700' %}selected{% endif %}>Bold (700)</option></select></label>
+    <label><i class="fa-solid fa-text-width"></i> Base Font Size (px)<input name="ui_font_size" value="{{ settings.ui_font_size or '16' }}"></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-shapes"></i></span><div><h3>Border Radius</h3><p>Consistent rounded corners for cards, buttons, and tables.</p></div></div>
+    <label><i class="fa-solid fa-square"></i> Card Radius (px)<input name="ui_card_radius" value="{{ settings.ui_card_radius or '12' }}"></label>
+    <label><i class="fa-solid fa-hand-pointer"></i> Button Radius (px)<input name="ui_button_radius" value="{{ settings.ui_button_radius or '8' }}"></label>
+    <label><i class="fa-solid fa-table"></i> Table Radius (px)<input name="ui_table_radius" value="{{ settings.ui_table_radius or '8' }}"></label>
+    
+    <div class="section-heading wide"><span><i class="fa-solid fa-circle-half-stroke"></i></span><div><h3>Display Mode</h3><p>Light/dark mode and spacing preferences.</p></div></div>
+    <label><i class="fa-solid fa-moon"></i> Dark Mode<select name="ui_dark_mode"><option value="off" {% if settings.ui_dark_mode != 'on' %}selected{% endif %}>OFF</option><option value="on" {% if settings.ui_dark_mode == 'on' %}selected{% endif %}>ON</option></select></label>
+    <label><i class="fa-solid fa-sun"></i> Light Mode<select name="ui_light_mode"><option value="on" {% if settings.ui_light_mode != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.ui_light_mode == 'off' %}selected{% endif %}>OFF</option></select></label>
+    <label><i class="fa-solid fa-compress"></i> Compact Mode<select name="ui_compact_mode"><option value="off" {% if settings.ui_compact_mode != 'on' %}selected{% endif %}>OFF</option><option value="on" {% if settings.ui_compact_mode == 'on' %}selected{% endif %}>ON</option></select></label>
+    <label><i class="fa-solid fa-expand"></i> Comfortable Mode<select name="ui_comfortable_mode"><option value="on" {% if settings.ui_comfortable_mode != 'off' %}selected{% endif %}>ON</option><option value="off" {% if settings.ui_comfortable_mode == 'off' %}selected{% endif %}>OFF</option></select></label>
+  </section>
+
+  <section class="panel form-grid premium-form">
     <div class="section-heading wide"><span><i class="fa-solid fa-font"></i></span><div><h2>Typography Controls</h2><p>Adjust key public-page and result-dashboard font sizes without editing code.</p></div></div>
     <label><i class="fa-solid fa-heading"></i> Page Title<input name="typography_page_title_size" value="{{ settings.typography_page_title_size }}"></label>
     <label><i class="fa-solid fa-align-left"></i> Subtitle<input name="typography_subtitle_size" value="{{ settings.typography_subtitle_size }}"></label>
