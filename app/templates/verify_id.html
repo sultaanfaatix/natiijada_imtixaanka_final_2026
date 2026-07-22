@@ -171,11 +171,13 @@
   <div class="verification-container">
     <!-- Header -->
     <header class="verification-header">
-      {% if settings.logo_path %}
-        <img class="school-logo" src="{{ asset_url(settings.logo_path) }}" alt="{{ settings.school_name }} logo">
-      {% else %}
-        <div class="school-logo fallback"><i class="fa-solid fa-school"></i></div>
-      {% endif %}
+      <div class="school-logo-shell">
+        {% if settings.logo_path %}
+          <img class="school-logo" src="{{ asset_url(settings.logo_path) }}" alt="{{ settings.school_name }} logo">
+        {% else %}
+          <i class="fa-solid fa-school"></i>
+        {% endif %}
+      </div>
       <h1>{{ settings.school_name }}</h1>
       <p class="header-subtitle">Official Student Identity Verification</p>
     </header>

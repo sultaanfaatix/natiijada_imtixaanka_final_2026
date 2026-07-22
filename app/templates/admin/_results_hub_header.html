@@ -1,55 +1,72 @@
 {% set rh_year = selected_year.name if selected_year else "2025 - 2026" %}
-{% set rh_exam = selected_exam.name if selected_exam else "" %}
 {% set rh_level = scope_info.level.name if scope_info is defined and scope_info.level else "" %}
 {% set rh_class = scope_info.class.name if scope_info is defined and scope_info.class else "" %}
 {% set rh_section = scope_info.section.name if scope_info is defined and scope_info.section else "" %}
 {% set rh_query = "year_id=" ~ (selected_year.id if selected_year else "") ~ "&exam_id=" ~ (selected_exam.id if selected_exam else "") %}
+{% set rh_settings = settings if settings is defined else none %}
+{% set rh_school_name = rh_settings.school_name if rh_settings and rh_settings.school_name else rh_label("hub.brand.school", default="Taysiir International School") %}
+{% set rh_school_motto = rh_settings.school_motto if rh_settings and rh_settings.school_motto else rh_label("hub.brand.subtitle", default="Results Hub") %}
+{% set rh_page_titles = {
+  "dashboard": rh_label("hub.tab.dashboard", default="Dashboard"),
+  "entry": rh_label("hub.tab.entry", default="Result Entry"),
+  "roster": rh_label("hub.tab.roster", default="Class List"),
+  "analytics": rh_label("hub.tab.analytics", default="Analytics"),
+  "setup": rh_label("hub.tab.setup", default="Setup"),
+  "students": rh_label("hub.tab.students", default="Student Management"),
+  "grades": rh_label("hub.tab.grades", default="Grade Management"),
+  "settings": rh_label("hub.tab.settings", default="Settings")
+} %}
+{% set rh_page_title = rh_page_titles.get(active_tab, active_tab|replace('_', ' ')|title) %}
 
 <div class="rh-topbar">
   <div class="rh-brand">
-    <div class="rh-brand-mark">D</div>
+    <div class="rh-brand-mark">
+      {% if rh_settings and rh_settings.logo_path %}
+        <img src="{{ asset_url(rh_settings.logo_path) }}" alt="{{ rh_school_name }} logo">
+      {% else %}
+        <i class="fa-solid fa-school"></i>
+      {% endif %}
+    </div>
     <div class="rh-brand-text">
-      <div class="rh-school">{{ rh_label("hub.brand.school", default="Dugsiga — Nidaamka Maamulka") }}</div>
-      <div class="rh-sub">{{ rh_label("hub.brand.subtitle", default="Results Hub") }}</div>
+      <div class="rh-school">{{ rh_school_name }}</div>
+      <div class="rh-sub">{{ rh_school_motto }}</div>
     </div>
   </div>
-  <div class="rh-user"><span></span>{{ current_user.full_name or rh_label("hub.user.role", default="Maamule · Super Admin") }}</div>
+  <div class="rh-user"><span></span>{{ current_user.full_name or rh_label("hub.user.role", default="Maamule - Super Admin") }}</div>
 </div>
 
 <div class="rh-context">
-  <a href="{{ url_for('admin_advanced_results.new_dashboard') }}" style="color:inherit; text-decoration:none;">Results</a>
+  <a href="{{ url_for('admin_advanced_results.new_dashboard') }}" style="color:inherit; text-decoration:none;">{{ rh_year }}</a>
   <span>/</span>
-  <span class="active">{{ rh_year }}</span>
-  {% if rh_exam %}<span>/</span><span>{{ rh_exam }}</span>{% endif %}
-  {% if rh_level %}<span>/</span><span>{{ rh_level }}</span>{% endif %}
-  {% if rh_class %}<span>/</span><span class="active">{{ rh_class }}</span>{% endif %}
-  {% if rh_section %}<span>/</span><span>{{ rh_section }}</span>{% endif %}
-  {% if not rh_exam and active_tab == "setup" %}<span>·</span><span>Setup</span>{% endif %}
+  <span class="active">{{ rh_page_title }}</span>
+  {% if active_tab in ["entry", "roster", "analytics"] and rh_level %}<span>/</span><span>{{ rh_level }}</span>{% endif %}
+  {% if active_tab in ["entry", "roster", "analytics"] and rh_class %}<span>/</span><span>{{ rh_class }}</span>{% endif %}
+  {% if active_tab in ["entry", "roster", "analytics"] and rh_section %}<span>/</span><span>{{ rh_section }}</span>{% endif %}
 </div>
 
 <nav class="rh-tabs">
   <button class="rh-tab {{ 'active' if active_tab == 'dashboard' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.new_dashboard') }}?{{ rh_query }}'">
-    <span>01</span>{{ rh_label("hub.tab.dashboard", default="Dashboard") }}
+    <i class="fa-solid fa-chart-line"></i>{{ rh_label("hub.tab.dashboard", default="Dashboard") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'entry' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.result_entry') }}?{{ rh_query }}{% if rh_level and scope_info.level %}&level_id={{ scope_info.level.id }}{% endif %}{% if rh_class and scope_info.class %}&class_id={{ scope_info.class.id }}{% endif %}{% if rh_section and scope_info.section %}&section_id={{ scope_info.section.id }}{% endif %}'">
-    <span>02</span>{{ rh_label("hub.tab.entry", default="Result Entry") }}
+    <i class="fa-solid fa-pen-to-square"></i>{{ rh_label("hub.tab.entry", default="Result Entry") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'roster' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.class_roster') }}?{{ rh_query }}{% if rh_level and scope_info.level %}&level_id={{ scope_info.level.id }}{% endif %}{% if rh_class and scope_info.class %}&class_id={{ scope_info.class.id }}{% endif %}{% if rh_section and scope_info.section %}&section_id={{ scope_info.section.id }}{% endif %}'">
-    <span>03</span>{{ rh_label("hub.tab.roster", default="Liiska Fasalka") }}
+    <i class="fa-solid fa-table-list"></i>{{ rh_label("hub.tab.roster", default="Liiska Fasalka") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'analytics' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.analytics') }}?{{ rh_query }}{% if rh_level and scope_info.level %}&level_id={{ scope_info.level.id }}{% endif %}{% if rh_class and scope_info.class %}&class_id={{ scope_info.class.id }}{% endif %}{% if rh_section and scope_info.section %}&section_id={{ scope_info.section.id }}{% endif %}'">
-    <span>04</span>{{ rh_label("hub.tab.analytics", default="Analytics") }}
+    <i class="fa-solid fa-chart-pie"></i>{{ rh_label("hub.tab.analytics", default="Analytics") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'setup' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.new_setup') }}'">
-    <span>05</span>{{ rh_label("hub.tab.setup", default="Setup") }}
+    <i class="fa-solid fa-sliders"></i>{{ rh_label("hub.tab.setup", default="Setup") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'students' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.students_management') }}?{{ rh_query }}'">
-    <span>06</span>{{ rh_label("hub.tab.students", default="Students Mgmt") }}
+    <i class="fa-solid fa-user-graduate"></i>{{ rh_label("hub.tab.students", default="Students Mgmt") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'grades' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.grade_management') }}?{{ rh_query }}'">
-    <span>07</span>{{ rh_label("hub.tab.grades", default="Grade Mgmt") }}
+    <i class="fa-solid fa-award"></i>{{ rh_label("hub.tab.grades", default="Grade Mgmt") }}
   </button>
   <button class="rh-tab {{ 'active' if active_tab == 'settings' else '' }}" onclick="window.location.href='{{ url_for('admin_advanced_results.results_settings') }}'">
-    <span>08</span>{{ rh_label("hub.tab.settings", default="Settings") }}
+    <i class="fa-solid fa-gear"></i>{{ rh_label("hub.tab.settings", default="Settings") }}
   </button>
 </nav>

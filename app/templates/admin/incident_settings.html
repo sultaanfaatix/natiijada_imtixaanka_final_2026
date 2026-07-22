@@ -534,54 +534,6 @@
         {{ lookup_card('action', 'Incident Actions', actions, 'list-check') }}
     </div>
 
-    <!-- Right Column - Live Preview -->
-    <div class="preview-column">
-      <div class="preview-card">
-        <div class="preview-header">
-          <i class="fa-solid fa-eye"></i>
-          <div class="header-text">
-            <h3>Live Preview</h3>
-            <p>See how your incident report will look</p>
-          </div>
-        </div>
-        <div class="preview-body">
-          <div class="preview-form" id="previewForm">
-            <div class="preview-header-section">
-              <h2>Incident Report</h2>
-              <p class="preview-school">Example School Name</p>
-            </div>
-            <div class="preview-field">
-              <label>Date</label>
-              <div class="preview-input">January 15, 2026</div>
-            </div>
-            <div class="preview-field">
-              <label>Exam Room</label>
-              <div class="preview-input">Room 101</div>
-            </div>
-            <div class="preview-field">
-              <label>Student</label>
-              <div class="preview-input">John Doe</div>
-            </div>
-            <div class="preview-field">
-              <label>Invigilator</label>
-              <div class="preview-input">Jane Smith</div>
-            </div>
-            <div class="preview-field">
-              <label>Incident Description</label>
-              <div class="preview-textarea">Student was found using unauthorized materials during the examination...</div>
-            </div>
-            <div class="preview-field">
-              <label>Actions Taken</label>
-              <div class="preview-textarea">Materials confiscated, report filed with administration...</div>
-            </div>
-            <div class="preview-signature">
-              <label>Signature</label>
-              <div class="preview-signature-line"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Footer Info -->
@@ -762,18 +714,13 @@
 /* Settings Layout */
 .settings-layout {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   align-items: start;
 }
 
 .settings-column {
   min-width: 0;
-}
-
-.preview-column {
-  position: sticky;
-  top: 2rem;
 }
 
 /* Settings Cards */

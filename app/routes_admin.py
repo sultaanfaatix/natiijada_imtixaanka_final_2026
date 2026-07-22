@@ -1,6 +1,7 @@
 from datetime import datetime, date, timedelta
+from functools import wraps
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, session, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for
 from flask_login import current_user, login_required
 from openpyxl import Workbook
 from sqlalchemy import or_
@@ -10,7 +11,7 @@ from . import db
 from .audit import audit
 from .cloudinary_service import upload_image
 from .import_wizard import preview_results, preview_students, result_template, student_template
-from .models import AcademicLevel, AcademicClass, AcademicSection, AcademicYear, AuditLog, Exam, GradeScale, IncidentAction, IncidentAttachment, IncidentCategory, IncidentReport, Result, SchoolClass, SeverityLevel, Setting, Student, Subject, User, ExamInvigilator, InvigilatorLoginHistory, IncidentReportSettings
+from .models import AcademicLevel, AcademicClass, AcademicSection, AcademicYear, AttendanceRecord, AuditLog, Exam, GradeScale, IncidentAction, IncidentAttachment, IncidentCategory, IncidentReport, ReportVerification, Result, SchoolClass, SeverityLevel, Setting, Student, Subject, User, ExamInvigilator, InvigilatorLoginHistory, IncidentReportSettings
 from .permissions import PERMISSIONS, can, enforce_endpoint_permission, permission_required
 from .security import ALLOWED_PHOTOS, ALLOWED_SHEETS, allowed_file
 from .services import get_settings, grade_for, result_payload
@@ -133,9 +134,9 @@ def incidents():
     class_filter = request.args.get("class_id", "")
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
-    
+
     query = IncidentReport.query.outerjoin(IncidentReport.student).outerjoin(IncidentReport.exam)
-    
+
     if q:
         query = query.filter(
             or_(
@@ -143,19 +144,19 @@ def incidents():
                 Student.full_name.like(f"%{q}%")
             )
         )
-    
+
     if status_filter:
         query = query.filter(IncidentReport.status == status_filter)
-    
+
     if severity_filter:
         query = query.filter(IncidentReport.severity_id == int(severity_filter))
-    
+
     if category_filter:
         query = query.filter(IncidentReport.category_id == int(category_filter))
-    
+
     if room_filter:
         query = query.filter(IncidentReport.exam_room.like(f"%{room_filter}%"))
-    
+
     if subject_filter:
         query = query.filter(IncidentReport.subject.has(Subject.name.like(f"%{subject_filter}%")))
 
@@ -170,13 +171,13 @@ def incidents():
 
     if class_filter:
         query = query.filter(Student.academic_class_id == int(class_filter))
-    
+
     if date_from:
         query = query.filter(IncidentReport.incident_date >= datetime.strptime(date_from, "%Y-%m-%d").date())
-    
+
     if date_to:
         query = query.filter(IncidentReport.incident_date <= datetime.strptime(date_to, "%Y-%m-%d").date())
-    
+
     reports = query.order_by(IncidentReport.created_at.desc()).all()
     # Statistics reflect the currently filtered report set.
     stats = {
@@ -194,7 +195,7 @@ def incidents():
     levels = AcademicLevel.query.order_by(AcademicLevel.sort_order, AcademicLevel.name).all()
     classes = AcademicClass.query.order_by(AcademicClass.sort_order, AcademicClass.name).all()
     exam_sessions = exams
-    
+
     return render_template(
         "admin/incidents.html",
         reports=reports,
@@ -243,7 +244,7 @@ def incident_view(report_id):
 def incident_edit(report_id):
     """Edit incident report"""
     report = IncidentReport.query.get_or_404(report_id)
-    
+
     if request.method == "POST":
         report.category_id = int(request.form.get("category_id"))
         report.severity_id = int(request.form.get("severity_id"))
@@ -254,12 +255,12 @@ def incident_edit(report_id):
         report.reviewed_by_id = current_user.id
         report.reviewed_at = datetime.utcnow()
         report.review_notes = request.form.get("review_notes", "")
-        
+
         db.session.commit()
         audit("Incident Report Updated", f"Updated report {report.report_number}")
         flash("Incident report updated successfully.", "success")
         return redirect(url_for("admin.incidents"))
-    
+
     categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
     severities = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order).all()
     return render_template("admin/incident_edit.html", report=report, categories=categories, severities=severities)
@@ -1113,9 +1114,9 @@ def invigilators():
     role_filter = request.args.get("role", "")
     school_filter = request.args.get("school", "")
     validity_filter = request.args.get("validity", "")
-    
+
     query = ExamInvigilator.query
-    
+
     if q:
         query = query.filter(
             or_(
@@ -1125,16 +1126,16 @@ def invigilators():
                 ExamInvigilator.mobile_number.like(f"%{q}%")
             )
         )
-    
+
     if status_filter:
         query = query.filter(ExamInvigilator.status == status_filter)
-    
+
     if role_filter:
         query = query.filter(ExamInvigilator.role == role_filter)
-    
+
     if school_filter:
         query = query.filter(ExamInvigilator.school.like(f"%{school_filter}%"))
-    
+
     if validity_filter:
         today = date.today()
         if validity_filter == "active":
@@ -1143,13 +1144,13 @@ def invigilators():
             query = query.filter(ExamInvigilator.active_until.between(today, today + timedelta(days=7)))
         elif validity_filter == "expired":
             query = query.filter(ExamInvigilator.active_until < today)
-    
+
     invigilators = query.order_by(ExamInvigilator.created_at.desc()).all()
-    
+
     # Statistics
     today = date.today()
     week_from_now = today + timedelta(days=7)
-    
+
     stats = {
         "total": ExamInvigilator.query.count(),
         "active": ExamInvigilator.query.filter_by(status="Active").count(),
@@ -1160,7 +1161,7 @@ def invigilators():
         "supervisors": ExamInvigilator.query.filter(ExamInvigilator.role.in_(["Supervisor", "Chief Invigilator"])).count(),
         "administrators": ExamInvigilator.query.filter_by(role="Administrator").count(),
     }
-    
+
     return render_template(
         "admin/invigilators.html",
         invigilators=invigilators,
@@ -1187,7 +1188,7 @@ def invigilator_add():
         notes = request.form.get("notes", "").strip()
         active_from = request.form.get("active_from", "")
         active_until = request.form.get("active_until", "")
-        
+
         # Validate required fields
         if not all([invigilator_id, username, password, full_name]):
             flash("Invigilator ID, username, password, and full name are required.", "danger")
@@ -1196,16 +1197,16 @@ def invigilator_add():
         if not is_valid_password:
             flash(password_error, "danger")
             return render_template("admin/invigilator_form.html", invigilator=None)
-        
+
         # Check if invigilator_id or username already exists
         if ExamInvigilator.query.filter_by(invigilator_id=invigilator_id).first():
             flash("Invigilator ID already exists.", "danger")
             return render_template("admin/invigilator_form.html", invigilator=None)
-        
+
         if ExamInvigilator.query.filter_by(username=username).first():
             flash("Username already exists.", "danger")
             return render_template("admin/invigilator_form.html", invigilator=None)
-        
+
         # Create invigilator
         invigilator = ExamInvigilator(
             invigilator_id=invigilator_id,
@@ -1220,14 +1221,14 @@ def invigilator_add():
         )
         invigilator.set_password(password)
         invigilator.visible_password = password
-        
+
         db.session.add(invigilator)
         db.session.commit()
-        
+
         audit("Invigilator Created", f"Created invigilator {invigilator.full_name} ({invigilator.invigilator_id})")
         flash(f"Invigilator {full_name} added successfully!", "success")
         return redirect(url_for("admin.invigilators"))
-    
+
     return render_template("admin/invigilator_form.html", invigilator=None)
 
 
@@ -1235,7 +1236,7 @@ def invigilator_add():
 def invigilator_edit(invigilator_id):
     """Edit invigilator"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
-    
+
     if request.method == "POST":
         invigilator.invigilator_id = request.form.get("invigilator_id", "").strip()
         invigilator.username = request.form.get("username", "").strip()
@@ -1247,7 +1248,7 @@ def invigilator_edit(invigilator_id):
         invigilator.status = request.form.get("status", "Active")
         invigilator.active_from = datetime.strptime(request.form.get("active_from", ""), "%Y-%m-%d").date() if request.form.get("active_from") else None
         invigilator.active_until = datetime.strptime(request.form.get("active_until", ""), "%Y-%m-%d").date() if request.form.get("active_until") else None
-        
+
         # Update password if provided
         new_password = request.form.get("new_password", "")
         if new_password:
@@ -1257,20 +1258,20 @@ def invigilator_edit(invigilator_id):
                 return render_template("admin/invigilator_form.html", invigilator=invigilator)
             invigilator.set_password(new_password)
             invigilator.visible_password = new_password
-        
+
         # Handle photo upload
         if request.files.get("photo") and request.files["photo"].filename:
             photo = request.files["photo"]
             if allowed_file(photo.filename, ALLOWED_PHOTOS):
                 photo_url = upload_image(photo, "invigilators")
                 invigilator.photo_path = photo_url
-        
+
         db.session.commit()
-        
+
         audit("Invigilator Updated", f"Updated invigilator {invigilator.full_name} ({invigilator.invigilator_id})")
         flash(f"Invigilator {invigilator.full_name} updated successfully!", "success")
         return redirect(url_for("admin.invigilators"))
-    
+
     return render_template("admin/invigilator_form.html", invigilator=invigilator)
 
 
@@ -1278,13 +1279,13 @@ def invigilator_edit(invigilator_id):
 def invigilator_delete(invigilator_id):
     """Delete invigilator"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
-    
+
     full_name = invigilator.full_name
     invigilator_id_str = invigilator.invigilator_id
-    
+
     db.session.delete(invigilator)
     db.session.commit()
-    
+
     audit("Invigilator Deleted", f"Deleted invigilator {full_name} ({invigilator_id_str})")
     flash(f"Invigilator {full_name} deleted successfully!", "success")
     return redirect(url_for("admin.invigilators"))
@@ -1294,15 +1295,15 @@ def invigilator_delete(invigilator_id):
 def invigilator_toggle_status(invigilator_id):
     """Toggle invigilator active status"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
-    
+
     invigilator.is_active = not invigilator.is_active
     if not invigilator.is_active:
         invigilator.status = "Inactive"
     else:
         invigilator.status = "Active"
-    
+
     db.session.commit()
-    
+
     status_text = "activated" if invigilator.is_active else "deactivated"
     audit("Invigilator Status Changed", f"{status_text.capitalize()} invigilator {invigilator.full_name}")
     flash(f"Invigilator {invigilator.full_name} {status_text} successfully!", "success")
@@ -1313,13 +1314,13 @@ def invigilator_toggle_status(invigilator_id):
 def invigilator_reset_password(invigilator_id):
     """Reset invigilator password and force change"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
-    
+
     temp_password = generate_invigilator_password()
     invigilator.set_password(temp_password)
     invigilator.visible_password = temp_password
     invigilator.force_password_change = True
     db.session.commit()
-    
+
     audit("Invigilator Password Reset", f"Reset password for {invigilator.full_name}")
     flash(f"Temporary password for {invigilator.full_name}: {temp_password}", "info")
     return redirect(url_for("admin.invigilators"))
@@ -1330,7 +1331,7 @@ def invigilator_history(invigilator_id):
     """View invigilator login history"""
     invigilator = ExamInvigilator.query.get_or_404(invigilator_id)
     history = InvigilatorLoginHistory.query.filter_by(invigilator_id=invigilator_id).order_by(InvigilatorLoginHistory.login_time.desc()).limit(50).all()
-    
+
     return render_template("admin/invigilator_history.html", invigilator=invigilator, history=history)
 
 
@@ -1346,14 +1347,14 @@ def incident_settings():
     categories = IncidentCategory.query.order_by(IncidentCategory.sort_order, IncidentCategory.name).all()
     severities = SeverityLevel.query.order_by(SeverityLevel.sort_order, SeverityLevel.name).all()
     actions = IncidentAction.query.order_by(IncidentAction.sort_order, IncidentAction.name).all()
-    
+
     # Group settings by category
     grouped_settings = {}
     for setting in settings:
         if setting.category not in grouped_settings:
             grouped_settings[setting.category] = []
         grouped_settings[setting.category].append(setting)
-    
+
     return render_template(
         "admin/incident_settings.html",
         grouped_settings=grouped_settings,
@@ -1369,10 +1370,10 @@ def incident_settings_update():
     ensure_incident_setting_defaults()
     # Get all settings first to handle unchecked checkboxes
     all_settings = IncidentReportSettings.query.all()
-    
+
     for setting in all_settings:
         form_key = f"setting_{setting.setting_key}"
-        
+
         if setting.setting_type == 'boolean':
             # Checkboxes only send 'on' when checked, so we need to handle unchecked case
             if form_key in request.form:
@@ -1386,9 +1387,9 @@ def incident_settings_update():
                 if setting.setting_key == "incident_reference_prefix":
                     value = "".join(ch for ch in value.strip().upper() if ch.isalnum())[:10] or "INC"
                 setting.setting_value = value
-    
+
     db.session.commit()
-    
+
     audit("Incident Settings Updated", "Updated incident report form settings")
     flash("Incident report settings updated successfully!", "success")
     return redirect(url_for("admin.incident_settings"))
@@ -1484,3 +1485,982 @@ def incident_lookup_delete(kind, row_id):
         db.session.rollback()
         flash(f"Could not delete {kind}. It was not changed.", "danger")
     return redirect(url_for("admin.incident_settings"))
+
+
+CONFIG_CENTER_SECTIONS = {
+    'academic-years': {
+        'title': 'Academic Years',
+        'description': 'Manage academic calendar years and their status',
+        'columns': ['Academic Year', 'Status', 'Type', 'Start Date', 'End Date', 'Created By']
+    },
+    'exam-types': {
+        'title': 'Exam Types',
+        'description': 'Manage examination types and their configurations',
+        'columns': ['Exam Type', 'Status', 'Code', 'Weight %', 'Academic Year', 'Created By']
+    },
+    'levels': {
+        'title': 'Levels & Classes',
+        'description': 'Manage academic levels, classes, and sections as one hierarchy',
+        'columns': ['Level / Class', 'Status', 'Type', 'Students', 'Sections', 'Created By']
+    },
+    'subjects': {
+        'title': 'Subjects',
+        'description': 'Manage subject offerings and their level assignments',
+        'columns': ['Subject', 'Status', 'Code', 'Level', 'Classes', 'Created By']
+    },
+    'promotion-rules': {
+        'title': 'Promotion Rules',
+        'description': 'Document student promotion criteria and administrative policies',
+        'columns': ['Rule', 'Condition', 'Value', 'Status', 'Applies To', 'Created By']
+    },
+    'result-settings': {
+        'title': 'Result Settings',
+        'description': 'Review result publication and display settings',
+        'columns': ['Setting', 'Value', 'Type', 'Status', 'Category', 'Created By']
+    },
+    'system-defaults': {
+        'title': 'System Defaults',
+        'description': 'Review system-wide default values',
+        'columns': ['Setting', 'Default Value', 'Type', 'Status', 'Category', 'Created By']
+    },
+    'audit-logs': {
+        'title': 'Audit Logs',
+        'description': 'View all system configuration changes',
+        'columns': ['Date/Time', 'Action', 'User', 'Module', 'Details', 'IP Address']
+    },
+    'archive': {
+        'title': 'Archive',
+        'description': 'View and restore safely archived configuration items',
+        'columns': ['Item', 'Type', 'Archived Date', 'Archived By', 'Reason']
+    }
+}
+
+
+CONFIG_CENTER_MODEL_MAP = {
+    'academic-years': AcademicYear,
+    'exam-types': Exam,
+    'levels': AcademicLevel,
+    'classes': AcademicClass,
+    'subjects': Subject,
+}
+
+CONFIG_CENTER_MUTABLE_TYPES = {'academic-years', 'exam-types', 'levels', 'classes', 'subjects'}
+
+
+def _config_center_auth_valid():
+    if not session.get('config_center_authenticated'):
+        return False
+    expiry = session.get('config_center_auth_expiry')
+    if expiry:
+        try:
+            expiry_dt = datetime.fromisoformat(expiry)
+        except (TypeError, ValueError):
+            return False
+        if datetime.utcnow() > expiry_dt:
+            session.pop('config_center_authenticated', None)
+            session.pop('config_center_auth_time', None)
+            session.pop('config_center_auth_expiry', None)
+            return False
+    return True
+
+
+def config_center_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if _config_center_auth_valid():
+            return fn(*args, **kwargs)
+        if request.path.startswith('/admin/config-center/api') or request.path.endswith('/confirm-password'):
+            return jsonify({'success': False, 'message': 'Configuration Center authentication is required.'}), 403
+        flash('Please authenticate from Results Hub Setup before opening Configuration Center.', 'warning')
+        return redirect(url_for('admin_advanced_results.new_setup'))
+    return wrapper
+
+
+def _item_display_name(item):
+    return getattr(item, 'name', None) or getattr(item, 'key', None) or str(getattr(item, 'id', 'item'))
+
+
+def _config_item_is_active(item_type, item):
+    if item_type == 'academic-years':
+        return bool(getattr(item, 'is_current', False))
+    if hasattr(item, 'is_active'):
+        return bool(item.is_active)
+    if item_type == 'subjects':
+        return True
+    return bool(getattr(item, 'status', 'active') == 'active')
+
+
+def _config_dependencies(item_type, item_id):
+    dependencies = []
+    if item_type == 'academic-years':
+        exam_count = Exam.query.filter_by(academic_year_id=item_id).count()
+        student_count = Student.query.filter_by(academic_year_id=item_id).count()
+        attendance_count = AttendanceRecord.query.filter_by(academic_year_id=item_id).count()
+        if exam_count:
+            dependencies.append(f'Exam Types: {exam_count}')
+        if student_count:
+            dependencies.append(f'Students: {student_count}')
+        if attendance_count:
+            dependencies.append(f'Attendance Records: {attendance_count}')
+    elif item_type == 'exam-types':
+        result_count = Result.query.filter_by(exam_id=item_id).count()
+        verification_count = ReportVerification.query.filter_by(exam_id=item_id).count()
+        incident_count = IncidentReport.query.filter_by(exam_id=item_id).count()
+        grade_count = GradeScale.query.filter_by(exam_id=item_id).count()
+        if result_count:
+            dependencies.append(f'Results: {result_count}')
+        if verification_count:
+            dependencies.append(f'Report Verifications: {verification_count}')
+        if incident_count:
+            dependencies.append(f'Incident Reports: {incident_count}')
+        if grade_count:
+            dependencies.append(f'Grade Scales: {grade_count}')
+    elif item_type == 'levels':
+        class_count = AcademicClass.query.filter_by(academic_level_id=item_id).count()
+        student_count = Student.query.filter_by(academic_level_id=item_id).count()
+        subject_count = Subject.query.filter_by(academic_level_id=item_id).count()
+        if class_count:
+            dependencies.append(f'Classes: {class_count}')
+        if student_count:
+            dependencies.append(f'Students: {student_count}')
+        if subject_count:
+            dependencies.append(f'Subjects: {subject_count}')
+    elif item_type == 'classes':
+        section_count = AcademicSection.query.filter_by(academic_class_id=item_id).count()
+        student_count = Student.query.filter_by(academic_class_id=item_id).count()
+        exam_count = Exam.query.filter_by(academic_class_id=item_id).count()
+        if section_count:
+            dependencies.append(f'Sections: {section_count}')
+        if student_count:
+            dependencies.append(f'Students: {student_count}')
+        if exam_count:
+            dependencies.append(f'Exams: {exam_count}')
+    elif item_type == 'subjects':
+        result_count = Result.query.filter_by(subject_id=item_id).count()
+        incident_count = IncidentReport.query.filter_by(subject_id=item_id).count()
+        if result_count:
+            dependencies.append(f'Results: {result_count}')
+        if incident_count:
+            dependencies.append(f'Incident Reports: {incident_count}')
+    return dependencies
+
+
+def _config_model(item_type):
+    return CONFIG_CENTER_MODEL_MAP.get(item_type)
+
+
+def _config_status(item_type, item):
+    return 'active' if _config_item_is_active(item_type, item) else 'archived'
+
+
+def _parse_int(value, default=None):
+    if value in (None, ''):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _parse_float(value, default=None):
+    if value in (None, ''):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _duplicate_exists(model, filters, exclude_id=None):
+    query = model.query.filter_by(**filters)
+    if exclude_id:
+        query = query.filter(model.id != exclude_id)
+    return query.first() is not None
+
+
+def _audit_config_change(action, item_type, item, old_value=None, new_value=None, reason=None):
+    details = {
+        'item_type': item_type,
+        'item_id': getattr(item, 'id', None),
+        'item_name': _item_display_name(item),
+        'old_value': old_value,
+        'new_value': new_value,
+        'reason': reason,
+        'device': request.headers.get('User-Agent', '')[:180],
+    }
+    audit(action, str(details))
+
+
+@admin_bp.before_request
+def enforce_config_center_access():
+    if not request.path.startswith('/admin/config-center'):
+        return None
+    if request.endpoint == 'admin.config_center_authenticate':
+        return None
+    if _config_center_auth_valid():
+        return None
+    if request.path.startswith('/admin/config-center/api') or request.endpoint == 'admin.config_center_confirm_password':
+        return jsonify({'success': False, 'message': 'Configuration Center authentication is required.'}), 403
+    flash('Please authenticate from Results Hub Setup before opening Configuration Center.', 'warning')
+    return redirect(url_for('admin_advanced_results.new_setup'))
+
+
+# Configuration Center Routes
+@admin_bp.route("/config-center")
+@login_required
+@config_center_required
+def config_center():
+    """Configuration Center Main Page"""
+    section = request.args.get('section', 'academic-years')
+    if section == 'grade-system':
+        abort(404)
+    info = CONFIG_CENTER_SECTIONS.get(section, CONFIG_CENTER_SECTIONS['academic-years'])
+
+    classes_by_level = {}
+    class_student_counts = {}
+    subject_class_map = {}
+
+    # Get data based on section
+    items = []
+    if section == 'academic-years':
+        items = AcademicYear.query.order_by(AcademicYear.name.desc()).all()
+    elif section == 'exam-types':
+        items = Exam.query.order_by(Exam.academic_year_id.desc(), Exam.sort_order, Exam.name).all()
+    elif section == 'levels':
+        items = AcademicLevel.query.order_by(AcademicLevel.sort_order, AcademicLevel.name).all()
+        level_ids = [level.id for level in items]
+        classes = AcademicClass.query.filter(AcademicClass.academic_level_id.in_(level_ids)).order_by(AcademicClass.sort_order, AcademicClass.name).all() if level_ids else []
+        classes_by_level = {level.id: [] for level in items}
+        for academic_class in classes:
+            classes_by_level.setdefault(academic_class.academic_level_id, []).append(academic_class)
+            class_student_counts[academic_class.id] = Student.query.filter_by(academic_class_id=academic_class.id).count()
+    elif section == 'subjects':
+        items = Subject.query.order_by(Subject.academic_level_id, Subject.sort_order, Subject.name).all()
+        for subject in items:
+            if subject.academic_level_id:
+                subject_class_map[subject.id] = AcademicClass.query.filter_by(academic_level_id=subject.academic_level_id, is_active=True).order_by(AcademicClass.sort_order, AcademicClass.name).all()
+            else:
+                subject_class_map[subject.id] = []
+    elif section == 'audit-logs':
+        items = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(50).all()
+    elif section == 'archive':
+        items = []
+        for item in AcademicYear.query.filter_by(is_current=False).order_by(AcademicYear.name.desc()).all():
+            items.append({'id': item.id, 'item_type': 'academic-years', 'name': item.name, 'status': 'archived', 'archived_at': item.updated_at})
+        for item in Exam.query.filter_by(is_active=False).order_by(Exam.updated_at.desc()).all():
+            items.append({'id': item.id, 'item_type': 'exam-types', 'name': item.name, 'status': 'archived', 'archived_at': item.updated_at})
+        for item in AcademicLevel.query.filter_by(is_active=False).order_by(AcademicLevel.sort_order, AcademicLevel.name).all():
+            items.append({'id': item.id, 'item_type': 'levels', 'name': item.name, 'status': 'archived', 'archived_at': item.updated_at})
+        for item in AcademicClass.query.filter_by(is_active=False).order_by(AcademicClass.sort_order, AcademicClass.name).all():
+            items.append({'id': item.id, 'item_type': 'classes', 'name': item.name, 'status': 'archived', 'archived_at': item.updated_at})
+
+    # Calculate counts
+    total_count = len(items)
+    if section == 'archive':
+        active_count = 0
+    else:
+        active_count = len([item for item in items if _config_item_is_active(section, item)])
+    archived_count = total_count - active_count
+
+    return render_template('admin/config_center.html',
+                         section=section,
+                         section_title=info['title'],
+                         section_description=info['description'],
+                         table_columns=info['columns'],
+                         items=items,
+                         total_count=total_count,
+                         active_count=active_count,
+                         archived_count=archived_count,
+                         filter_status='all',
+                         years=AcademicYear.query.order_by(AcademicYear.name.desc()).all(),
+                         levels=AcademicLevel.query.order_by(AcademicLevel.sort_order, AcademicLevel.name).all(),
+                         classes_by_level=classes_by_level,
+                         class_student_counts=class_student_counts,
+                         subject_class_map=subject_class_map)
+
+
+@admin_bp.route("/config-center/authenticate", methods=["POST"])
+@login_required
+def config_center_authenticate():
+    """Authenticate administrator for Configuration Center access"""
+    data = request.get_json(silent=True) or {}
+    password = data.get('password', '')
+    remember_duration = int(data.get('remember_duration', 0))
+
+    # Verify administrator password
+    # In production, use proper password hashing
+    admin_user = User.query.filter_by(id=current_user.id).first()
+
+    # Simple password verification (replace with proper hashing in production)
+    if admin_user and admin_user.check_password(password):
+        # Set session flag for Configuration Center access
+        session['config_center_authenticated'] = True
+        session['config_center_auth_time'] = datetime.utcnow().isoformat()
+
+        if remember_duration > 0:
+            session['config_center_auth_expiry'] = (datetime.utcnow() + timedelta(minutes=remember_duration)).isoformat()
+        else:
+            session['config_center_auth_expiry'] = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
+
+        audit("Configuration Center Access", f"Administrator {current_user.username} accessed Configuration Center")
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid password'})
+
+
+@admin_bp.route("/config-center/confirm-password", methods=["POST"])
+@login_required
+def config_center_confirm_password():
+    """Confirm password for dangerous actions"""
+    data = request.get_json(silent=True) or {}
+    password = data.get('password', '')
+    action = data.get('action', '')
+    item_id = data.get('item_id')
+
+    # Verify administrator password
+    admin_user = User.query.filter_by(id=current_user.id).first()
+
+    if admin_user and admin_user.check_password(password):
+        # Log the action
+        audit(f"Configuration Action: {action}", f"User {current_user.username} confirmed action on item {item_id}")
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid password'})
+
+
+@admin_bp.route("/config-center/academic-years")
+@login_required
+def config_academic_years():
+    """Academic Years Management"""
+    return redirect(url_for('admin.config_center', section='academic-years'))
+
+
+@admin_bp.route("/config-center/exam-types")
+@login_required
+def config_exam_types():
+    """Exam Types Management"""
+    return redirect(url_for('admin.config_center', section='exam-types'))
+
+
+@admin_bp.route("/config-center/levels")
+@login_required
+def config_levels():
+    """Levels & Classes Management"""
+    return redirect(url_for('admin.config_center', section='levels'))
+
+
+@admin_bp.route("/config-center/subjects")
+@login_required
+def config_subjects():
+    """Subjects Management"""
+    return redirect(url_for('admin.config_center', section='subjects'))
+
+
+@admin_bp.route("/config-center/promotion-rules")
+@login_required
+def config_promotion_rules():
+    """Promotion Rules Management"""
+    return redirect(url_for('admin.config_center', section='promotion-rules'))
+
+
+@admin_bp.route("/config-center/result-settings")
+@login_required
+def config_result_settings():
+    """Result Settings Management"""
+    return redirect(url_for('admin.config_center', section='result-settings'))
+
+
+@admin_bp.route("/config-center/system-defaults")
+@login_required
+def config_system_defaults():
+    """System Defaults Management"""
+    return redirect(url_for('admin.config_center', section='system-defaults'))
+
+
+@admin_bp.route("/config-center/audit-logs")
+@login_required
+def config_audit_logs():
+    """Audit Logs View"""
+    return redirect(url_for('admin.config_center', section='audit-logs'))
+
+
+@admin_bp.route("/config-center/archive")
+@login_required
+def config_archive():
+    """Archive Management"""
+    return redirect(url_for('admin.config_center', section='archive'))
+
+
+# Configuration Center CRUD API Endpoints
+@admin_bp.route("/config-center/api/academic-years", methods=["POST"])
+@login_required
+def config_create_academic_year():
+    """Create new academic year"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+
+    try:
+        # Check if academic year already exists
+        existing = AcademicYear.query.filter_by(name=name).first()
+        if existing:
+            return jsonify({'success': False, 'message': 'Academic year already exists'})
+
+        academic_year = AcademicYear(
+            name=name,
+            is_current=False
+        )
+        db.session.add(academic_year)
+        db.session.commit()
+
+        audit("Configuration Center", f"Created academic year: {name}")
+        return jsonify({'success': True, 'message': 'Academic year created successfully', 'data': {'id': academic_year.id, 'name': academic_year.name}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/academic-years/<int:year_id>", methods=["PUT"])
+@login_required
+def config_update_academic_year(year_id):
+    """Update academic year"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    year = AcademicYear.query.get_or_404(year_id)
+    name = data.get('name', year.name).strip()
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+    if _duplicate_exists(AcademicYear, {'name': name}, exclude_id=year.id):
+        return jsonify({'success': False, 'message': 'Academic year already exists'})
+    old_name = year.name
+    year.name = name
+
+    try:
+        db.session.commit()
+        _audit_config_change("Configuration Center Updated", "academic-years", year, old_value=old_name, new_value=year.name)
+        return jsonify({'success': True, 'message': 'Academic year updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/academic-years/<int:year_id>/activate", methods=["POST"])
+@login_required
+def config_activate_academic_year(year_id):
+    """Set academic year as current"""
+    from flask import jsonify
+
+    year = AcademicYear.query.get_or_404(year_id)
+
+    try:
+        # Deactivate all other years
+        AcademicYear.query.update({'is_current': False})
+
+        # Activate this year
+        year.is_current = True
+        db.session.commit()
+
+        audit("Configuration Center", f"Activated academic year: {year.name}")
+        return jsonify({'success': True, 'message': 'Academic year activated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/academic-years/<int:year_id>/deactivate", methods=["POST"])
+@login_required
+def config_deactivate_academic_year(year_id):
+    """Deactivate academic year"""
+    from flask import jsonify
+
+    year = AcademicYear.query.get_or_404(year_id)
+
+    try:
+        year.is_current = False
+        db.session.commit()
+
+        audit("Configuration Center", f"Deactivated academic year: {year.name}")
+        return jsonify({'success': True, 'message': 'Academic year deactivated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/exam-types", methods=["POST"])
+@login_required
+def config_create_exam_type():
+    """Create new exam type"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    short_code = data.get('short_code', '').strip()
+    weight_percentage = _parse_float(data.get('weight_percentage'), 0.0)
+    academic_year_id = _parse_int(data.get('academic_year_id'))
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+    if not academic_year_id or not AcademicYear.query.get(academic_year_id):
+        return jsonify({'success': False, 'message': 'Academic year is required'})
+
+    try:
+        if _duplicate_exists(Exam, {'name': name, 'academic_year_id': academic_year_id}):
+            return jsonify({'success': False, 'message': 'Exam type already exists for this academic year'})
+        exam = Exam(
+            name=name,
+            short_code=short_code,
+            weight_percentage=weight_percentage,
+            academic_year_id=academic_year_id,
+            is_active=True
+        )
+        db.session.add(exam)
+        db.session.commit()
+
+        audit("Configuration Center", f"Created exam type: {name}")
+        return jsonify({'success': True, 'message': 'Exam type created successfully', 'data': {'id': exam.id, 'name': exam.name}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/exam-types/<int:exam_id>", methods=["PUT"])
+@login_required
+def config_update_exam_type(exam_id):
+    """Update exam type"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    exam = Exam.query.get_or_404(exam_id)
+
+    name = data.get('name', exam.name).strip()
+    academic_year_id = _parse_int(data.get('academic_year_id'), exam.academic_year_id)
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+    if not academic_year_id or not AcademicYear.query.get(academic_year_id):
+        return jsonify({'success': False, 'message': 'Academic year is required'})
+    if _duplicate_exists(Exam, {'name': name, 'academic_year_id': academic_year_id}, exclude_id=exam.id):
+        return jsonify({'success': False, 'message': 'Exam type already exists for this academic year'})
+
+    old_value = {'name': exam.name, 'academic_year_id': exam.academic_year_id, 'short_code': exam.short_code, 'weight_percentage': exam.weight_percentage}
+    exam.name = name
+    exam.short_code = data.get('short_code', exam.short_code)
+    exam.weight_percentage = _parse_float(data.get('weight_percentage'), exam.weight_percentage)
+    exam.academic_year_id = academic_year_id
+
+    try:
+        db.session.commit()
+        _audit_config_change("Configuration Center Updated", "exam-types", exam, old_value=old_value, new_value={'name': exam.name, 'academic_year_id': exam.academic_year_id, 'short_code': exam.short_code, 'weight_percentage': exam.weight_percentage})
+        return jsonify({'success': True, 'message': 'Exam type updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/exam-types/<int:exam_id>/activate", methods=["POST"])
+@login_required
+def config_activate_exam_type(exam_id):
+    """Activate exam type"""
+    exam = Exam.query.get_or_404(exam_id)
+    try:
+        exam.is_active = True
+        db.session.commit()
+        _audit_config_change("Configuration Center Activated", "exam-types", exam)
+        return jsonify({'success': True, 'message': 'Exam type activated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/exam-types/<int:exam_id>/deactivate", methods=["POST"])
+@login_required
+def config_deactivate_exam_type(exam_id):
+    """Deactivate exam type before archive/delete"""
+    exam = Exam.query.get_or_404(exam_id)
+    try:
+        exam.is_active = False
+        db.session.commit()
+        _audit_config_change("Configuration Center Deactivated", "exam-types", exam)
+        return jsonify({'success': True, 'message': 'Exam type deactivated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/levels", methods=["POST"])
+@login_required
+def config_create_level():
+    """Create new academic level"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    sort_order = _parse_int(data.get('sort_order'))
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+
+    try:
+        from sqlalchemy import func
+        if _duplicate_exists(AcademicLevel, {'name': name}):
+            return jsonify({'success': False, 'message': 'Academic level already exists'})
+        max_sort = db.session.query(func.max(AcademicLevel.sort_order)).scalar() or 0
+
+        level = AcademicLevel(
+            name=name,
+            is_active=True,
+            sort_order=sort_order if sort_order is not None else max_sort + 1
+        )
+        db.session.add(level)
+        db.session.commit()
+
+        audit("Configuration Center", f"Created academic level: {name}")
+        return jsonify({'success': True, 'message': 'Academic level created successfully', 'data': {'id': level.id, 'name': level.name}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/levels/<int:level_id>", methods=["PUT"])
+@login_required
+def config_update_level(level_id):
+    """Update academic level"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    level = AcademicLevel.query.get_or_404(level_id)
+
+    name = data.get('name', level.name).strip()
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+    if _duplicate_exists(AcademicLevel, {'name': name}, exclude_id=level.id):
+        return jsonify({'success': False, 'message': 'Academic level already exists'})
+    old_value = {'name': level.name, 'sort_order': level.sort_order, 'is_active': level.is_active}
+    level.name = name
+    if 'sort_order' in data:
+        level.sort_order = _parse_int(data.get('sort_order'), level.sort_order)
+    if 'is_active' in data:
+        level.is_active = bool(data.get('is_active'))
+
+    try:
+        db.session.commit()
+        _audit_config_change("Configuration Center Updated", "levels", level, old_value=old_value, new_value={'name': level.name, 'sort_order': level.sort_order, 'is_active': level.is_active})
+        return jsonify({'success': True, 'message': 'Academic level updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/levels/<int:level_id>/activate", methods=["POST"])
+@login_required
+def config_activate_level(level_id):
+    """Activate academic level"""
+    from flask import jsonify
+
+    level = AcademicLevel.query.get_or_404(level_id)
+
+    try:
+        level.is_active = True
+        db.session.commit()
+
+        audit("Configuration Center", f"Activated academic level: {level.name}")
+        return jsonify({'success': True, 'message': 'Academic level activated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/levels/<int:level_id>/deactivate", methods=["POST"])
+@login_required
+def config_deactivate_level(level_id):
+    """Deactivate academic level"""
+    from flask import jsonify
+
+    level = AcademicLevel.query.get_or_404(level_id)
+
+    try:
+        level.is_active = False
+        db.session.commit()
+
+        audit("Configuration Center", f"Deactivated academic level: {level.name}")
+        return jsonify({'success': True, 'message': 'Academic level deactivated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/classes", methods=["POST"])
+@login_required
+def config_create_class():
+    """Create new academic class inside a level"""
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    level_id = _parse_int(data.get('academic_level_id'))
+    sort_order = _parse_int(data.get('sort_order'))
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Class name is required'})
+    if not level_id or not AcademicLevel.query.get(level_id):
+        return jsonify({'success': False, 'message': 'Academic level is required'})
+
+    try:
+        if _duplicate_exists(AcademicClass, {'name': name, 'academic_level_id': level_id}):
+            return jsonify({'success': False, 'message': 'Class already exists in this level'})
+        from sqlalchemy import func
+        max_sort = db.session.query(func.max(AcademicClass.sort_order)).filter_by(academic_level_id=level_id).scalar() or 0
+        academic_class = AcademicClass(
+            name=name,
+            academic_level_id=level_id,
+            sort_order=sort_order if sort_order is not None else max_sort + 1,
+            is_active=True,
+        )
+        db.session.add(academic_class)
+        db.session.commit()
+        _audit_config_change("Configuration Center Created", "classes", academic_class)
+        return jsonify({'success': True, 'message': 'Class created successfully', 'data': {'id': academic_class.id, 'name': academic_class.name}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/classes/<int:class_id>", methods=["PUT"])
+@login_required
+def config_update_class(class_id):
+    """Update academic class"""
+    data = request.get_json(silent=True) or {}
+    academic_class = AcademicClass.query.get_or_404(class_id)
+    name = data.get('name', academic_class.name).strip()
+    level_id = _parse_int(data.get('academic_level_id'), academic_class.academic_level_id)
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Class name is required'})
+    if not level_id or not AcademicLevel.query.get(level_id):
+        return jsonify({'success': False, 'message': 'Academic level is required'})
+    if _duplicate_exists(AcademicClass, {'name': name, 'academic_level_id': level_id}, exclude_id=academic_class.id):
+        return jsonify({'success': False, 'message': 'Class already exists in this level'})
+
+    old_value = {'name': academic_class.name, 'academic_level_id': academic_class.academic_level_id, 'sort_order': academic_class.sort_order, 'is_active': academic_class.is_active}
+    academic_class.name = name
+    academic_class.academic_level_id = level_id
+    academic_class.sort_order = _parse_int(data.get('sort_order'), academic_class.sort_order)
+    if 'is_active' in data:
+        academic_class.is_active = bool(data.get('is_active'))
+
+    try:
+        db.session.commit()
+        _audit_config_change("Configuration Center Updated", "classes", academic_class, old_value=old_value, new_value={'name': academic_class.name, 'academic_level_id': academic_class.academic_level_id, 'sort_order': academic_class.sort_order, 'is_active': academic_class.is_active})
+        return jsonify({'success': True, 'message': 'Class updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/classes/<int:class_id>/activate", methods=["POST"])
+@login_required
+def config_activate_class(class_id):
+    academic_class = AcademicClass.query.get_or_404(class_id)
+    try:
+        academic_class.is_active = True
+        db.session.commit()
+        _audit_config_change("Configuration Center Activated", "classes", academic_class)
+        return jsonify({'success': True, 'message': 'Class activated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/classes/<int:class_id>/deactivate", methods=["POST"])
+@login_required
+def config_deactivate_class(class_id):
+    academic_class = AcademicClass.query.get_or_404(class_id)
+    try:
+        academic_class.is_active = False
+        db.session.commit()
+        _audit_config_change("Configuration Center Deactivated", "classes", academic_class)
+        return jsonify({'success': True, 'message': 'Class deactivated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/subjects", methods=["POST"])
+@login_required
+def config_create_subject():
+    """Create new subject"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    name = data.get('name', '').strip()
+    academic_level_id = _parse_int(data.get('academic_level_id'))
+    max_score = _parse_float(data.get('max_score'), 100.0)
+    sort_order = _parse_int(data.get('sort_order'))
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+
+    try:
+        from sqlalchemy import func
+        if _duplicate_exists(Subject, {'name': name, 'academic_level_id': academic_level_id}):
+            return jsonify({'success': False, 'message': 'Subject already exists for this level'})
+        max_sort_query = db.session.query(func.max(Subject.sort_order))
+        if academic_level_id:
+            max_sort_query = max_sort_query.filter_by(academic_level_id=academic_level_id)
+        max_sort = max_sort_query.scalar() or 0
+
+        subject = Subject(
+            name=name,
+            academic_level_id=academic_level_id,
+            max_score=max_score,
+            sort_order=sort_order if sort_order is not None else max_sort + 1
+        )
+        db.session.add(subject)
+        db.session.commit()
+
+        audit("Configuration Center", f"Created subject: {name}")
+        return jsonify({'success': True, 'message': 'Subject created successfully', 'data': {'id': subject.id, 'name': subject.name}})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/subjects/<int:subject_id>", methods=["PUT"])
+@login_required
+def config_update_subject(subject_id):
+    """Update subject"""
+    from flask import jsonify
+
+    data = request.get_json(silent=True) or {}
+    subject = Subject.query.get_or_404(subject_id)
+
+    name = data.get('name', subject.name).strip()
+    academic_level_id = _parse_int(data.get('academic_level_id'), subject.academic_level_id)
+    if not name:
+        return jsonify({'success': False, 'message': 'Name is required'})
+    if _duplicate_exists(Subject, {'name': name, 'academic_level_id': academic_level_id}, exclude_id=subject.id):
+        return jsonify({'success': False, 'message': 'Subject already exists for this level'})
+
+    old_value = {'name': subject.name, 'academic_level_id': subject.academic_level_id, 'max_score': float(subject.max_score or 0), 'sort_order': subject.sort_order}
+    subject.name = name
+    subject.academic_level_id = academic_level_id
+    subject.max_score = _parse_float(data.get('max_score'), float(subject.max_score or 100))
+    subject.sort_order = _parse_int(data.get('sort_order'), subject.sort_order)
+
+    try:
+        db.session.commit()
+        _audit_config_change("Configuration Center Updated", "subjects", subject, old_value=old_value, new_value={'name': subject.name, 'academic_level_id': subject.academic_level_id, 'max_score': float(subject.max_score or 0), 'sort_order': subject.sort_order})
+        return jsonify({'success': True, 'message': 'Subject updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/<string:item_type>/<int:item_id>/delete", methods=["POST"])
+@login_required
+def config_delete_item(item_type, item_id):
+    """Delete configuration item (with dependency check)"""
+    Model = _config_model(item_type)
+    if not Model:
+        return jsonify({'success': False, 'message': 'Invalid item type'})
+
+    item = Model.query.get_or_404(item_id)
+    if item_type != 'subjects' and _config_item_is_active(item_type, item):
+        return jsonify({'success': False, 'message': 'Active configuration cannot be deleted. Deactivate it first.'})
+
+    dependencies = _config_dependencies(item_type, item_id)
+    if dependencies:
+        return jsonify({
+            'success': False,
+            'message': 'Cannot delete item with dependencies',
+            'dependencies': dependencies
+        })
+
+    try:
+        item_name = _item_display_name(item)
+        db.session.delete(item)
+        db.session.commit()
+
+        audit("Configuration Center", f"Deleted {item_type}: {item_name}")
+        return jsonify({'success': True, 'message': 'Item deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/<string:item_type>/<int:item_id>/archive", methods=["POST"])
+@login_required
+def config_archive_item(item_type, item_id):
+    """Archive configuration item (soft delete)"""
+    Model = _config_model(item_type)
+    if not Model:
+        return jsonify({'success': False, 'message': 'Invalid item type'})
+
+    item = Model.query.get_or_404(item_id)
+    if _config_item_is_active(item_type, item):
+        return jsonify({'success': False, 'message': 'Active configuration cannot be archived. Deactivate it first.'})
+    if not hasattr(item, 'is_current') and not hasattr(item, 'is_active'):
+        return jsonify({'success': False, 'message': 'Archive is not supported for this item type with the current database model.'})
+
+    try:
+        # Archive by setting is_active/is_current to False
+        if hasattr(item, 'is_current'):
+            item.is_current = False
+        if hasattr(item, 'is_active'):
+            item.is_active = False
+
+        db.session.commit()
+
+        _audit_config_change("Configuration Center Archived", item_type, item)
+        return jsonify({'success': True, 'message': 'Item archived successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/<string:item_type>/<int:item_id>/restore", methods=["POST"])
+@login_required
+def config_restore_item(item_type, item_id):
+    """Restore archived configuration item"""
+    Model = _config_model(item_type)
+    if not Model:
+        return jsonify({'success': False, 'message': 'Invalid item type'})
+
+    item = Model.query.get_or_404(item_id)
+    if item_type == 'academic-years':
+        return jsonify({'success': False, 'message': 'Academic years are restored by using Set as Current.'})
+    if not hasattr(item, 'is_active'):
+        return jsonify({'success': False, 'message': 'Restore is not supported for this item type with the current database model.'})
+
+    try:
+        # Restore by setting is_active to True
+        if hasattr(item, 'is_active'):
+            item.is_active = True
+
+        db.session.commit()
+
+        _audit_config_change("Configuration Center Restored", item_type, item)
+        return jsonify({'success': True, 'message': 'Item restored successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@admin_bp.route("/config-center/api/<string:item_type>/<int:item_id>/dependencies", methods=["GET"])
+@login_required
+def config_item_dependencies(item_type, item_id):
+    """Return real dependency information for configuration lifecycle decisions."""
+    Model = _config_model(item_type)
+    if not Model:
+        return jsonify({'success': False, 'message': 'Invalid item type'}), 404
+    item = Model.query.get_or_404(item_id)
+    dependencies = _config_dependencies(item_type, item_id)
+    return jsonify({
+        'success': True,
+        'item': {'id': item.id, 'name': _item_display_name(item), 'status': _config_status(item_type, item)},
+        'dependencies': dependencies,
+        'has_dependencies': bool(dependencies),
+        'is_active': _config_item_is_active(item_type, item),
+    })

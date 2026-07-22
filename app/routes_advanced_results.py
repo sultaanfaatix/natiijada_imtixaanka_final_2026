@@ -290,7 +290,7 @@ def dashboard():
 
 @advanced_results_bp.route("/new-setup")
 def new_setup():
-    """Setup wizard - Master Configuration for the entire Results system"""
+    """Setup wizard - Master Configuration for the entire Results system - Read Only Dashboard"""
     level_id = int_or_none(request.args.get("level_id"))
     
     # Get selected year (current year by default)
@@ -304,6 +304,18 @@ def new_setup():
     subjects = Subject.query.order_by(Subject.sort_order).all()
     classes = AcademicClass.query.order_by(AcademicClass.name).all()
     
+    # Get last configuration update info
+    from .models import AuditLog
+    last_config_log = AuditLog.query.filter(
+        AuditLog.action.like('%Setup%') | 
+        AuditLog.action.like('%Configuration%') |
+        AuditLog.action.like('%Academic Year%') |
+        AuditLog.action.like('%Exam Type%')
+    ).order_by(AuditLog.created_at.desc()).first()
+    
+    last_updated = last_config_log.created_at.strftime('%B %d, %Y at %H:%M') if last_config_log else None
+    updated_by = last_config_log.username if last_config_log else 'Unknown'
+    
     # Calculate step completion states
     step_states = {
         'academic_year': len(years) > 0,
@@ -313,8 +325,11 @@ def new_setup():
     }
     
     # Check if any level has at least one class
+    total_classes = 0
     for level in levels:
-        if level.classes.count() > 0:
+        class_count = level.classes.count()
+        total_classes += class_count
+        if class_count > 0:
             step_states['levels_classes'] = True
             break
     
@@ -339,13 +354,16 @@ def new_setup():
         years=years,
         exams=exams,
         levels=levels,
-        selected_year=selected_year,
-        selected_level=selected_level,
         subjects=subjects,
         classes=classes,
-        settings=get_settings(),
+        total_classes=total_classes,
+        selected_year=selected_year,
+        selected_level=selected_level,
+        selected_exam=None,
         step_states=step_states,
         current_step=current_step,
+        last_updated=last_updated,
+        updated_by=updated_by
     )
 
 
@@ -1824,7 +1842,7 @@ def build_analytics_data(results, students, exam, top_limit=5, bottom_limit=5):
         return {
             "grade_distribution": {"labels": [], "values": [], "colors": []},
             "subject_performance": {"labels": [], "values": []},
-            "exam_trend": {"labels": [], "values": []},
+            "exam_trend": {"labels": [], "scores": []},
             "pass_fail_ratio": {"pass": 0, "fail": 0, "total": 0},
             "overall_average": 0,
             "top_performers": [],

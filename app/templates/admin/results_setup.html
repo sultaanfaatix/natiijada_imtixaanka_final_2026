@@ -1,209 +1,618 @@
 {% extends "admin/base.html" %}
 {% set active_tab = "setup" %}
-{% set selected_year = selected_year %}
-{% set selected_exam = selected_exam %}
-{% set scope_info = namespace(level=selected_level, class=None, section=None) %}
-{% block title %}System Setup{% endblock %}
-{% block page_title %}System Setup{% endblock %}
+{% block title %}Configuration Dashboard{% endblock %}
+{% block page_title %}Configuration Dashboard{% endblock %}
 {% block admin_content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/results_module.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/config_center.css') }}">
 
-<div class="results-hub">
-  {% include "admin/_results_hub_header.html" %}
+<div class="config-dashboard">
+  <!-- Hero Section -->
+  <div class="config-hero">
+    <div class="config-hero-content">
+      <div class="config-hero-left">
+        <div class="config-hero-icon">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        <div class="config-hero-text">
+          <h1 class="config-hero-title">Configuration is Protected</h1>
+          <p class="config-hero-subtitle">This page is in Read Only Mode. All system configuration is managed inside the Configuration Center.</p>
+        </div>
+      </div>
+      <div class="config-hero-right">
+        <div class="config-hero-status">
+          <div class="config-status-item">
+            <span class="config-status-label">Last Updated</span>
+            <span class="config-status-value">{{ last_updated or 'Never' }}</span>
+          </div>
+          <div class="config-status-item">
+            <span class="config-status-label">Updated By</span>
+            <span class="config-status-value">{{ updated_by or 'System' }}</span>
+          </div>
+          <div class="config-status-item">
+            <span class="config-status-label">System Status</span>
+            <span class="config-status-badge config-badge-success">
+              <i class="fas fa-check-circle"></i>
+              Healthy
+            </span>
+          </div>
+          <div class="config-status-item">
+            <span class="config-status-label">Configuration Status</span>
+            <span class="config-status-badge config-badge-info">
+              <i class="fas fa-lock"></i>
+              Read Only
+            </span>
+          </div>
+        </div>
+        <button class="config-btn config-btn-primary config-hero-button" onclick="openConfigCenter()">
+          <i class="fas fa-cog"></i>
+          Open Configuration Center
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <main class="rh-screen">
-    <div class="rh-eyebrow">Master Configuration Center</div>
-    <h1 class="rh-title">System Setup</h1>
-    <p class="rh-desc">Configure all required settings before using the Results Management System — Academic Year, Exam Types, Levels, Classes, and Subjects.</p>
-
-    <div class="rh-stepper">
-      <div class="rh-step {{ 'done' if step_states.academic_year else '' }} {{ 'active' if current_step == 'academic_year' else '' }}" onclick="scrollToSection('academic-year')">
-        <span class="rh-step-num">{{ '✓' if step_states.academic_year else '1' }}</span> Academic Year
+  <!-- Dashboard Cards -->
+  <div class="config-cards-grid">
+    <!-- Academic Years Card -->
+    <div class="config-card config-card-academic">
+      <div class="config-card-header">
+        <div class="config-card-icon" style="background: var(--gradient-academic);">
+          <i class="fas fa-calendar-alt"></i>
+        </div>
+        <div class="config-card-title">
+          <h3>Academic Years</h3>
+          <p>Manage academic calendar</p>
+        </div>
       </div>
-      <div class="rh-step {{ 'done' if step_states.exam_type else '' }} {{ 'active' if current_step == 'exam_type' else '' }}" onclick="scrollToSection('exam-type')">
-        <span class="rh-step-num">{{ '✓' if step_states.exam_type else '2' }}</span> Exam Type
+      <div class="config-card-stats">
+        <div class="config-stat">
+          <span class="config-stat-value">{{ years|length }}</span>
+          <span class="config-stat-label">Total</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">{{ years|selectattr('is_current')|list|length }}</span>
+          <span class="config-stat-label">Active</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">{{ years|rejectattr('is_current')|list|length }}</span>
+          <span class="config-stat-label">Archived</span>
+        </div>
       </div>
-      <div class="rh-step {{ 'done' if step_states.levels_classes else '' }} {{ 'active' if current_step == 'levels_classes' else '' }}" onclick="scrollToSection('levels-classes')">
-        <span class="rh-step-num">{{ '✓' if step_states.levels_classes else '3' }}</span> Level & Class
-      </div>
-      <div class="rh-step {{ 'done' if step_states.subjects else '' }} {{ 'active' if current_step == 'subjects' else '' }}" onclick="scrollToSection('subjects')">
-        <span class="rh-step-num">{{ '✓' if step_states.subjects else '4' }}</span> Subjects
+      <div class="config-card-footer">
+        <div class="config-card-current">
+          <span class="config-card-current-label">Current:</span>
+          <span class="config-card-current-value">{{ selected_year.name if selected_year else 'None' }}</span>
+        </div>
+        <button class="config-btn config-btn-secondary config-btn-sm" onclick="viewDetails('academic')">
+          View Details
+        </button>
       </div>
     </div>
 
-    <div class="rh-grid">
-      <div class="rh-card" id="academic-year">
-        <h3>1 · Academic Year</h3>
-        <p class="rh-hint">Hal sanad oo active ah ayaa mar walba jiri kara.</p>
-        {% for year in years %}
-          <div class="rh-item {% if year.is_current %}active{% endif %}">
-            <span class="rh-item-name">{{ year.name }}</span>
-            <div class="rh-item-actions">
-              <span class="rh-badge {% if year.is_current %}success{% else %}muted{% endif %}">{{ 'Active' if year.is_current else 'Archived' }}</span>
-              {% if not year.is_current %}
-                <form method="post" action="{{ url_for('admin.switch_year', row_id=year.id) }}" class="rh-inline-form">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="rh-btn-sm">Activate</button>
-                </form>
-              {% endif %}
-              <form method="post" action="{{ url_for('admin.delete_academic_year', row_id=year.id) }}" class="rh-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="rh-btn-sm rh-btn-danger">Delete</button>
-              </form>
-            </div>
-          </div>
-        {% endfor %}
-        <button class="rh-btn-outline" onclick="toggleSection('academic-years-form')">+ Samee Sanad Cusub</button>
-        
-        <div id="academic-years-form" class="rh-form-panel" style="display:none;">
-          <form method="post" action="{{ url_for('admin.academic_years') }}" class="rh-form-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="name" placeholder="2025-2026" required>
-            <button type="submit" class="rh-btn-primary">Add</button>
-          </form>
+    <!-- Exam Types Card -->
+    <div class="config-card config-card-exam">
+      <div class="config-card-header">
+        <div class="config-card-icon" style="background: var(--gradient-exam);">
+          <i class="fas fa-clipboard-list"></i>
         </div>
-
-        <h3 style="margin-top:24px;" id="exam-type">2 · Exam Type ({{ selected_year.name if selected_year else 'Select Year' }})</h3>
-        <p class="rh-hint">La abuuray sanadkan — natiijadu waxay ku xidhan tahay midkan.</p>
-        <div class="rh-chips">
-          {% for exam in exams %}
-            <span class="rh-chip">
-              {{ exam.name }} <span class="rh-chip-code">{{ exam.id }}</span>
-              <form method="post" action="{{ url_for('admin.delete_exam', row_id=exam.id) }}" class="rh-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="rh-chip-remove">×</button>
-              </form>
-            </span>
-          {% endfor %}
-          <span class="rh-chip rh-chip-add" onclick="toggleSection('exams-form')">+ Nooc Cusub</span>
-        </div>
-        
-        <div id="exams-form" class="rh-form-panel" style="display:none;">
-          <form method="post" action="{{ url_for('admin.exams') }}" class="rh-form-grid">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="name" placeholder="Exam Name" required>
-            <input name="short_code" placeholder="Code (e.g., MT1)">
-            <select name="academic_year_id">
-              {% for y in years %}
-                <option value="{{ y.id }}" {% if selected_year and selected_year.id == y.id %}selected{% endif %}>{{ y.name }}</option>
-              {% endfor %}
-            </select>
-            <input name="weight_percentage" placeholder="Weight %" type="number" step="0.1">
-            <button type="submit" class="rh-btn-primary">Add</button>
-          </form>
+        <div class="config-card-title">
+          <h3>Exam Types</h3>
+          <p>Manage examination types</p>
         </div>
       </div>
-
-      <div class="rh-card" id="levels-classes">
-        <h3>3 · Levels & Classes</h3>
-        <p class="rh-hint">Level kasta wuxuu leeyahay fasallo iyo sections gaar ah.</p>
-        {% for level in levels %}
-          <div class="rh-item" onclick="toggleLevelClasses({{ level.id }})">
-            <div style="display:flex; align-items:center; gap:10px; flex:1;">
-              <span class="rh-item-name" style="cursor:pointer;">{{ level.name }}</span>
-              <span style="font-size:0.8rem; color:var(--slate); cursor:pointer;">▼</span>
-            </div>
-            <div class="rh-item-actions">
-              <form method="post" action="{{ url_for('admin_advanced_results.setup_delete_level', level_id=level.id) }}" class="rh-inline-form" onclick="event.stopPropagation()">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="rh-btn-sm rh-btn-danger">Delete</button>
-              </form>
-            </div>
-          </div>
-          <div id="classes-{{ level.id }}" class="rh-classes-panel" style="display:none; margin-left:20px; margin-top:10px; padding:12px; background:var(--paper); border-radius:8px;">
-            {% set class_count = level.classes.count() %}
-            {% if class_count > 0 %}
-              {% for cls in level.classes %}
-                <div class="rh-item" style="margin-bottom:8px;">
-                  <span class="rh-item-name">{{ cls.name }}</span>
-                  <div class="rh-item-actions">
-                    <button class="rh-btn-sm">View</button>
-                    <button class="rh-btn-sm">Edit</button>
-                    <form method="post" action="{{ url_for('admin_advanced_results.setup_delete_class', class_id=cls.id) }}" class="rh-inline-form" onclick="event.stopPropagation()">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="rh-btn-sm rh-btn-danger">Delete</button>
-                    </form>
-                  </div>
-                </div>
-              {% endfor %}
-            {% else %}
-              <div style="color:var(--slate); font-size:0.9rem;">No classes yet</div>
-            {% endif %}
-            <button class="rh-btn-outline" style="margin-top:10px; font-size:0.85rem;" onclick="event.stopPropagation(); toggleSection('add-class-{{ level.id }}')">+ Add Class</button>
-            <div id="add-class-{{ level.id }}" class="rh-form-panel" style="display:none;">
-              <form method="post" action="{{ url_for('admin_advanced_results.setup_add_class') }}" class="rh-form-inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="academic_level_id" value="{{ level.id }}">
-                <input name="name" placeholder="Class Name (e.g., Form 1)" required>
-                <button type="submit" class="rh-btn-primary">Add</button>
-              </form>
-            </div>
-          </div>
-        {% endfor %}
-        <button class="rh-btn-outline" onclick="toggleSection('levels-form')">+ Add Level</button>
-        
-        <div id="levels-form" class="rh-form-panel" style="display:none;">
-          <form method="post" action="{{ url_for('admin_advanced_results.setup_add_level') }}" class="rh-form-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="name" placeholder="Level Name (e.g., Secondary)" required>
-            <button type="submit" class="rh-btn-primary">Add</button>
-          </form>
+      <div class="config-card-stats">
+        <div class="config-stat">
+          <span class="config-stat-value">{{ exams|length }}</span>
+          <span class="config-stat-label">Total</span>
         </div>
-        
-        <h3 style="margin-top:24px;" id="subjects">4 · Subjects — per class</h3>
-        <p class="rh-hint">Fasalada isku level ah way kala duwanaan karaan maadooyinkooda.</p>
-        <div class="rh-tabs-sm">
-          {% for level in levels %}
-            <button class="rh-tab-sm {% if selected_level and selected_level.id == level.id %}active{% endif %}" onclick="selectLevel({{ level.id }})">{{ level.name }}</button>
-          {% endfor %}
+        <div class="config-stat">
+          <span class="config-stat-value">{{ exams|length }}</span>
+          <span class="config-stat-label">Active</span>
         </div>
-        <div class="rh-chips">
-          {% for subject in subjects %}
-            <span class="rh-chip">
-              {{ subject.name }} <span class="rh-chip-code">{{ subject.id }}</span>
-              <form method="post" action="{{ url_for('admin.delete_subject', row_id=subject.id) }}" class="rh-inline-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="rh-chip-remove">×</button>
-              </form>
-            </span>
-          {% endfor %}
-          <span class="rh-chip rh-chip-add" onclick="toggleSection('subjects-form')">+ Ku dar Subject</span>
+        <div class="config-stat">
+          <span class="config-stat-value">0</span>
+          <span class="config-stat-label">Archived</span>
         </div>
-        
-        <div id="subjects-form" class="rh-form-panel" style="display:none;">
-          <form method="post" action="{{ url_for('admin.subjects') }}" class="rh-form-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input name="name" placeholder="Subject Name" required>
-            <button type="submit" class="rh-btn-primary">Add</button>
-          </form>
+      </div>
+      <div class="config-card-footer">
+        <div class="config-card-current">
+          <span class="config-card-current-label">Types:</span>
+          <span class="config-card-current-value">{% set exam_names = exams|map(attribute='name')|join(', ') %}{{ exam_names[:30] }}{% if exam_names|length > 30 %}...{% endif %}</span>
         </div>
+        <button class="config-btn config-btn-secondary config-btn-sm" onclick="viewDetails('exam')">
+          View Details
+        </button>
       </div>
     </div>
-  </main>
+
+    <!-- Levels & Classes Card -->
+    <div class="config-card config-card-level">
+      <div class="config-card-header">
+        <div class="config-card-icon" style="background: var(--gradient-level);">
+          <i class="fas fa-layer-group"></i>
+        </div>
+        <div class="config-card-title">
+          <h3>Levels & Classes</h3>
+          <p>Manage academic levels</p>
+        </div>
+      </div>
+      <div class="config-card-stats">
+        <div class="config-stat">
+          <span class="config-stat-value">{{ levels|length }}</span>
+          <span class="config-stat-label">Levels</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">{{ total_classes }}</span>
+          <span class="config-stat-label">Classes</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">0</span>
+          <span class="config-stat-label">Archived</span>
+        </div>
+      </div>
+      <div class="config-card-footer">
+        <div class="config-card-current">
+          <span class="config-card-current-label">Levels:</span>
+          <span class="config-card-current-value">{% set level_names = levels|map(attribute='name')|join(', ') %}{{ level_names[:30] }}{% if level_names|length > 30 %}...{% endif %}</span>
+        </div>
+        <button class="config-btn config-btn-secondary config-btn-sm" onclick="viewDetails('level')">
+          View Details
+        </button>
+      </div>
+    </div>
+
+    <!-- Subjects Card -->
+    <div class="config-card config-card-subject">
+      <div class="config-card-header">
+        <div class="config-card-icon" style="background: var(--gradient-subject);">
+          <i class="fas fa-book"></i>
+        </div>
+        <div class="config-card-title">
+          <h3>Subjects</h3>
+          <p>Manage subject offerings</p>
+        </div>
+      </div>
+      <div class="config-card-stats">
+        <div class="config-stat">
+          <span class="config-stat-value">{{ subjects|length }}</span>
+          <span class="config-stat-label">Total</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">{{ subjects|length }}</span>
+          <span class="config-stat-label">Active</span>
+        </div>
+        <div class="config-stat">
+          <span class="config-stat-value">0</span>
+          <span class="config-stat-label">Archived</span>
+        </div>
+      </div>
+      <div class="config-card-footer">
+        <div class="config-card-current">
+          <span class="config-card-current-label">Subjects:</span>
+          <span class="config-card-current-value">{% set subject_names = subjects|map(attribute='name')|join(', ') %}{{ subject_names[:30] }}{% if subject_names|length > 30 %}...{% endif %}</span>
+        </div>
+        <button class="config-btn config-btn-secondary config-btn-sm" onclick="viewDetails('subject')">
+          View Details
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuration Status Banner -->
+  <div class="config-status-banner">
+    <div class="config-status-banner-content">
+      <div class="config-status-banner-icon">
+        <i class="fas fa-shield-alt"></i>
+      </div>
+      <div class="config-status-banner-text">
+        <h4>Configuration is Protected</h4>
+        <p>Read Only Mode - All modifications require authentication in Configuration Center</p>
+      </div>
+      <div class="config-status-banner-actions">
+        <span class="config-badge config-badge-success">
+          <i class="fas fa-check-circle"></i>
+          Secure
+        </span>
+        <span class="config-badge config-badge-info">
+          <i class="fas fa-lock"></i>
+          Protected
+        </span>
+      </div>
+    </div>
+  </div>
 </div>
 
+<!-- Authentication Modal -->
+<div class="config-modal-overlay" id="authModal">
+  <div class="config-modal">
+    <div class="config-modal-header">
+      <h3 class="config-modal-title">Authentication Required</h3>
+      <button class="config-modal-close" onclick="closeAuthModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="config-modal-body">
+      <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+        Please enter your administrator password to access the Configuration Center.
+      </p>
+      <form id="authForm" onsubmit="authenticate(event)">
+        <div class="config-form-group">
+          <label class="config-form-label">Administrator Password</label>
+          <input type="password" class="config-form-input" id="adminPassword" required placeholder="Enter your password">
+        </div>
+        <div class="config-form-group">
+          <label class="config-form-label">Remember for</label>
+          <select class="config-form-select" id="rememberDuration">
+            <option value="0">Don't remember</option>
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="30">30 minutes</option>
+          </select>
+        </div>
+        <button type="submit" class="config-btn config-btn-primary" style="width: 100%;">
+          <i class="fas fa-unlock"></i>
+          Access Configuration Center
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.config-dashboard {
+  padding: var(--space-8);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.config-hero {
+  background: var(--bg-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-light);
+  margin-bottom: var(--space-8);
+  overflow: hidden;
+}
+
+.config-hero-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-10);
+  gap: var(--space-8);
+}
+
+.config-hero-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex: 1;
+}
+
+.config-hero-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-2xl);
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.config-hero-text {
+  flex: 1;
+}
+
+.config-hero-title {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.config-hero-subtitle {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.config-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 300px;
+}
+
+.config-hero-status {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.config-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.config-status-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.config-status-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.config-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.config-hero-button {
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--font-size-base);
+  justify-content: center;
+}
+
+.config-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.config-card {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  padding: var(--space-6);
+  transition: all var(--transition-base);
+}
+
+.config-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.config-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.config-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.config-card-title h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.config-card-title p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.config-card-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.config-stat {
+  text-align: center;
+}
+
+.config-stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+}
+
+.config-stat-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.config-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.config-card-current {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.config-card-current-label {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.config-card-current-value {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.config-status-banner {
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+  padding: var(--space-5);
+}
+
+.config-status-banner-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.config-status-banner-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+}
+
+.config-status-banner-text {
+  flex: 1;
+}
+
+.config-status-banner-text h4 {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.config-status-banner-text p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.config-status-banner-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+@media (max-width: 1200px) {
+  .config-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .config-hero-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .config-hero-left {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .config-hero-right {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .config-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-status-banner-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+
 <script>
-function toggleSection(sectionId) {
-  const section = document.getElementById(sectionId);
-  section.style.display = section.style.display === 'none' ? 'block' : 'none';
+function openConfigCenter() {
+  document.getElementById('authModal').classList.add('show');
 }
 
-function selectLevel(levelId) {
-  window.location.href = `{{ url_for('admin_advanced_results.new_setup') }}?level_id=${levelId}`;
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('show');
 }
 
-function scrollToSection(sectionId) {
-  const element = document.getElementById(sectionId);
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function authenticate(event) {
+  event.preventDefault();
+  const password = document.getElementById('adminPassword').value;
+  const rememberDuration = document.getElementById('rememberDuration').value;
+  
+  // Send authentication request to server
+  fetch('/admin/config-center/authenticate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({
+      password: password,
+      remember_duration: rememberDuration
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href = '/admin/config-center';
+    } else {
+      alert('Authentication failed. Please check your password.');
+    }
+  })
+  .catch(error => {
+    console.error('Authentication error:', error);
+    alert('An error occurred. Please try again.');
+  });
+}
+
+function viewDetails(type) {
+  openConfigCenter();
+}
+
+// Close modal on outside click
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeAuthModal();
   }
-}
+});
 
-function toggleLevelClasses(levelId) {
-  const classesDiv = document.getElementById(`classes-${levelId}`);
-  if (classesDiv) {
-    classesDiv.style.display = classesDiv.style.display === 'none' ? 'block' : 'none';
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeAuthModal();
   }
-}
+});
 </script>
 {% endblock %}

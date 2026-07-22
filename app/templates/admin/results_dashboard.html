@@ -13,6 +13,7 @@
     <h1 class="rh-title">{{ rh_label("dashboard.title", default="Results Dashboard") }}</h1>
 
     <div class="rh-selector-row">
+      <input type="hidden" id="year-selector" value="{{ selected_year.id if selected_year else '' }}">
       <div class="rh-selector year-selector" id="yearSelector" onclick="toggleYearDropdown(event)">
         <label>Sanad Dugsiyeedka <span class="auto-pill" id="yearAutoPill">⚡ Auto</span></label>
         <div class="val" id="yearSelectorVal">{{ selected_year.name if selected_year else '' }}</div>
@@ -71,7 +72,7 @@
       <div class="rh-section-label">2 · {{ rh_label("dashboard.step_class", default="Dooro Fasalka") }}{% if selected_level %} — {{ selected_level.name }}{% endif %}</div>
       <section class="rh-card-grid">
         {% for card in class_cards %}
-          <article class="rh-class-card {% if loop.index == 3 %}active{% endif %}" onclick="openClassRoster({{ card.academic_level_id }}, {{ card.academic_class_id }}, {{ card.academic_section_id }})">
+          <article class="rh-class-card {% if loop.index == 3 %}active{% endif %}" onclick="openClassStudents({{ card.academic_level_id }}, {{ card.academic_class_id }}, {{ card.academic_section_id }})">
             <h3>{{ card.label }}</h3>
             <p>{{ card.student_count }} {{ rh_label("roster.students", default="arday") }}</p>
             <div class="rh-progress"><span style="width: {{ card.completion_percentage }}%"></span></div>
@@ -139,10 +140,10 @@ function selectLevel(levelId) {
   window.location.href = url;
 }
 
-function openClassRoster(levelId, classId, sectionId) {
+function openClassStudents(levelId, classId, sectionId) {
   const yearId = document.getElementById('year-selector').value;
   const examId = document.getElementById('exam-selector').value;
-  let url = `{{ url_for('admin_advanced_results.class_roster') }}?year_id=${yearId}&exam_id=${examId}`;
+  let url = `{{ url_for('admin_advanced_results.students_management') }}?year_id=${yearId}&exam_id=${examId}`;
   if (levelId) url += `&level_id=${levelId}`;
   if (classId) url += `&class_id=${classId}`;
   if (sectionId) url += `&section_id=${sectionId}`;

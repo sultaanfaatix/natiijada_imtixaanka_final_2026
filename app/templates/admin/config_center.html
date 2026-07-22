@@ -1,0 +1,677 @@
+{% extends "admin/base.html" %}
+{% set active_tab = "setup" %}
+{% block title %}Configuration Center{% endblock %}
+{% block page_title %}Configuration Center{% endblock %}
+{% block admin_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/config_center.css') }}">
+
+{% set mutable_sections = ["academic-years", "exam-types", "levels", "subjects"] %}
+{% set section_item_type = {"academic-years": "academic-years", "exam-types": "exam-types", "levels": "levels", "subjects": "subjects"} %}
+
+{% macro action_menu(item_type, item_id, is_active=false, can_edit=true, can_archive=true, subject_mode=false, archive_mode=false) %}
+<div class="config-action-menu">
+  <button class="config-action-trigger" onclick="toggleActionMenu('{{ item_type }}-{{ item_id }}')" title="Actions">
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  <div class="config-action-dropdown" id="actionMenu-{{ item_type }}-{{ item_id }}">
+    <button class="config-action-item" onclick="viewItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-eye"></i> View</button>
+    {% if can_edit and not archive_mode %}
+    <button class="config-action-item" onclick="editItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-edit"></i> Edit</button>
+    {% endif %}
+    <div class="config-action-divider"></div>
+    {% if archive_mode %}
+      <button class="config-action-item" onclick="restoreItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-undo"></i> Restore</button>
+      <button class="config-action-item danger" onclick="deleteItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-trash"></i> Delete Permanently</button>
+    {% elif subject_mode %}
+      <button class="config-action-item danger" onclick="deleteItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-trash"></i> Delete if Unused</button>
+    {% elif is_active %}
+      <button class="config-action-item" onclick="deactivateItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-pause"></i> Deactivate</button>
+    {% else %}
+      <button class="config-action-item" onclick="activateItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-play"></i> Activate</button>
+      {% if can_archive %}
+      <button class="config-action-item" onclick="archiveItem('{{ item_type }}', {{ item_id }})"><i class="fas fa-archive"></i> Archive</button>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+<div class="config-center">
+  <aside class="config-sidebar">
+    <div class="config-sidebar-header">
+      <div class="config-sidebar-title">
+        <i class="fas fa-shield-alt"></i>
+        Configuration Center
+      </div>
+      <div class="config-sidebar-subtitle">Protected system management</div>
+    </div>
+    <nav class="config-sidebar-nav">
+      <div class="config-nav-section">
+        <div class="config-nav-section-title">Core Configuration</div>
+        <a href="{{ url_for('admin.config_academic_years') }}" class="config-nav-item academic {% if section == 'academic-years' %}active{% endif %}">
+          <i class="fas fa-calendar-alt"></i> Academic Years
+        </a>
+        <a href="{{ url_for('admin.config_exam_types') }}" class="config-nav-item exam {% if section == 'exam-types' %}active{% endif %}">
+          <i class="fas fa-clipboard-list"></i> Exam Types
+        </a>
+        <a href="{{ url_for('admin.config_levels') }}" class="config-nav-item level {% if section == 'levels' %}active{% endif %}">
+          <i class="fas fa-layer-group"></i> Levels & Classes
+        </a>
+        <a href="{{ url_for('admin.config_subjects') }}" class="config-nav-item subject {% if section == 'subjects' %}active{% endif %}">
+          <i class="fas fa-book"></i> Subjects
+        </a>
+      </div>
+      <div class="config-nav-section">
+        <div class="config-nav-section-title">Rules & Results</div>
+        <a href="{{ url_for('admin.config_promotion_rules') }}" class="config-nav-item grade {% if section == 'promotion-rules' %}active{% endif %}">
+          <i class="fas fa-arrow-up"></i> Promotion Rules
+        </a>
+        <a href="{{ url_for('admin.config_result_settings') }}" class="config-nav-item grade {% if section == 'result-settings' %}active{% endif %}">
+          <i class="fas fa-sliders-h"></i> Result Settings
+        </a>
+      </div>
+      <div class="config-nav-section">
+        <div class="config-nav-section-title">System</div>
+        <a href="{{ url_for('admin.config_system_defaults') }}" class="config-nav-item {% if section == 'system-defaults' %}active{% endif %}">
+          <i class="fas fa-cogs"></i> System Defaults
+        </a>
+        <a href="{{ url_for('admin.config_audit_logs') }}" class="config-nav-item audit {% if section == 'audit-logs' %}active{% endif %}">
+          <i class="fas fa-history"></i> Audit Logs
+        </a>
+        <a href="{{ url_for('admin.config_archive') }}" class="config-nav-item archive {% if section == 'archive' %}active{% endif %}">
+          <i class="fas fa-archive"></i> Archive
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="config-main">
+    <div class="config-header">
+      <div>
+        <h1 class="config-title">{{ section_title }}</h1>
+        <p class="config-description">{{ section_description }}</p>
+      </div>
+      <a class="config-btn config-btn-secondary" href="{{ url_for('admin_advanced_results.new_setup') }}">
+        <i class="fas fa-arrow-left"></i> Back to Setup
+      </a>
+    </div>
+
+    <div class="config-toolbar">
+      <div class="config-search">
+        <i class="fas fa-search config-search-icon"></i>
+        <input type="text" placeholder="Search {{ section_title.lower() }}..." id="searchInput">
+      </div>
+      <div class="config-filters">
+        <button class="config-filter active" onclick="applyFilter(event, 'all')">All</button>
+        <button class="config-filter" onclick="applyFilter(event, 'active')">Active</button>
+        <button class="config-filter" onclick="applyFilter(event, 'archived')">Archived</button>
+      </div>
+      {% if section in mutable_sections %}
+      <button class="config-btn config-btn-primary" onclick="openAddModal()">
+        <i class="fas fa-plus"></i> Add New
+      </button>
+      {% endif %}
+    </div>
+
+    <div class="config-stats-row">
+      <div class="config-stat-card">
+        <div class="config-stat-card-icon" style="background: var(--gradient-primary);"><i class="fas fa-database"></i></div>
+        <div class="config-stat-card-content">
+          <span class="config-stat-card-value">{{ total_count }}</span>
+          <span class="config-stat-card-label">Total</span>
+        </div>
+      </div>
+      <div class="config-stat-card">
+        <div class="config-stat-card-icon" style="background: var(--gradient-success);"><i class="fas fa-check-circle"></i></div>
+        <div class="config-stat-card-content">
+          <span class="config-stat-card-value">{{ active_count }}</span>
+          <span class="config-stat-card-label">Active</span>
+        </div>
+      </div>
+      <div class="config-stat-card">
+        <div class="config-stat-card-icon" style="background: var(--gradient-warning);"><i class="fas fa-archive"></i></div>
+        <div class="config-stat-card-content">
+          <span class="config-stat-card-value">{{ archived_count }}</span>
+          <span class="config-stat-card-label">Archived</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-card">
+      <div class="config-table-container">
+        <table class="config-table">
+          <thead>
+            <tr>
+              {% for column in table_columns %}
+              <th>{{ column }}</th>
+              {% endfor %}
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+          {% if section == 'academic-years' %}
+            {% for item in items %}
+            <tr data-id="{{ item.id }}" data-item-type="academic-years" data-status="{{ 'active' if item.is_current else 'archived' }}" data-name="{{ item.name }}">
+              <td><strong>{{ item.name }}</strong></td>
+              <td><span class="config-badge {{ 'config-badge-success' if item.is_current else 'config-badge-neutral' }}">{{ 'Current' if item.is_current else 'Inactive' }}</span></td>
+              <td>Academic Year</td>
+              <td>{{ item.created_at.strftime('%Y-%m-%d') if item.created_at else '-' }}</td>
+              <td>{{ item.updated_at.strftime('%Y-%m-%d') if item.updated_at else '-' }}</td>
+              <td>{{ current_user.username }}</td>
+              <td>{{ action_menu("academic-years", item.id, item.is_current, true, false) }}</td>
+            </tr>
+            {% endfor %}
+          {% elif section == 'exam-types' %}
+            {% for item in items %}
+            <tr data-id="{{ item.id }}" data-item-type="exam-types" data-status="{{ 'active' if item.is_active else 'archived' }}" data-name="{{ item.name }}" data-short-code="{{ item.short_code or '' }}" data-weight-percentage="{{ item.weight_percentage or 0 }}" data-academic-year-id="{{ item.academic_year_id or '' }}">
+              <td><strong>{{ item.name }}</strong></td>
+              <td><span class="config-badge {{ 'config-badge-success' if item.is_active else 'config-badge-neutral' }}">{{ 'Active' if item.is_active else 'Inactive' }}</span></td>
+              <td>{{ item.short_code or '-' }}</td>
+              <td>{{ item.weight_percentage or 0 }}%</td>
+              <td>{{ item.academic_year.name if item.academic_year else '-' }}</td>
+              <td>{{ current_user.username }}</td>
+              <td>{{ action_menu("exam-types", item.id, item.is_active, true, true) }}</td>
+            </tr>
+            {% endfor %}
+          {% elif section == 'levels' %}
+            {% for item in items %}
+            {% set level_classes = classes_by_level.get(item.id, []) %}
+            <tr data-id="{{ item.id }}" data-item-type="levels" data-status="{{ 'active' if item.is_active else 'archived' }}" data-name="{{ item.name }}" data-sort-order="{{ item.sort_order }}">
+              <td>
+                <div class="config-hierarchy-cell">
+                  <strong>{{ item.name }}</strong>
+                  <div class="config-class-tree">
+                    {% for cls in level_classes %}
+                    <span class="config-class-pill {{ 'inactive' if not cls.is_active else '' }}" data-class-id="{{ cls.id }}">{{ cls.name }}</span>
+                    {% else %}
+                    <span class="config-muted">No classes configured</span>
+                    {% endfor %}
+                  </div>
+                </div>
+              </td>
+              <td><span class="config-badge {{ 'config-badge-success' if item.is_active else 'config-badge-neutral' }}">{{ 'Active' if item.is_active else 'Inactive' }}</span></td>
+              <td>Academic Level</td>
+              <td>{{ level_classes|length }} Classes</td>
+              <td>{{ level_classes|selectattr('is_active')|list|length }} Active</td>
+              <td>{{ current_user.username }}</td>
+              <td>{{ action_menu("levels", item.id, item.is_active, true, true) }}</td>
+            </tr>
+            {% for cls in level_classes %}
+            <tr data-id="{{ cls.id }}" data-item-type="classes" data-status="{{ 'active' if cls.is_active else 'archived' }}" data-name="{{ cls.name }}" data-academic-level-id="{{ cls.academic_level_id }}" data-sort-order="{{ cls.sort_order }}">
+              <td>
+                <div class="config-class-row-name">
+                  <i class="fas fa-level-up-alt"></i>
+                  <div>
+                    <strong>{{ cls.name }}</strong>
+                    <span>Class under {{ item.name }}</span>
+                  </div>
+                </div>
+              </td>
+              <td><span class="config-badge {{ 'config-badge-success' if cls.is_active else 'config-badge-neutral' }}">{{ 'Active' if cls.is_active else 'Inactive' }}</span></td>
+              <td>Class</td>
+              <td>{{ class_student_counts.get(cls.id, 0) }} Students</td>
+              <td>{{ cls.sections.count() if cls.sections else 0 }} Sections</td>
+              <td>{{ current_user.username }}</td>
+              <td>{{ action_menu("classes", cls.id, cls.is_active, true, true) }}</td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          {% elif section == 'subjects' %}
+            {% for item in items %}
+            {% set assigned_classes = subject_class_map.get(item.id, []) %}
+            <tr data-id="{{ item.id }}" data-item-type="subjects" data-status="active" data-name="{{ item.name }}" data-academic-level-id="{{ item.academic_level_id or '' }}" data-max-score="{{ item.max_score or 100 }}" data-sort-order="{{ item.sort_order }}">
+              <td><strong>{{ item.name }}</strong></td>
+              <td><span class="config-badge config-badge-success">Configured</span></td>
+              <td>{{ item.max_score or 100 }} marks</td>
+              <td>{{ item.academic_level.name if item.academic_level else 'All Levels' }}</td>
+              <td>
+                {% if assigned_classes %}
+                  {{ assigned_classes|map(attribute='name')|join(', ') }}
+                {% else %}
+                  Level-wide / global
+                {% endif %}
+              </td>
+              <td>{{ current_user.username }}</td>
+              <td>{{ action_menu("subjects", item.id, false, true, false, true) }}</td>
+            </tr>
+            {% endfor %}
+          {% elif section == 'audit-logs' %}
+            {% for item in items %}
+            <tr data-id="{{ item.id }}" data-status="active">
+              <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') if item.created_at else '-' }}</td>
+              <td><strong>{{ item.action }}</strong></td>
+              <td>{{ item.username or 'System' }}</td>
+              <td>Configuration</td>
+              <td>{{ (item.details or '')[:80] }}{% if item.details and item.details|length > 80 %}...{% endif %}</td>
+              <td>{{ item.ip_address or '-' }}</td>
+              <td><span class="config-muted">Read only</span></td>
+            </tr>
+            {% endfor %}
+          {% elif section == 'archive' %}
+            {% for item in items %}
+            <tr data-id="{{ item.id }}" data-item-type="{{ item.item_type }}" data-status="archived" data-name="{{ item.name }}">
+              <td><strong>{{ item.name }}</strong></td>
+              <td>{{ item.item_type|replace('-', ' ')|title }}</td>
+              <td>{{ item.archived_at.strftime('%Y-%m-%d') if item.archived_at else '-' }}</td>
+              <td>{{ current_user.username }}</td>
+              <td>Safely inactive</td>
+              <td>{{ action_menu(item.item_type, item.id, false, false, false, false, true) }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7">
+                <div class="config-empty-state">
+                  <i class="fas fa-lock"></i>
+                  <h3>Read-only review area</h3>
+                  <p>This section is reserved for policy review. Grade Scale remains managed by the dedicated Grade Management module.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="config-modal-overlay" id="itemModal">
+  <div class="config-modal">
+    <div class="config-modal-header">
+      <h3 class="config-modal-title" id="modalTitle">Add New Item</h3>
+      <button class="config-modal-close" onclick="closeItemModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="config-modal-body">
+      <form id="itemForm">
+        <div class="config-form-group js-kind-group">
+          <label class="config-form-label">Record Type</label>
+          <select class="config-form-select" id="itemRecordKind" onchange="configureForm()">
+            <option value="level">Academic Level</option>
+            <option value="class">Class inside a Level</option>
+          </select>
+          <small class="config-form-help">Levels and classes stay in one protected hierarchy.</small>
+        </div>
+        <div class="config-form-group">
+          <label class="config-form-label" id="itemNameLabel">Name</label>
+          <input type="text" class="config-form-input" id="itemName" required placeholder="Enter name">
+        </div>
+        <div class="config-form-group js-year-group">
+          <label class="config-form-label">Academic Year</label>
+          <select class="config-form-select" id="itemAcademicYearId">
+            <option value="">Select academic year</option>
+            {% for year in years %}
+            <option value="{{ year.id }}">{{ year.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="config-form-group js-level-group">
+          <label class="config-form-label">Academic Level</label>
+          <select class="config-form-select" id="itemAcademicLevelId">
+            <option value="">All Levels / Select level</option>
+            {% for level in levels %}
+            <option value="{{ level.id }}">{{ level.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="config-form-group js-code-group">
+          <label class="config-form-label">Short Code</label>
+          <input type="text" class="config-form-input" id="itemShortCode" placeholder="FIN, MID, MT1">
+        </div>
+        <div class="config-form-group js-weight-group">
+          <label class="config-form-label">Weight Percentage</label>
+          <input type="number" min="0" max="100" step="0.01" class="config-form-input" id="itemWeightPercentage" placeholder="0">
+        </div>
+        <div class="config-form-group js-max-score-group">
+          <label class="config-form-label">Maximum Score</label>
+          <input type="number" min="0" step="0.01" class="config-form-input" id="itemMaxScore" placeholder="100">
+        </div>
+        <div class="config-form-group js-sort-group">
+          <label class="config-form-label">Sort Order</label>
+          <input type="number" min="0" step="1" class="config-form-input" id="itemSortOrder" placeholder="Auto">
+        </div>
+      </form>
+    </div>
+    <div class="config-modal-footer">
+      <button class="config-btn config-btn-secondary" onclick="closeItemModal()">Cancel</button>
+      <button class="config-btn config-btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="config-modal-overlay" id="passwordModal">
+  <div class="config-modal">
+    <div class="config-modal-header">
+      <h3 class="config-modal-title">Confirm Protected Action</h3>
+      <button class="config-modal-close" onclick="closePasswordModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="config-modal-body">
+      <p class="config-modal-copy" id="passwordModalMessage">Please enter your administrator password to confirm this action.</p>
+      <div class="config-form-group">
+        <label class="config-form-label">Administrator Password</label>
+        <input type="password" class="config-form-input" id="confirmPassword" required placeholder="Enter your password">
+      </div>
+    </div>
+    <div class="config-modal-footer">
+      <button class="config-btn config-btn-secondary" onclick="closePasswordModal()">Cancel</button>
+      <button class="config-btn config-btn-danger" onclick="confirmPasswordAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="config-modal-overlay" id="dependencyModal">
+  <div class="config-modal">
+    <div class="config-modal-header">
+      <h3 class="config-modal-title">Dependency Check</h3>
+      <button class="config-modal-close" onclick="closeDependencyModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="config-modal-body" id="dependencyContent"></div>
+    <div class="config-modal-footer">
+      <button class="config-btn config-btn-secondary" onclick="closeDependencyModal()">Close</button>
+      <button class="config-btn config-btn-danger" id="dependencyProceedBtn" onclick="openPasswordForPendingAction()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="config-notification" id="notification">
+  <div class="config-notification-icon" id="notificationIcon"><i class="fas fa-check"></i></div>
+  <div class="config-notification-content">
+    <div class="config-notification-title" id="notificationTitle">Success</div>
+    <div class="config-notification-message" id="notificationMessage">Action completed successfully</div>
+  </div>
+  <button class="config-notification-close" onclick="closeNotification()"><i class="fas fa-times"></i></button>
+</div>
+
+<script>
+const currentSection = '{{ section }}';
+let editingItemId = null;
+let editingItemType = null;
+let pendingAction = null;
+
+function apiTypeForSection() {
+  if (currentSection === 'academic-years') return 'academic-years';
+  if (currentSection === 'exam-types') return 'exam-types';
+  if (currentSection === 'subjects') return 'subjects';
+  if (currentSection === 'levels') return document.getElementById('itemRecordKind').value === 'class' ? 'classes' : 'levels';
+  return currentSection;
+}
+
+function toggleActionMenu(key) {
+  const menu = document.getElementById(`actionMenu-${key}`);
+  document.querySelectorAll('.config-action-dropdown').forEach(item => {
+    if (item !== menu) item.classList.remove('show');
+  });
+  if (menu) menu.classList.toggle('show');
+}
+
+document.addEventListener('click', event => {
+  if (!event.target.closest('.config-action-menu')) {
+    document.querySelectorAll('.config-action-dropdown').forEach(menu => menu.classList.remove('show'));
+  }
+});
+
+function setGroup(selector, visible) {
+  document.querySelectorAll(selector).forEach(group => group.style.display = visible ? '' : 'none');
+}
+
+function configureForm() {
+  const apiType = apiTypeForSection();
+  setGroup('.js-kind-group', currentSection === 'levels' && !editingItemId);
+  setGroup('.js-year-group', apiType === 'exam-types');
+  setGroup('.js-level-group', apiType === 'subjects' || apiType === 'classes');
+  setGroup('.js-code-group', apiType === 'exam-types');
+  setGroup('.js-weight-group', apiType === 'exam-types');
+  setGroup('.js-max-score-group', apiType === 'subjects');
+  setGroup('.js-sort-group', apiType === 'levels' || apiType === 'classes' || apiType === 'subjects');
+
+  const labels = {
+    'academic-years': 'Academic Year Name',
+    'exam-types': 'Exam Type Name',
+    levels: 'Academic Level Name',
+    classes: 'Class Name',
+    subjects: 'Subject Name'
+  };
+  document.getElementById('itemNameLabel').textContent = labels[apiType] || 'Name';
+}
+
+function openAddModal() {
+  editingItemId = null;
+  editingItemType = null;
+  document.getElementById('modalTitle').textContent = 'Add New ' + '{{ section_title }}';
+  document.getElementById('itemForm').reset();
+  configureForm();
+  document.getElementById('itemModal').classList.add('show');
+}
+
+function closeItemModal() {
+  document.getElementById('itemModal').classList.remove('show');
+}
+
+function rowFor(itemType, itemId) {
+  return document.querySelector(`tr[data-item-type="${itemType}"][data-id="${itemId}"]`);
+}
+
+function viewItem(itemType, itemId) {
+  const row = rowFor(itemType, itemId);
+  showNotification('info', 'Configuration Item', row ? row.innerText.replace(/\s+/g, ' ').trim() : `Item ${itemId}`);
+}
+
+function editItem(itemType, itemId) {
+  const row = rowFor(itemType, itemId);
+  if (!row) return;
+  editingItemId = itemId;
+  editingItemType = itemType;
+  document.getElementById('modalTitle').textContent = 'Edit ' + (row.dataset.name || 'Item');
+  document.getElementById('itemRecordKind').value = itemType === 'classes' ? 'class' : 'level';
+  document.getElementById('itemName').value = row.dataset.name || '';
+  document.getElementById('itemShortCode').value = row.dataset.shortCode || '';
+  document.getElementById('itemWeightPercentage').value = row.dataset.weightPercentage || '';
+  document.getElementById('itemAcademicYearId').value = row.dataset.academicYearId || '';
+  document.getElementById('itemAcademicLevelId').value = row.dataset.academicLevelId || '';
+  document.getElementById('itemMaxScore').value = row.dataset.maxScore || '';
+  document.getElementById('itemSortOrder').value = row.dataset.sortOrder || '';
+  configureForm();
+  document.getElementById('itemModal').classList.add('show');
+}
+
+function deactivateItem(itemType, itemId) { prepareProtectedAction(itemType, itemId, 'deactivate'); }
+function activateItem(itemType, itemId) { prepareProtectedAction(itemType, itemId, 'activate'); }
+function restoreItem(itemType, itemId) { prepareProtectedAction(itemType, itemId, 'restore'); }
+
+function archiveItem(itemType, itemId) {
+  pendingAction = { itemType, itemId, action: 'archive' };
+  checkDependencies(itemType, itemId, 'archive');
+}
+
+function deleteItem(itemType, itemId) {
+  pendingAction = { itemType, itemId, action: 'delete' };
+  checkDependencies(itemType, itemId, 'delete');
+}
+
+function prepareProtectedAction(itemType, itemId, action) {
+  pendingAction = { itemType, itemId, action };
+  openPasswordModal(`Enter your password to ${action.replace('-', ' ')} this configuration item.`);
+}
+
+function checkDependencies(itemType, itemId, action) {
+  fetch(`/admin/config-center/api/${itemType}/${itemId}/dependencies`)
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success) {
+        showNotification('error', 'Dependency Check Failed', data.message || 'Could not check dependencies.');
+        return;
+      }
+      const dependencies = data.dependencies || [];
+      const isDelete = action === 'delete';
+      const isActive = data.is_active;
+      let content = '';
+      let canContinue = true;
+      if (isActive) {
+        canContinue = false;
+        content += `<div class="config-dependency-warning"><strong>Active item protected.</strong><p>Deactivate this item before archive or permanent delete.</p></div>`;
+      }
+      if (dependencies.length) {
+        canContinue = false;
+        content += `<div class="config-dependency-warning"><strong>Linked records found.</strong><p>This item is used by:</p><ul>${dependencies.map(dep => `<li>${dep}</li>`).join('')}</ul></div>`;
+      }
+      if (!content) {
+        content = `<div class="config-dependency-safe"><strong>No blocking dependencies found.</strong><p>You can continue after password confirmation.</p></div>`;
+      }
+      document.getElementById('dependencyContent').innerHTML = content;
+      document.getElementById('dependencyProceedBtn').style.display = canContinue ? '' : 'none';
+      document.getElementById('dependencyModal').classList.add('show');
+    })
+    .catch(() => showNotification('error', 'Error', 'Could not check dependencies.'));
+}
+
+function closeDependencyModal() {
+  document.getElementById('dependencyModal').classList.remove('show');
+}
+
+function openPasswordForPendingAction() {
+  closeDependencyModal();
+  if (pendingAction) {
+    openPasswordModal(`Enter your password to ${pendingAction.action.replace('-', ' ')} this configuration item.`);
+  }
+}
+
+function openPasswordModal(message) {
+  document.getElementById('passwordModalMessage').textContent = message;
+  document.getElementById('confirmPassword').value = '';
+  document.getElementById('passwordModal').classList.add('show');
+}
+
+function closePasswordModal() {
+  document.getElementById('passwordModal').classList.remove('show');
+}
+
+function confirmPasswordAction() {
+  const password = document.getElementById('confirmPassword').value;
+  if (!password || !pendingAction) {
+    showNotification('error', 'Password Required', 'Enter your administrator password.');
+    return;
+  }
+  fetch('/admin/config-center/confirm-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+    body: JSON.stringify({ password, action: pendingAction.action, item_id: pendingAction.itemId })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success) {
+        showNotification('error', 'Authentication Failed', data.message || 'Invalid password.');
+        return;
+      }
+      closePasswordModal();
+      executeAction();
+    })
+    .catch(() => showNotification('error', 'Error', 'Password confirmation failed.'));
+}
+
+function executeAction() {
+  if (!pendingAction) return;
+  const { itemType, itemId, action } = pendingAction;
+  fetch(`/admin/config-center/api/${itemType}/${itemId}/${action}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' }
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification('success', 'Success', data.message || 'Action completed.');
+        setTimeout(() => location.reload(), 900);
+      } else {
+        showNotification('error', 'Action Blocked', data.message || 'Action could not be completed.');
+      }
+    })
+    .catch(() => showNotification('error', 'Error', 'Action failed.'));
+}
+
+function payloadFor(apiType) {
+  const payload = { name: document.getElementById('itemName').value.trim() };
+  if (apiType === 'exam-types') {
+    payload.short_code = document.getElementById('itemShortCode').value.trim();
+    payload.weight_percentage = document.getElementById('itemWeightPercentage').value;
+    payload.academic_year_id = document.getElementById('itemAcademicYearId').value;
+  }
+  if (apiType === 'classes') {
+    payload.academic_level_id = document.getElementById('itemAcademicLevelId').value;
+    payload.sort_order = document.getElementById('itemSortOrder').value;
+  }
+  if (apiType === 'levels') {
+    payload.sort_order = document.getElementById('itemSortOrder').value;
+  }
+  if (apiType === 'subjects') {
+    payload.academic_level_id = document.getElementById('itemAcademicLevelId').value;
+    payload.max_score = document.getElementById('itemMaxScore').value || 100;
+    payload.sort_order = document.getElementById('itemSortOrder').value;
+  }
+  return payload;
+}
+
+function saveItem() {
+  const apiType = editingItemType || apiTypeForSection();
+  const endpoint = editingItemId ? `/admin/config-center/api/${apiType}/${editingItemId}` : `/admin/config-center/api/${apiType}`;
+  const method = editingItemId ? 'PUT' : 'POST';
+  fetch(endpoint, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+    body: JSON.stringify(payloadFor(apiType))
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        closeItemModal();
+        showNotification('success', 'Saved', data.message || 'Configuration saved.');
+        setTimeout(() => location.reload(), 900);
+      } else {
+        showNotification('error', 'Save Failed', data.message || 'Configuration could not be saved.');
+      }
+    })
+    .catch(() => showNotification('error', 'Error', 'Save failed.'));
+}
+
+function applyFilter(event, status) {
+  document.querySelectorAll('.config-filter').forEach(btn => btn.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('#tableBody tr').forEach(row => {
+    const rowStatus = row.dataset.status || 'active';
+    row.style.display = status === 'all' || rowStatus === status ? '' : 'none';
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', event => {
+  const searchTerm = event.target.value.toLowerCase();
+  document.querySelectorAll('#tableBody tr').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+  });
+});
+
+function showNotification(type, title, message) {
+  const notification = document.getElementById('notification');
+  const icon = document.getElementById('notificationIcon');
+  document.getElementById('notificationTitle').textContent = title;
+  document.getElementById('notificationMessage').textContent = message;
+  notification.className = `config-notification ${type}`;
+  const icons = { success: 'fa-check', error: 'fa-times', warning: 'fa-exclamation', info: 'fa-info' };
+  icon.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i>`;
+  notification.classList.add('show');
+  setTimeout(closeNotification, 4500);
+}
+
+function closeNotification() {
+  document.getElementById('notification').classList.remove('show');
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    closeItemModal();
+    closePasswordModal();
+    closeDependencyModal();
+    closeNotification();
+  }
+});
+
+configureForm();
+</script>
+{% endblock %}
