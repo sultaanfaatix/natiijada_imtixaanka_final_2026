@@ -96,6 +96,9 @@
   --sis-display-share-button: {{ 'grid' if settings.result_dashboard_show_share_button == 'on' else 'none' }};
 "{% endif %}>
   <nav class="premium-language-nav">
+    <a class="premium-contact-link" href="{{ settings.call_url or '#' }}" aria-label="Contact the examination office" title="Contact / Help">
+      <i class="fa-solid fa-headset"></i><span>Help</span>
+    </a>
     <label class="premium-language-pill">
       <i class="fa-solid fa-globe"></i>
       <select aria-label="Language" onchange="window.location.href='{{ url_for('public.set_language', lang='__LANG__') }}'.replace('__LANG__', this.value)">
@@ -125,9 +128,17 @@
   {% if result_options %}
     <section class="premium-search-shell glass-card premium-result-options-shell">
       <div class="result-options-heading">
-        <span class="premium-input-icon"><i class="fa-solid fa-user-check"></i></span>
+        <span class="result-options-photo">
+          {% if result_options.student.photo_path %}
+            <img src="{{ asset_url(result_options.student.photo_path) }}" alt="{{ result_options.student.full_name }} photo">
+          {% elif settings.result_dashboard_default_avatar %}
+            <img src="{{ asset_url(settings.result_dashboard_default_avatar) }}" alt="Default student avatar">
+          {% else %}
+            <i class="fa-solid fa-user-graduate"></i>
+          {% endif %}
+        </span>
         <div>
-          <p class="result-options-kicker">Student result records</p>
+          <p class="result-options-kicker">Academic record</p>
           <h2>{{ result_options.student.full_name }}</h2>
           <p>{{ result_options.student.student_code }} · Select an academic record to continue.</p>
         </div>
@@ -267,7 +278,7 @@
               <div><span><i class="fa-solid fa-chart-pie"></i> Average Percentage</span><strong>{{ result.average }}%</strong></div>
               <div><span><i class="fa-solid fa-star"></i> Overall Grade</span><strong class="pill" style="background: {{ result.overall_grade.badge_color }}; color: {{ result.overall_grade.text_color }};">{{ result.overall_grade.grade }}</strong></div>
               <div><span><i class="fa-solid fa-ranking-star"></i> Position in Class</span><strong>{{ result.rank or '-' }}</strong></div>
-              <div><span><i class="fa-solid fa-face-smile"></i> Behavior</span><strong>Excellent</strong></div>
+              <div><span><i class="fa-solid fa-arrow-up-right-dots"></i> Final Status</span><strong class="final-status-value">{{ 'PROMOTED' if result.overall_grade.is_pass else 'NOT PROMOTED' }}</strong></div>
             </section>
 
             <section class="reference-comments">

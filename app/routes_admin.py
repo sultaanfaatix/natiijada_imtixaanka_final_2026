@@ -1858,7 +1858,12 @@ def config_levels():
 @login_required
 def config_subjects():
     """Subjects Management"""
-    return redirect(url_for('admin.config_center', section='subjects'))
+    return redirect(url_for(
+        'admin.config_center',
+        section='subjects',
+        year_id=request.args.get('year_id') or None,
+        level_id=request.args.get('level_id') or None,
+    ))
 
 
 @admin_bp.route("/config-center/promotion-rules")

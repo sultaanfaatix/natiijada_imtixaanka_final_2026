@@ -215,7 +215,7 @@
             {% for item in items %}
             {% set assigned_classes = subject_class_map.get(item.id, []) %}
             {% set icon = subject_icons.get(item.id, {"type": "fa", "value": "fa-book"}) %}
-            <tr data-id="{{ item.id }}" data-item-type="subjects" data-status="active" data-name="{{ item.name }}" data-short-name="{{ subject_short_names.get(item.id, '') }}" data-academic-level-id="{{ item.academic_level_id or '' }}" data-max-score="{{ item.max_score or 100 }}" data-sort-order="{{ item.sort_order }}">
+            <tr data-id="{{ item.id }}" data-item-type="subjects" data-status="active" data-name="{{ item.name }}" data-short-name="{{ subject_short_names.get(item.id, '') }}" data-academic-level-id="{{ item.academic_level_id or '' }}" data-sort-order="{{ item.sort_order }}">
               <td>
                 <div class="config-subject-cell subject-theme-{{ item.name|lower|replace(' ', '-')|replace('/', '-') }}">
                   <span class="config-subject-icon">
@@ -328,10 +328,6 @@
         <div class="config-form-group js-weight-group">
           <label class="config-form-label">Weight Percentage</label>
           <input type="number" min="0" max="100" step="0.01" class="config-form-input" id="itemWeightPercentage" placeholder="0">
-        </div>
-        <div class="config-form-group js-max-score-group">
-          <label class="config-form-label">Maximum Score</label>
-          <input type="number" min="0" step="0.01" class="config-form-input" id="itemMaxScore" placeholder="100">
         </div>
         <div class="config-form-group js-short-name-group">
           <label class="config-form-label">Short Name</label>
@@ -481,7 +477,6 @@ function editItem(itemType, itemId) {
   document.getElementById('itemWeightPercentage').value = row.dataset.weightPercentage || '';
   document.getElementById('itemAcademicYearId').value = row.dataset.academicYearId || '';
   document.getElementById('itemAcademicLevelId').value = row.dataset.academicLevelId || '';
-  document.getElementById('itemMaxScore').value = row.dataset.maxScore || '';
   document.getElementById('itemSortOrder').value = row.dataset.sortOrder || '';
   configureForm();
   document.getElementById('itemModal').classList.add('show');
@@ -617,7 +612,6 @@ function payloadFor(apiType) {
   if (apiType === 'subjects') {
     payload.academic_level_id = document.getElementById('itemAcademicLevelId').value;
     payload.short_name = document.getElementById('itemShortName').value.trim();
-    payload.max_score = document.getElementById('itemMaxScore').value || 100;
     payload.sort_order = document.getElementById('itemSortOrder').value;
   }
   return payload;
