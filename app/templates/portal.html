@@ -142,7 +142,7 @@
             <section class="selection-wizard-step"><div class="selection-step-heading"><span class="selection-step-icon year"><i class="fa-solid fa-calendar-days"></i></span><div><h3>Select Academic Year</h3><p>Choose the academic record you want to view.</p></div></div><div class="selection-choice-list">{% for year in result_options.years %}<button type="button" class="selection-choice year-choice{% if year.id == result_options.selected_year_id %} is-selected{% endif %}" data-year-id="{{ year.id }}"><span class="selection-choice-icon"><i class="fa-solid fa-calendar-check"></i></span><span class="selection-choice-copy"><strong>{{ year.name }}</strong><small>Academic Year</small></span><span class="selection-choice-check"><i class="fa-solid fa-check"></i></span></button>{% endfor %}</div></section>
             <section class="selection-wizard-step"><div class="selection-step-heading"><span class="selection-step-icon exam"><i class="fa-solid fa-file-lines"></i></span><div><h3>Select Exam Type</h3><p>Choose an examination from the selected academic year.</p></div></div><div class="selection-choice-list" id="selectionExamChoices">{% for exam_option in result_options.exams %}<button type="button" class="selection-choice exam-choice" data-exam-id="{{ exam_option.id }}" data-year-id="{{ exam_option.academic_year_id }}"><span class="selection-choice-icon"><i class="fa-solid fa-file-signature"></i></span><span class="selection-choice-copy"><strong>{{ exam_option.name }}</strong><small>{{ exam_option.academic_year.name if exam_option.academic_year else 'Examination' }}</small></span><span class="selection-choice-check"><i class="fa-solid fa-check"></i></span></button>{% endfor %}</div><div class="selection-no-exams" id="selectionNoExams" hidden>No published examinations are available for this year.</div></section>
           </div></div>
-          <div class="selection-sheet-actions"><button type="button" class="selection-back-button" id="selectionBackButton" hidden><i class="fa-solid fa-arrow-left"></i> Back</button><button type="submit" class="student-search-button premium-search-button result-options-submit" id="selectionViewButton" disabled><i class="fa-solid fa-arrow-right"></i><span>VIEW RESULT</span></button></div>
+          <div class="selection-sheet-actions"><button type="button" class="selection-back-button" id="selectionBackButton" hidden><i class="fa-solid fa-arrow-left"></i> Back</button><button type="submit" class="student-search-button premium-search-button result-options-submit" id="selectionViewButton" disabled><i class="fa-solid fa-eye"></i><span>ARAG NATIIJADA</span></button></div>
         </form>
       </section>
     </section>
@@ -207,7 +207,7 @@
             {% endfor %}
           </select>
         </label>
-        <button type="submit" class="student-search-button premium-search-button result-options-submit"><i class="fa-solid fa-arrow-right"></i><span>VIEW RESULT</span></button>
+        <button type="submit" class="student-search-button premium-search-button result-options-submit"><i class="fa-solid fa-eye"></i><span>ARAG NATIIJADA</span></button>
       </form>
     </section>
     <script>
