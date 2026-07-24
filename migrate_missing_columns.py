@@ -26,6 +26,20 @@ if 'invigilator_id' not in column_names:
 else:
     print("[OK] invigilator_id column already exists")
 
+if 'category_description' not in column_names:
+    print("Adding category_description column to incident_reports...")
+    cursor.execute("ALTER TABLE incident_reports ADD COLUMN category_description VARCHAR(500)")
+    print("[OK] category_description column added")
+else:
+    print("[OK] category_description column already exists")
+
+if 'action_description' not in column_names:
+    print("Adding action_description column to incident_reports...")
+    cursor.execute("ALTER TABLE incident_reports ADD COLUMN action_description VARCHAR(500)")
+    print("[OK] action_description column added")
+else:
+    print("[OK] action_description column already exists")
+
 # Check if exam_invigilators table exists
 cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='exam_invigilators'")
 if not cursor.fetchone():

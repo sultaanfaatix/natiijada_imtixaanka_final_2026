@@ -153,21 +153,60 @@
           <label for="category_id">Incident Category{% if incident_settings.get('require_category', 'true') == 'true' %} *{% endif %}</label>
           <select id="category_id" name="category_id" data-required="{{ incident_settings.get('require_category', 'true') }}" data-message="Please select a Category.">
             <option value="">Select category</option>
-            {% for category in categories %}
+          {% for category in categories %}
             <option value="{{ category.id }}">{{ category.name }}</option>
             {% endfor %}
           </select>
+        </div>
+        <div id="categoryDescriptionGroup" class="form-group full-width category-description-group" hidden>
+          <label for="category_description">Category Details / Additional Context <span class="required-mark">*</span></label>
+          <textarea id="category_description" name="category_description" rows="3" maxlength="500" data-message="Please describe the Category details." placeholder="Provide details specific to the selected category..."></textarea>
+          <div class="field-meta"><span>Category context is saved independently.</span><span id="categoryDescriptionCount">0 / 500</span></div>
         </div>
       </div>
 
       <div class="form-group">
         <label>Severity Level{% if incident_settings.get('require_severity', 'true') == 'true' %} *{% endif %}</label>
-        <div class="severity-badges">
+        <div class="severity-badges" role="radiogroup" aria-label="Severity Level Selection">
           {% for severity in severities %}
-          <label class="severity-badge" style="background: {{ severity.color }}; color: white;">
-            <input type="radio" name="severity_id" value="{{ severity.id }}" data-required="{{ incident_settings.get('require_severity', 'true') }}" data-message="Please select a Severity Level.">
-            <span>{{ severity.name }}</span>
-          </label>
+            {% set s_name = severity.name.lower() %}
+            {% if 'minor' in s_name %}
+              {% set identity_color = '#10b981' %}
+              {% set identity_icon = 'fa-circle-check' %}
+            {% elif 'moderate' in s_name %}
+              {% set identity_color = '#eab308' %}
+              {% set identity_icon = 'fa-circle-exclamation' %}
+            {% elif 'major' in s_name or 'serious' in s_name %}
+              {% set identity_color = '#f97316' %}
+              {% set identity_icon = 'fa-triangle-exclamation' %}
+            {% elif 'critical' in s_name or 'severe' in s_name %}
+              {% set identity_color = '#ef4444' %}
+              {% set identity_icon = 'fa-circle-radiation' %}
+            {% else %}
+              {% set identity_color = severity.color if severity.color and severity.color != '#64748b' else '#3b82f6' %}
+              {% set identity_icon = 'fa-shield-halved' %}
+            {% endif %}
+            <label class="severity-badge" style="--identity-color: {{ identity_color }};">
+              <input type="radio" name="severity_id" value="{{ severity.id }}" data-required="{{ incident_settings.get('require_severity', 'true') }}" data-message="Please select a Severity Level.">
+              <div class="liquid-wave">
+                <div class="wave-container">
+                  <svg class="wave-svg" viewBox="0 0 240 20" preserveAspectRatio="none">
+                    <path d="M0,10 C30,20 90,0 120,10 C150,20 210,0 240,10 L240,20 L0,20 Z" />
+                  </svg>
+                  <svg class="wave-svg wave-back" viewBox="0 0 240 20" preserveAspectRatio="none">
+                    <path d="M0,10 C30,0 90,20 120,10 C150,0 210,20 240,10 L240,20 L0,20 Z" />
+                  </svg>
+                  <div class="wave-fill"></div>
+                </div>
+              </div>
+              <svg class="border-glow-svg">
+                <rect x="0" y="0" width="100%" height="100%" rx="12" ry="12" />
+              </svg>
+              <div class="severity-card-content">
+                <i class="fa-solid {{ identity_icon }} severity-icon"></i>
+                <span class="severity-name">{{ severity.name }}</span>
+              </div>
+            </label>
           {% endfor %}
         </div>
       </div>
@@ -236,6 +275,11 @@
           <span>{{ action.name }}</span>
         </label>
         {% endfor %}
+      </div>
+      <div id="actionDescriptionGroup" class="form-group full-width action-description-group" style="margin-top: 1.25rem;" hidden>
+        <label for="action_description">Action Token Details / Action Notes <span class="required-mark">*</span></label>
+        <textarea id="action_description" name="action_description" rows="3" maxlength="500" data-message="Please describe the Action Token details." placeholder="Provide details specific to the selected action..."></textarea>
+        <div class="field-meta"><span>Action token details are saved independently.</span><span id="actionDescriptionCount">0 / 500</span></div>
       </div>
     </div>
 
@@ -322,6 +366,22 @@
     <p>{{ incident_settings.get('footer_text', '© 2024 Examination System') }}</p>
   </div>
   {% endif %}
+</div>
+
+<div class="incident-submit-overlay" id="incidentSubmitOverlay" aria-hidden="true" role="status" aria-live="polite">
+  <div class="incident-submit-dialog">
+    <div class="submit-orbit"><i class="fa-solid fa-file-circle-check"></i><span id="submitPercent">0%</span></div>
+    <h2 id="submitTitle">Submitting Report</h2>
+    <p id="submitMessage">Preparing your secure incident record.</p>
+    <div class="submit-progress"><span id="submitProgressBar"></span></div>
+    <ol class="submit-steps">
+      <li data-step="1"><i class="fa-solid fa-circle"></i><span>Validating information</span></li>
+      <li data-step="2"><i class="fa-solid fa-circle"></i><span>Saving student details</span></li>
+      <li data-step="3"><i class="fa-solid fa-circle"></i><span>Recording incident</span></li>
+      <li data-step="4"><i class="fa-solid fa-circle"></i><span>Finalizing report</span></li>
+    </ol>
+    <button type="button" class="submit-retry" id="submitRetry" hidden>Try Again</button>
+  </div>
 </div>
 
 <style>
@@ -535,6 +595,55 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     const radioChecked = (name) => Boolean(incidentForm.querySelector(`input[name="${name}"]:checked`));
     const checkboxChecked = (name) => Boolean(incidentForm.querySelector(`input[name="${name}"]:checked`));
+    const categorySelect = document.getElementById('category_id');
+    const categoryDescriptionGroup = document.getElementById('categoryDescriptionGroup');
+    const categoryDescription = document.getElementById('category_description');
+    const categoryDescriptionCount = document.getElementById('categoryDescriptionCount');
+
+    const actionDescriptionGroup = document.getElementById('actionDescriptionGroup');
+    const actionDescription = document.getElementById('action_description');
+    const actionDescriptionCount = document.getElementById('actionDescriptionCount');
+
+    const selectedCategoryIsOther = () => {
+      const option = categorySelect?.options[categorySelect.selectedIndex];
+      return option && option.text.trim().toLowerCase() === 'other';
+    };
+
+    const selectedActionIsOther = () => Array.from(incidentForm.querySelectorAll('input[name="actions_taken"]:checked'))
+      .some((input) => String(input.value || '').trim().toLowerCase() === 'other');
+
+    const syncCategoryDescription = () => {
+      if (!categoryDescriptionGroup || !categoryDescription) return;
+      const required = selectedCategoryIsOther();
+      categoryDescriptionGroup.hidden = !required;
+      categoryDescription.dataset.required = required ? 'true' : 'false';
+      categoryDescription.required = required;
+      if (!required) categoryDescription.value = '';
+      if (categoryDescriptionCount) categoryDescriptionCount.textContent = `${categoryDescription.value.length} / 500`;
+    };
+
+    const syncActionDescription = () => {
+      if (!actionDescriptionGroup || !actionDescription) return;
+      const required = selectedActionIsOther();
+      actionDescriptionGroup.hidden = !required;
+      actionDescription.dataset.required = required ? 'true' : 'false';
+      actionDescription.required = required;
+      if (!required) actionDescription.value = '';
+      if (actionDescriptionCount) actionDescriptionCount.textContent = `${actionDescription.value.length} / 500`;
+    };
+
+    categorySelect?.addEventListener('change', syncCategoryDescription);
+    incidentForm.querySelectorAll('input[name="actions_taken"]').forEach((input) => input.addEventListener('change', syncActionDescription));
+    
+    categoryDescription?.addEventListener('input', () => {
+      if (categoryDescriptionCount) categoryDescriptionCount.textContent = `${categoryDescription.value.length} / 500`;
+    });
+    actionDescription?.addEventListener('input', () => {
+      if (actionDescriptionCount) actionDescriptionCount.textContent = `${actionDescription.value.length} / 500`;
+    });
+
+    syncCategoryDescription();
+    syncActionDescription();
     const validateIncidentForm = () => {
       clearValidation();
       const errors = [];
@@ -568,15 +677,88 @@ document.addEventListener('DOMContentLoaded', function() {
     incidentForm.addEventListener('change', (event) => {
       if (event.target.closest('.field-invalid')) clearValidation();
     });
-    incidentForm.addEventListener('submit', (event) => {
+    const submitOverlay = document.getElementById('incidentSubmitOverlay');
+    const submitPercent = document.getElementById('submitPercent');
+    const submitProgressBar = document.getElementById('submitProgressBar');
+    const submitTitle = document.getElementById('submitTitle');
+    const submitMessage = document.getElementById('submitMessage');
+    const submitRetry = document.getElementById('submitRetry');
+    let progressTimer = null;
+    const updateProgress = (value, failed = false) => {
+      if (submitPercent) submitPercent.textContent = `${value}%`;
+      if (submitProgressBar) submitProgressBar.style.inlineSize = `${value}%`;
+      document.querySelectorAll('.submit-steps li').forEach((step) => {
+        const stepNumber = Number(step.dataset.step || 0);
+        step.classList.toggle('is-complete', stepNumber < Math.ceil(value / 25));
+        step.classList.toggle('is-active', stepNumber === Math.ceil(value / 25) && !failed);
+        step.classList.toggle('is-failed', failed && stepNumber === Math.ceil(value / 25));
+      });
+    };
+    const openSubmitOverlay = () => {
+      submitOverlay?.classList.add('is-visible');
+      submitOverlay?.setAttribute('aria-hidden', 'false');
+      if (submitTitle) submitTitle.textContent = 'Submitting Report';
+      if (submitMessage) submitMessage.textContent = 'Preparing your secure incident record.';
+      if (submitRetry) submitRetry.hidden = true;
+      updateProgress(8);
+      let progress = 8;
+      clearInterval(progressTimer);
+      progressTimer = window.setInterval(() => {
+        progress = Math.min(progress + (progress < 55 ? 9 : 3), 86);
+        updateProgress(progress);
+      }, 380);
+    };
+    const failSubmission = (message) => {
+      clearInterval(progressTimer);
+      if (submitTitle) submitTitle.textContent = 'Unable to Submit Report';
+      if (submitMessage) submitMessage.textContent = message || 'The report was not saved. Please review the form and try again.';
+      submitOverlay?.classList.add('has-error');
+      if (submitRetry) submitRetry.hidden = false;
+    };
+    submitRetry?.addEventListener('click', () => {
+      submitOverlay?.classList.remove('is-visible', 'has-error');
+      submitOverlay?.setAttribute('aria-hidden', 'true');
+      incidentForm.querySelector('.btn-submit')?.removeAttribute('disabled');
+    });
+    incidentForm.addEventListener('submit', async (event) => {
       if (!validateIncidentForm()) {
         event.preventDefault();
         return;
       }
+      event.preventDefault();
       const button = incidentForm.querySelector('.btn-submit');
       if (button) {
         button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
         button.disabled = true;
+      }
+      openSubmitOverlay();
+      try {
+        const response = await fetch(incidentForm.action, {
+          method: 'POST',
+          body: new FormData(incidentForm),
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+          const errors = payload.errors || [payload.message || 'The server could not save this report.'];
+          clearValidation();
+          errors.forEach((message) => {
+            const field = Array.from(incidentForm.querySelectorAll('[data-message]')).find((item) => item.dataset.message === message);
+            if (field) addError(field, message);
+          });
+          if (validationSummary) validationSummary.hidden = false;
+          failSubmission(payload.message || errors[0]);
+          return;
+        }
+        clearInterval(progressTimer);
+        updateProgress(100);
+        if (submitTitle) submitTitle.textContent = 'Report Submitted Successfully';
+        if (submitMessage) submitMessage.textContent = `Reference: ${payload.report_number}`;
+        submitOverlay?.classList.add('is-success');
+        window.setTimeout(() => { window.location.assign(payload.success_url); }, 800);
+      } catch (error) {
+        failSubmission('A network error interrupted the submission. Your information is still on this form; please try again.');
       }
     });
   }

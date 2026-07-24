@@ -3,6 +3,7 @@ from datetime import date, datetime
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 
 from . import db
 from .i18n import language_redirect
@@ -40,6 +41,24 @@ def parse_incident_time(value):
         except ValueError:
             continue
     raise ValueError("Invalid incident time")
+
+
+def incident_json_request():
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def incident_form_error(message, errors=None, status=400):
+    """Return a concrete error to the enhanced form and retain the legacy form flow."""
+    errors = errors or [message]
+    if incident_json_request():
+        return jsonify(success=False, message=message, errors=errors), status
+    for error in errors:
+        flash(error, "danger")
+    return redirect(request.url)
+
+
+def is_other_lookup_value(value):
+    return (value or "").strip().casefold() == "other"
 
 
 @public_bp.route("/")
@@ -374,6 +393,9 @@ def incident_report_form(token):
         actions_list = request.form.getlist("actions_taken")
         evidence_files = [file for file in request.files.getlist("evidence") if file and file.filename]
         signature_data = request.form.get("signature_data", "").strip()
+        category_description = request.form.get("category_description", "").strip()
+        action_description = request.form.get("action_description", "").strip()
+        other_description = request.form.get("other_description", "").strip()
         if not signature_data and allow_signature_reuse:
             signature_data = invigilator.signature_data or ""
 
@@ -397,9 +419,7 @@ def incident_report_form(token):
         if incident_bool_setting(settings_dict, "require_incident_time", True) and not request.form.get("incident_time"):
             validation_errors.append("Incident Time is required.")
         if validation_errors:
-            for message in validation_errors:
-                flash(message, "danger")
-            return redirect(request.url)
+            return incident_form_error("Please correct the highlighted fields.", validation_errors)
 
         if not category_id:
             default_category = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order, IncidentCategory.id).first()
@@ -408,20 +428,51 @@ def incident_report_form(token):
             default_severity = SeverityLevel.query.filter_by(is_active=True).order_by(SeverityLevel.sort_order, SeverityLevel.id).first()
             severity_id = default_severity.id if default_severity else None
         if not category_id or not severity_id:
-            flash("Incident categories and severity levels must be configured before submitting reports.", "danger")
-            return redirect(request.url)
+            return incident_form_error("Incident categories and severity levels must be configured before submitting reports.")
         if not description:
             description = "No description provided."
 
+        try:
+            category = IncidentCategory.query.filter_by(id=int(category_id), is_active=True).first()
+            severity = SeverityLevel.query.filter_by(id=int(severity_id), is_active=True).first()
+        except (TypeError, ValueError):
+            category = severity = None
+        if not category:
+            return incident_form_error("Please select an active incident category.")
+        if not severity:
+            return incident_form_error("Please select an active severity level.")
+
+        category_is_other = is_other_lookup_value(category.name)
+        action_has_other = any(is_other_lookup_value(action) for action in actions_list)
+
+        if category_is_other and not category_description and not other_description:
+            return incident_form_error("Please describe the specific Category details.")
+        if action_has_other and not action_description and not other_description:
+            return incident_form_error("Please describe the specific Action details.")
+
+        if len(category_description) > 500:
+            return incident_form_error("Category description must be 500 characters or fewer.")
+        if len(action_description) > 500:
+            return incident_form_error("Action description must be 500 characters or fewer.")
+        if len(other_description) > 500:
+            return incident_form_error("The description must be 500 characters or fewer.")
+
+        # Legacy fallback if old form submitted single other_description
+        if not category_description and category_is_other and other_description:
+            category_description = other_description
+        if not action_description and action_has_other and other_description:
+            action_description = other_description
+
+        # Combined fallback for other_description field for legacy queries
+        legacy_other_combined = other_description or (" / ".join(filter(None, [category_description, action_description]))) or None
+
         if incident_bool_setting(settings_dict, "require_exam", False) and not exam:
-            flash("No active exam found for this student.", "danger")
-            return redirect(request.url)
+            return incident_form_error("No active exam found for this student.")
         try:
             incident_date = parse_incident_date(request.form.get("incident_date"))
             incident_time = parse_incident_time(request.form.get("incident_time"))
         except ValueError:
-            flash("Please enter a valid incident date and time.", "danger")
-            return redirect(request.url)
+            return incident_form_error("Please enter a valid incident date and time.")
         
         report_num = f"{incident_reference_prefix(settings_dict)}-{datetime.now().strftime('%Y%m%d')}-{''.join(random.choices(string.digits, k=4))}"
         
@@ -435,8 +486,8 @@ def incident_report_form(token):
             invigilator_id=invigilator.id,
             teacher_id=None,
             user_id=None,
-            category_id=int(category_id),
-            severity_id=int(severity_id),
+            category_id=category.id,
+            severity_id=severity.id,
             exam_id=exam.id if exam else None,
             subject_id=int(request.form.get("subject_id")) if request.form.get("subject_id") else None,
             exam_room=request.form.get("exam_room", ""),
@@ -444,14 +495,22 @@ def incident_report_form(token):
             incident_time=incident_time,
             description=description,
             actions_taken=actions_taken,
+            category_description=category_description or None,
+            action_description=action_description or None,
+            other_description=legacy_other_combined,
             signature_data=signature_data or None,
             status="Pending Review"
         )
-        
-        db.session.add(report)
-        if signature_data and allow_signature_reuse:
-            invigilator.signature_data = signature_data
-        db.session.commit()
+
+        try:
+            db.session.add(report)
+            if signature_data and allow_signature_reuse:
+                invigilator.signature_data = signature_data
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            current_app.logger.exception("Incident report submission failed")
+            return incident_form_error("Unable to save the report. Please try again.", status=500)
         
         # Handle file uploads if any (optional - report saves even if upload fails)
         if evidence_files:
@@ -481,7 +540,13 @@ def incident_report_form(token):
                 # Log error but don't fail the entire report submission
                 current_app.logger.error(f"File upload processing failed: {str(e)}")
         
-        return render_template("incident_success.html", settings=settings, report=report, student=student)
+        if incident_json_request():
+            return jsonify(
+                success=True,
+                report_number=report.report_number,
+                success_url=url_for("public.incident_report_success", token=token, report_id=report.id),
+            )
+        return render_template("incident_success.html", settings=settings, report=report, student=student, token=token)
     
     # GET request - show form
     categories = IncidentCategory.query.filter_by(is_active=True).order_by(IncidentCategory.sort_order).all()
@@ -523,3 +588,20 @@ def incident_report_form(token):
         allow_signature_reuse=allow_signature_reuse,
         exam=exam  # Pass the active exam to the template
     )
+
+
+@public_bp.route("/incident-report/<token>/success/<int:report_id>")
+def incident_report_success(token, report_id):
+    """Completion view for enhanced submissions, protected by the QR token and invigilator session."""
+    from .routes_invigilator import current_invigilator
+
+    issue = IdCardIssue.query.filter_by(token=token).first_or_404()
+    invigilator = current_invigilator()
+    if not invigilator:
+        return redirect(url_for("invigilator.login"))
+    report = IncidentReport.query.filter_by(
+        id=report_id,
+        student_id=issue.student_id,
+        invigilator_id=invigilator.id,
+    ).first_or_404()
+    return render_template("incident_success.html", settings=get_settings(), report=report, student=issue.student, token=token)

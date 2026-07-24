@@ -104,6 +104,12 @@
           <span class="label">Category:</span>
           <span class="value">{{ report.category.name if report.category else 'N/A' }}</span>
         </div>
+        {% if report.other_description %}
+        <div class="info-item full-width">
+          <span class="label">Other Description:</span>
+          <span class="value">{{ report.other_description }}</span>
+        </div>
+        {% endif %}
         <div class="info-item">
           <span class="label">Severity:</span>
           <span class="severity-badge" style="background: {{ report.severity.color if report.severity else '#64748b' }}; color: white;">

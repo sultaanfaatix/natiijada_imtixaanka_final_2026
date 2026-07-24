@@ -16,6 +16,7 @@ def ensure_schema_compatibility():
     add_column_if_missing("results", "grade_override", column_sql(dialect, "grade_override", "VARCHAR(10)"))
     add_column_if_missing("results", "comment", column_sql(dialect, "comment", "VARCHAR(255)"))
     add_column_if_missing("incident_reports", "signature_data", column_sql(dialect, "signature_data", "TEXT"))
+    add_column_if_missing("incident_reports", "other_description", column_sql(dialect, "other_description", "VARCHAR(500)"))
     add_column_if_missing("exam_invigilators", "visible_password", column_sql(dialect, "visible_password", "VARCHAR(255)"))
     add_column_if_missing("exam_invigilators", "signature_data", column_sql(dialect, "signature_data", "TEXT"))
     widen_varchar_if_needed("results", "grade_override", 20)

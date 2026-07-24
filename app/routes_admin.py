@@ -5,7 +5,7 @@ from flask import Blueprint, abort, current_app, flash, jsonify, redirect, rende
 from flask_login import current_user, login_required
 from openpyxl import Workbook
 from sqlalchemy import or_
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from . import db
 from .audit import audit
@@ -1408,6 +1408,14 @@ def incident_lookup_redirect():
     return redirect(url_for("admin.incident_settings", _anchor="incident-management"))
 
 
+def incident_lookup_response(message, category="success", status=200):
+    """Serve JSON to the enhanced settings UI and keep the classic redirect workflow."""
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify(success=category == "success", message=message), status
+    flash(message, category)
+    return incident_lookup_redirect()
+
+
 def safe_lookup_sort_order(value):
     try:
         return int(value or 0)
@@ -1422,6 +1430,24 @@ def normalize_lookup_color(value):
     return "#64748b"
 
 
+def lookup_name_conflict(model, name, row_id=None):
+    """Return an existing lookup with the same label, ignoring the edited row."""
+    query = model.query.filter(model.name.ilike(name))
+    if row_id is not None:
+        query = query.filter(model.id != row_id)
+    return query.first()
+
+
+def record_incident_lookup_audit(action, details):
+    """Auditing must not turn a successful lookup write into a failed user action."""
+    try:
+        audit(action, details)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Incident lookup audit could not be saved")
+
+
 @admin_bp.route("/incident-settings/<kind>/create", methods=["POST"])
 def incident_lookup_create(kind):
     model = incident_lookup_model(kind)
@@ -1429,8 +1455,9 @@ def incident_lookup_create(kind):
         abort(404)
     name = request.form.get("name", "").strip()
     if not name:
-        flash("Name is required.", "danger")
-        return incident_lookup_redirect()
+        return incident_lookup_response("Name is required.", "danger", 400)
+    if lookup_name_conflict(model, name):
+        return incident_lookup_response(f"A {kind} named '{name}' already exists.", "danger", 409)
     row = model(name=name)
     if hasattr(row, "description") and "description" in request.form:
         row.description = request.form.get("description", "").strip()
@@ -1441,13 +1468,16 @@ def incident_lookup_create(kind):
     db.session.add(row)
     try:
         db.session.commit()
-        audit("Incident Settings Updated", f"Created incident {kind}: {name}")
-        flash(f"{kind.title()} created successfully.", "success")
+        record_incident_lookup_audit("Incident Settings Updated", f"Created incident {kind}: {name}")
+        return incident_lookup_response(f"{kind.title()} created successfully.")
+    except IntegrityError:
+        db.session.rollback()
+        current_app.logger.warning("Incident %s create rejected because the name already exists: %s", kind, name)
+        return incident_lookup_response(f"Unable to save {kind}: that name already exists.", "danger", 409)
     except SQLAlchemyError as exc:
         db.session.rollback()
         current_app.logger.exception("Incident %s create failed: %s", kind, exc)
-        flash(f"Could not create {kind}. The name may already exist.", "danger")
-    return incident_lookup_redirect()
+        return incident_lookup_response(f"Unable to save {kind}. Please try again.", "danger", 500)
 
 
 @admin_bp.route("/incident-settings/<kind>/<int:row_id>/update", methods=["POST"])
@@ -1458,8 +1488,9 @@ def incident_lookup_update(kind, row_id):
     row = model.query.get_or_404(row_id)
     name = request.form.get("name", "").strip()
     if not name:
-        flash("Name is required.", "danger")
-        return incident_lookup_redirect()
+        return incident_lookup_response("Name is required.", "danger", 400)
+    if lookup_name_conflict(model, name, row.id):
+        return incident_lookup_response(f"Unable to save {kind}: a record named '{name}' already exists.", "danger", 409)
     row.name = name
     if hasattr(row, "description") and "description" in request.form:
         row.description = request.form.get("description", "").strip()
@@ -1470,13 +1501,16 @@ def incident_lookup_update(kind, row_id):
     db.session.add(row)
     try:
         db.session.commit()
-        audit("Incident Settings Updated", f"Updated incident {kind}: {name}")
-        flash(f"{kind.title()} updated successfully.", "success")
+        record_incident_lookup_audit("Incident Settings Updated", f"Updated incident {kind}: {name}")
+        return incident_lookup_response(f"{kind.title()} saved successfully.")
+    except IntegrityError:
+        db.session.rollback()
+        current_app.logger.warning("Incident %s update rejected because the name already exists: %s", kind, name)
+        return incident_lookup_response(f"Unable to save {kind}: that name already exists.", "danger", 409)
     except SQLAlchemyError as exc:
         db.session.rollback()
         current_app.logger.exception("Incident %s update failed for row %s: %s", kind, row_id, exc)
-        flash(f"Could not update {kind}. The name may already exist.", "danger")
-    return incident_lookup_redirect()
+        return incident_lookup_response(f"Unable to save {kind}. Please try again.", "danger", 500)
 
 
 @admin_bp.route("/incident-settings/<kind>/<int:row_id>/delete", methods=["POST"])
@@ -1501,13 +1535,12 @@ def incident_lookup_delete(kind, row_id):
             db.session.delete(row)
             message = f"{kind.title()} deleted successfully."
         db.session.commit()
-        audit("Incident Settings Updated", f"Deleted/deactivated incident {kind}: {name}")
-        flash(message, "success")
+        record_incident_lookup_audit("Incident Settings Updated", f"Deleted/deactivated incident {kind}: {name}")
+        return incident_lookup_response(message)
     except SQLAlchemyError as exc:
         db.session.rollback()
         current_app.logger.exception("Incident %s delete failed for row %s: %s", kind, row_id, exc)
-        flash(f"Could not delete {kind}. It was not changed.", "danger")
-    return incident_lookup_redirect()
+        return incident_lookup_response(f"Unable to delete {kind}. It was not changed.", "danger", 500)
 
 
 CONFIG_CENTER_SECTIONS = {

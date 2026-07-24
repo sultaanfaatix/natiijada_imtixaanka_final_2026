@@ -480,6 +480,11 @@ class IncidentReport(TimestampMixin, db.Model):
     
     description = db.Column(db.Text, nullable=False)
     actions_taken = db.Column(db.Text)
+    # Independent category and action description fields
+    category_description = db.Column(db.String(500), nullable=True)
+    action_description = db.Column(db.String(500), nullable=True)
+    # Retains free-form context for legacy records backward compatibility.
+    other_description = db.Column(db.String(500), nullable=True)
     signature_data = db.Column(db.Text)
     
     status = db.Column(
